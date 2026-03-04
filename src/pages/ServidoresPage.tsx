@@ -65,16 +65,21 @@ export const ServidoresPage = ({ initialAction, onActionHandled }: { initialActi
 
       console.log(`[Servidores] Fetching /api/servidores using BASE_URL: ${API_BASE_URL}`);
       
-      const data = await servidoresService.listar({ 
-        busca: debouncedSearchTerm, 
-        categoria: filterCategory as Categoria,
-        setor: filterSetor,
-        status: filterStatus as StatusServidor,
-        sexo: filterSexo
-      });
+     const resp = await servidoresService.listar({
+  busca: termo_de_pesquisa_debounced,
+  categoria: categoriaDeFiltro as Categoria,
+  setor: setorDeFiltro,
+  status: statusDoFiltro as StatusServidor,
+  sexo: filtroSexo,
+});
+
+// Normaliza: aceita retorno como array OU { ok, data: [] }
+const dados = Array.isArray(resp)
+  ? resp
+  : (Array.isArray((resp as any)?.data) ? (resp as any).data : []);
       
-      console.log(`[Servidores] Sucesso: ${data.length} registros carregados.`);
-      setEmployees(data);
+     console.log(`[Servidores] Sucesso: ${dados.length} registros carregados.`);
+setEmployees(dados);
     } catch (err: any) {
       const isTimeout = err.message?.includes('Tempo limite') || err.name === 'AbortError';
       console.error(`[Servidores] Erro no carregamento:`, err.message);
