@@ -51,11 +51,25 @@ export const DashboardPage = ({ onNavigate }: { onNavigate: (tab: string, action
       try {
         setIsLoading(true);
         setError(null);
-        const servidores = await servidoresService.listar();
+
+        const raw = await servidoresService.listar();
+
+        // ✅ CORREÇÃO: normaliza resposta para sempre ser array
+        // Suporta: array direto, { ok, data: [] }, { data: [] }, null/undefined
+        const servidores: Servidor[] = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : Array.isArray((raw as any)?.items)
+              ? (raw as any).items
+              : [];
+
+        const ativos = servidores.filter((s: any) => (s?.status ?? 'ATIVO') === 'ATIVO').length;
+
         setStats(prev => ({
           ...prev,
           total: servidores.length,
-          ativos: servidores.filter(s => s.status === 'ATIVO').length
+          ativos
         }));
       } catch (err) {
         console.error('Erro ao buscar estatísticas:', err);
@@ -64,6 +78,7 @@ export const DashboardPage = ({ onNavigate }: { onNavigate: (tab: string, action
         setIsLoading(false);
       }
     };
+
     fetchStats();
   }, []);
 
