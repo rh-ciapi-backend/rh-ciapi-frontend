@@ -82,7 +82,7 @@ console.log(`[Servidores] Sucesso: ${dados.length} registros carregados.`);
 setEmployees(dados);
 
 // Normaliza: aceita retorno como array OU { ok, data: [] }
-const dados = Array.isArray(resp)
+const lista = Array.isArray(resp)
   ? resp
   : (Array.isArray((resp as any)?.data) ? (resp as any).data : []);
       
