@@ -8,32 +8,32 @@ import { logsService } from './logsService';
 let servidoresMock = [...MOCK_SERVIDORES];
 
 const mapFromDB = (data: any): Servidor => ({
-  id: data.id,
-  nome: data.nome_completo,
-  nomeCompleto: data.nome_completo,
-  matricula: data.matricula,
-  cpf: data.cpf,
-  dataNascimento: data.data_nascimento,
-  sexo: data.sexo,
-  rgNumero: data.rg_numero,
-  rgOrgaoEmissor: data.rg_orgao_emissor,
-  rgUf: data.rg_uf,
-  email: data.email,
-  escolaridade: data.escolaridade,
-  profissao: data.profissao,
-  vinculo: data.vinculo,
-  funcao: data.funcao,
-  cargaHoraria: data.carga_horaria,
-  inicioExercicio: data.inicio_exercicio,
-  categoria: data.categoria,
-  setor: data.setor,
-  cargo: data.cargo,
-  telefone: data.telefone,
-  lotacaoInterna: data.lotacao_interna,
-  turno: data.turno,
-  status: data.status,
-  observacao: data.observacao,
-  aniversario: data.aniversario,
+  id: data?.id,
+  nome: data?.nome_completo ?? '',
+  nomeCompleto: data?.nome_completo ?? '',
+  matricula: data?.matricula ?? '',
+  cpf: data?.cpf ?? '',
+  dataNascimento: data?.data_nascimento ?? null,
+  sexo: data?.sexo ?? '',
+  rgNumero: data?.rg_numero ?? '',
+  rgOrgaoEmissor: data?.rg_orgao_emissor ?? '',
+  rgUf: data?.rg_uf ?? '',
+  email: data?.email ?? '',
+  escolaridade: data?.escolaridade ?? '',
+  profissao: data?.profissao ?? '',
+  vinculo: data?.vinculo ?? '',
+  funcao: data?.funcao ?? '',
+  cargaHoraria: data?.carga_horaria ?? '',
+  inicioExercicio: data?.inicio_exercicio ?? null,
+  categoria: data?.categoria ?? '',
+  setor: data?.setor ?? '',
+  cargo: data?.cargo ?? '',
+  telefone: data?.telefone ?? '',
+  lotacaoInterna: data?.lotacao_interna ?? '',
+  turno: data?.turno ?? '',
+  status: data?.status ?? 'ATIVO',
+  observacao: data?.observacao ?? '',
+  aniversario: data?.aniversario ?? null,
 });
 
 const mapToDB = (data: any) => ({
@@ -63,11 +63,72 @@ const mapToDB = (data: any) => ({
   aniversario: data?.aniversario,
 });
 
-// ✅ Normalizador: aceita array direto OU { ok, data: [] } OU qualquer coisa
+// ✅ Normalizador: aceita array direto OU { ok, data: [] } OU { data: [] } OU { items: [] } etc.
 const normalizeToArray = <T>(resp: any): T[] => {
   if (Array.isArray(resp)) return resp;
   if (resp && Array.isArray(resp.data)) return resp.data;
+  if (resp && Array.isArray(resp.items)) return resp.items;
+  if (resp && Array.isArray(resp.rows)) return resp.rows;
   return [];
+};
+
+// ✅ Garante que o frontend SEMPRE receba um Servidor "completo" no shape esperado
+// - se vier do DB (snake_case): usa mapFromDB
+// - se vier do backend já em camelCase: garante defaults para evitar undefined
+const normalizeServidor = (row: any): Servidor => {
+  if (!row || typeof row !== 'object') {
+    // fallback seguro
+    return {
+      id: undefined as any,
+      nome: '',
+      nomeCompleto: '',
+      matricula: '',
+      cpf: '',
+      dataNascimento: null,
+      sexo: '',
+      rgNumero: '',
+      rgOrgaoEmissor: '',
+      rgUf: '',
+      email: '',
+      escolaridade: '',
+      profissao: '',
+      vinculo: '',
+      funcao: '',
+      cargaHoraria: '',
+      inicioExercicio: null,
+      categoria: '',
+      setor: '',
+      cargo: '',
+      telefone: '',
+      lotacaoInterna: '',
+      turno: '',
+      status: 'ATIVO',
+      observacao: '',
+      aniversario: null,
+    };
+  }
+
+  // Detecta retorno snake_case (supabase direto ou backend repassando)
+  if ('nome_completo' in row || 'data_nascimento' in row || 'rg_numero' in row) {
+    return mapFromDB(row);
+  }
+
+  // Já veio camelCase: só blinda para evitar undefined (principal causa do charAt quebrar)
+  const nomeCompleto = String(row.nomeCompleto ?? row.nome ?? '').trim();
+  const nome = String(row.nome ?? nomeCompleto ?? '').trim();
+
+  return {
+    ...row,
+    nome: nome || '',
+    nomeCompleto: nomeCompleto || nome || '',
+    matricula: row.matricula ?? '',
+    cpf: row.cpf ?? '',
+    email: row.email ?? '',
+    setor: row.setor ?? '',
+    categoria: row.categoria ?? '',
+    cargo: row.cargo ?? '',
+    status: row.status ?? 'ATIVO',
+  } as Servidor;
 };
 
 export const apiServidores = {
@@ -107,7 +168,8 @@ export const apiServidores = {
         result = result.filter((s: any) => s?.sexo === filtros.sexo);
       }
 
-      return result;
+      // ✅ garante shape seguro também no mock
+      return result.map(normalizeServidor);
     }
 
     // ✅ Usar a API centralizada
@@ -122,10 +184,13 @@ export const apiServidores = {
       const queryString = queryParams.toString();
       const path = `/api/servidores${queryString ? `?${queryString}` : ''}`;
 
-      // ⚠️ Aqui é o ponto-chave:
-      // fetchJson pode retornar Servidor[] OU { ok, data: Servidor[] }
+      // ⚠️ fetchJson pode retornar array OU { ok, data: [] } OU outro wrapper
       const resp = await fetchJson<any>(path);
-      return normalizeToArray<Servidor>(resp);
+
+      const arr = normalizeToArray<any>(resp);
+
+      // ✅ Correção principal: normaliza cada item pro shape esperado
+      return arr.map(normalizeServidor);
     } catch (error) {
       console.warn(
         '[ServidoresService] Falha ao buscar da API, tentando Supabase diretamente...',
@@ -164,7 +229,7 @@ export const apiServidores = {
     if (API_CONFIG.useMock) {
       const s = servidoresMock.find((s: any) => s.id === id);
       if (!s) throw new Error('Servidor não encontrado');
-      return s;
+      return normalizeServidor(s);
     }
     const { data, error } = await supabase
       .from('servidores')
@@ -182,7 +247,7 @@ export const apiServidores = {
         id: Math.random().toString(36).substring(2, 9),
       };
       servidoresMock.push(novo);
-      return novo;
+      return normalizeServidor(novo);
     }
 
     const { data, error } = await supabase
@@ -215,7 +280,7 @@ export const apiServidores = {
       if (index === -1) throw new Error('Servidor não encontrado');
 
       servidoresMock[index] = { ...servidoresMock[index], ...dados };
-      return servidoresMock[index];
+      return normalizeServidor(servidoresMock[index]);
     }
 
     const { data, error } = await supabase
