@@ -73,21 +73,13 @@ export const ServidoresPage = ({ initialAction, onActionHandled }: { initialActi
   sexo: filterSexo,
 });
 
-// Normaliza: aceita retorno como array OU { ok, data: [] }
-const dados = Array.isArray(resp)
-  ? resp
-  : (Array.isArray((resp as any)?.data) ? (resp as any).data : []);
-
-console.log(`[Servidores] Sucesso: ${dados.length} registros carregados.`);
-setEmployees(dados);
-
-// Normaliza: aceita retorno como array OU { ok, data: [] }
 const lista = Array.isArray(resp)
   ? resp
   : (Array.isArray((resp as any)?.data) ? (resp as any).data : []);
+
+console.log(`[Servidores] Sucesso: ${lista.length} registros carregados.`);
+setEmployees(lista);
       
-     console.log(`[Servidores] Sucesso: ${dados.length} registros carregados.`);
-setEmployees(dados);
     } catch (err: any) {
       const isTimeout = err.message?.includes('Tempo limite') || err.name === 'AbortError';
       console.error(`[Servidores] Erro no carregamento:`, err.message);
