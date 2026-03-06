@@ -1,6 +1,19 @@
 import { supabase } from '../lib/supabaseClient';
-import { CategoriaAdmin } from '../types';
+import { CategoriaAdmin, OpcaoFiltro } from '../types';
 import { logsService } from './logsService';
+import { servidoresService } from './servidoresService';
+
+const FALLBACK_CATEGORIA = 'NÃO INFORMADO';
+
+const asString = (value: unknown, fallback = ''): string => {
+  if (value === null || value === undefined) return fallback;
+  return String(value).trim();
+};
+
+const sortUnique = (values: string[]) =>
+  [...new Set(values.map((v) => asString(v)).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+  );
 
 export const categoriasService = {
   listar: async (): Promise<CategoriaAdmin[]> => {
@@ -8,12 +21,35 @@ export const categoriasService = {
       .from('categorias')
       .select('*')
       .order('nome');
-    
+
     if (error) {
       console.warn('Tabela categorias não encontrada:', error.message);
       return [];
     }
+
     return data || [];
+  },
+
+  listarOpcoesFiltro: async (): Promise<OpcaoFiltro[]> => {
+    const [categoriasAdmin, servidores] = await Promise.all([
+      categoriasService.listar().catch(() => []),
+      servidoresService.listar().catch(() => []),
+    ]);
+
+    const nomesAdmin = categoriasAdmin
+      .filter((item) => item?.ativo !== false)
+      .map((item) => asString(item?.nome));
+
+    const nomesServidores = servidores.map((servidor) =>
+      asString(servidor?.categoria, FALLBACK_CATEGORIA)
+    );
+
+    const values = sortUnique([...nomesAdmin, ...nomesServidores]);
+
+    return values.map((value) => ({
+      value,
+      label: value,
+    }));
   },
 
   adicionar: async (nome: string): Promise<CategoriaAdmin> => {
@@ -22,7 +58,7 @@ export const categoriasService = {
       .insert({ nome, ativo: true })
       .select()
       .single();
-    
+
     if (error) throw error;
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -45,7 +81,7 @@ export const categoriasService = {
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -66,7 +102,7 @@ export const categoriasService = {
       .from('categorias')
       .delete()
       .eq('id', id);
-    
+
     if (error) throw error;
 
     const { data: { user } } = await supabase.auth.getUser();
