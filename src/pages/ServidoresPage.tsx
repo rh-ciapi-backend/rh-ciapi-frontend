@@ -8,7 +8,8 @@ import {
   UserPlus,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { servidoresService } from '../services/servidoresService';
@@ -127,6 +128,34 @@ const DetailItem = ({
   </div>
 );
 
+type PendingEmployeePayload = {
+  nome: string;
+  nomeCompleto: string;
+  matricula: string;
+  cpf: string;
+  dataNascimento: string | null;
+  sexo: Sexo | '';
+  rgNumero: string;
+  rgOrgaoEmissor: string;
+  rgUf: string;
+  email: string;
+  escolaridade: string;
+  profissao: string;
+  vinculo: string;
+  funcao: string;
+  cargaHoraria: string;
+  inicioExercicio: string | null;
+  categoria: Categoria | '';
+  setor: string;
+  cargo: string;
+  telefone: string;
+  lotacaoInterna: string;
+  turno: string;
+  status: StatusServidor;
+  observacao: string;
+  aniversario: string | null;
+};
+
 export const ServidoresPage = ({
   initialAction,
   onActionHandled
@@ -145,6 +174,8 @@ export const ServidoresPage = ({
   const [editingEmployee, setEditingEmployee] = useState<Servidor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Servidor | null>(null);
+  const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
+  const [pendingEmployeeData, setPendingEmployeeData] = useState<PendingEmployeePayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -274,6 +305,11 @@ export const ServidoresPage = ({
     setSelectedEmployee(null);
   };
 
+  const closeConfirmSaveModal = () => {
+    setIsConfirmSaveOpen(false);
+    setPendingEmployeeData(null);
+  };
+
   const handleOpenDetails = (emp: Servidor) => {
     setSelectedEmployee(emp);
     setIsDetailsModalOpen(true);
@@ -318,49 +354,71 @@ export const ServidoresPage = ({
     await handleDeleteEmployee(selectedEmployee.id);
   };
 
+  const buildPayloadFromForm = (formData: FormData): PendingEmployeePayload => ({
+    nome: asString(formData.get('nomeCompleto')),
+    nomeCompleto: asString(formData.get('nomeCompleto')),
+    matricula: asString(formData.get('matricula')),
+    cpf: asString(formData.get('cpf')),
+    dataNascimento: asString(formData.get('dataNascimento')) || null,
+    sexo: (asString(formData.get('sexo')) as Sexo | '') || '',
+    rgNumero: asString(formData.get('rgNumero')),
+    rgOrgaoEmissor: asString(formData.get('rgOrgaoEmissor')),
+    rgUf: asString(formData.get('rgUf')),
+    email: asString(formData.get('email')),
+    escolaridade: asString(formData.get('escolaridade')),
+    profissao: asString(formData.get('profissao')),
+    vinculo: asString(formData.get('vinculo')),
+    funcao: asString(formData.get('funcao')),
+    cargaHoraria: asString(formData.get('cargaHoraria')),
+    inicioExercicio: asString(formData.get('inicioExercicio')) || null,
+    categoria: (asString(formData.get('categoria')) as Categoria | '') || '',
+    setor: asString(formData.get('setor')),
+    cargo: asString(formData.get('cargo')),
+    telefone: asString(formData.get('telefone')),
+    lotacaoInterna: asString(formData.get('lotacaoInterna')),
+    turno: asString(formData.get('turno')),
+    status: (asString(formData.get('status'), 'ATIVO') as StatusServidor) || 'ATIVO',
+    observacao: asString(formData.get('observacao')),
+    aniversario: asString(formData.get('aniversario')) || null,
+  });
+
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
 
-    const dados = {
-      nome: formData.get('nomeCompleto') as string,
-      nomeCompleto: formData.get('nomeCompleto') as string,
-      matricula: formData.get('matricula') as string,
-      cpf: formData.get('cpf') as string,
-      dataNascimento: formData.get('dataNascimento') as string,
-      sexo: formData.get('sexo') as Sexo,
-      rgNumero: formData.get('rgNumero') as string,
-      rgOrgaoEmissor: formData.get('rgOrgaoEmissor') as string,
-      rgUf: formData.get('rgUf') as string,
-      email: formData.get('email') as string,
-      escolaridade: formData.get('escolaridade') as string,
-      profissao: formData.get('profissao') as string,
-      vinculo: formData.get('vinculo') as string,
-      funcao: formData.get('funcao') as string,
-      cargaHoraria: formData.get('cargaHoraria') as string,
-      inicioExercicio: formData.get('inicioExercicio') as string,
-      categoria: formData.get('categoria') as Categoria,
-      setor: formData.get('setor') as string,
-      cargo: formData.get('cargo') as string,
-      telefone: formData.get('telefone') as string,
-      lotacaoInterna: formData.get('lotacaoInterna') as string,
-      turno: formData.get('turno') as string,
-      status: formData.get('status') as StatusServidor,
-      observacao: formData.get('observacao') as string,
-      aniversario: (formData.get('aniversario') as string) || null,
-    };
+    const formData = new FormData(e.currentTarget);
+    const dados = buildPayloadFromForm(formData);
+
+    if (!dados.matricula) {
+      setError('A matrícula é obrigatória.');
+      return;
+    }
+
+    if (!dados.cpf) {
+      setError('O CPF é obrigatório.');
+      return;
+    }
+
+    setError(null);
+    setPendingEmployeeData(dados);
+    setIsConfirmSaveOpen(true);
+  };
+
+  const confirmSaveEmployee = async () => {
+    if (!pendingEmployeeData) return;
 
     try {
       setIsLoading(true);
 
       if (editingEmployee) {
-        await servidoresService.editar(editingEmployee.id, dados);
+        await servidoresService.editar(editingEmployee.id, pendingEmployeeData);
         setSuccessMessage('Servidor atualizado com sucesso!');
       } else {
-        await servidoresService.adicionar(dados);
+        await servidoresService.adicionar(pendingEmployeeData);
         setSuccessMessage('Servidor cadastrado com sucesso!');
       }
 
+      setIsConfirmSaveOpen(false);
+      setPendingEmployeeData(null);
       setIsModalOpen(false);
       setEditingEmployee(null);
       await fetchEmployees();
@@ -762,7 +820,11 @@ export const ServidoresPage = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingEmployee(null);
+                closeConfirmSaveModal();
+              }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div
@@ -775,7 +837,14 @@ export const ServidoresPage = ({
                 <h2 className="text-xl font-bold text-white">
                   {editingEmployee ? 'Editar Servidor' : 'Novo Servidor'}
                 </h2>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingEmployee(null);
+                    closeConfirmSaveModal();
+                  }}
+                  className="text-slate-500 hover:text-white"
+                >
                   <X size={24} />
                 </button>
               </div>
@@ -789,15 +858,29 @@ export const ServidoresPage = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1 md:col-span-2">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Nome Completo</label>
-                        <input name="nomeCompleto" type="text" defaultValue={editingEmployee?.nomeCompleto} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="nomeCompleto"
+                          type="text"
+                          defaultValue={editingEmployee?.nomeCompleto || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Nascimento</label>
-                        <input name="dataNascimento" type="date" defaultValue={editingEmployee?.dataNascimento || ''} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="dataNascimento"
+                          type="date"
+                          defaultValue={editingEmployee?.dataNascimento || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Sexo</label>
-                        <select name="sexo" defaultValue={editingEmployee?.sexo || 'M'} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select
+                          name="sexo"
+                          defaultValue={editingEmployee?.sexo || 'M'}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        >
                           <option value="M">MASCULINO</option>
                           <option value="F">FEMININO</option>
                           <option value="OUTRO">OUTRO</option>
@@ -805,7 +888,12 @@ export const ServidoresPage = ({
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Aniversário</label>
-                        <input name="aniversario" type="date" defaultValue={editingEmployee?.aniversario || ''} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="aniversario"
+                          type="date"
+                          defaultValue={editingEmployee?.aniversario || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                     </div>
                   </section>
@@ -816,20 +904,42 @@ export const ServidoresPage = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">CPF</label>
-                        <input name="cpf" type="text" defaultValue={editingEmployee?.cpf} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">CPF *</label>
+                        <input
+                          name="cpf"
+                          type="text"
+                          defaultValue={editingEmployee?.cpf || ''}
+                          required
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">RG Número</label>
-                        <input name="rgNumero" type="text" defaultValue={editingEmployee?.rgNumero} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="rgNumero"
+                          type="text"
+                          defaultValue={editingEmployee?.rgNumero || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Órgão Emissor</label>
-                        <input name="rgOrgaoEmissor" type="text" defaultValue={editingEmployee?.rgOrgaoEmissor} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="rgOrgaoEmissor"
+                          type="text"
+                          defaultValue={editingEmployee?.rgOrgaoEmissor || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">UF RG</label>
-                        <input name="rgUf" type="text" defaultValue={editingEmployee?.rgUf} maxLength={2} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="rgUf"
+                          type="text"
+                          defaultValue={editingEmployee?.rgUf || ''}
+                          maxLength={2}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                     </div>
                   </section>
@@ -841,11 +951,21 @@ export const ServidoresPage = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Telefone</label>
-                        <input name="telefone" type="text" defaultValue={editingEmployee?.telefone} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="telefone"
+                          type="text"
+                          defaultValue={editingEmployee?.telefone || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Email</label>
-                        <input name="email" type="email" defaultValue={editingEmployee?.email} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="email"
+                          type="email"
+                          defaultValue={editingEmployee?.email || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                     </div>
                   </section>
@@ -856,64 +976,127 @@ export const ServidoresPage = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Matrícula</label>
-                        <input name="matricula" type="text" defaultValue={editingEmployee?.matricula} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Matrícula *</label>
+                        <input
+                          name="matricula"
+                          type="text"
+                          defaultValue={editingEmployee?.matricula || ''}
+                          required
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Categoria</label>
-                        <select name="categoria" defaultValue={editingEmployee?.categoria || CATEGORIAS[0]} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select
+                          name="categoria"
+                          defaultValue={editingEmployee?.categoria || CATEGORIAS[0]}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        >
                           {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Setor</label>
-                        <select name="setor" defaultValue={editingEmployee?.setor || SETORES[0]} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select
+                          name="setor"
+                          defaultValue={editingEmployee?.setor || SETORES[0]}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        >
                           {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Cargo</label>
-                        <input name="cargo" type="text" defaultValue={editingEmployee?.cargo} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="cargo"
+                          type="text"
+                          defaultValue={editingEmployee?.cargo || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Função</label>
-                        <input name="funcao" type="text" defaultValue={editingEmployee?.funcao} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="funcao"
+                          type="text"
+                          defaultValue={editingEmployee?.funcao || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Vínculo</label>
-                        <select name="vinculo" defaultValue={editingEmployee?.vinculo} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select
+                          name="vinculo"
+                          defaultValue={editingEmployee?.vinculo || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="">Selecione</option>
                           {VINCULOS.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Profissão</label>
-                        <input name="profissao" type="text" defaultValue={editingEmployee?.profissao} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="profissao"
+                          type="text"
+                          defaultValue={editingEmployee?.profissao || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Escolaridade</label>
-                        <select name="escolaridade" defaultValue={editingEmployee?.escolaridade} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select
+                          name="escolaridade"
+                          defaultValue={editingEmployee?.escolaridade || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="">Selecione</option>
                           {ESCOLARIDADE.map(e => <option key={e} value={e}>{e}</option>)}
                         </select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Lotação Interna</label>
-                        <input name="lotacaoInterna" type="text" defaultValue={editingEmployee?.lotacaoInterna} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="lotacaoInterna"
+                          type="text"
+                          defaultValue={editingEmployee?.lotacaoInterna || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Carga Horária</label>
-                        <input name="cargaHoraria" type="text" defaultValue={editingEmployee?.cargaHoraria} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="cargaHoraria"
+                          type="text"
+                          defaultValue={editingEmployee?.cargaHoraria || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Turno</label>
-                        <input name="turno" type="text" defaultValue={editingEmployee?.turno} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="turno"
+                          type="text"
+                          defaultValue={editingEmployee?.turno || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Início Exercício</label>
-                        <input name="inicioExercicio" type="date" defaultValue={editingEmployee?.inicioExercicio || ''} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input
+                          name="inicioExercicio"
+                          type="date"
+                          defaultValue={editingEmployee?.inicioExercicio || ''}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Status</label>
-                        <select name="status" defaultValue={editingEmployee?.status || 'ATIVO'} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select
+                          name="status"
+                          defaultValue={editingEmployee?.status || 'ATIVO'}
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        >
                           <option value="ATIVO">ATIVO</option>
                           <option value="INATIVO">INATIVO</option>
                         </select>
@@ -927,7 +1110,11 @@ export const ServidoresPage = ({
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Observação</label>
-                      <textarea name="observacao" defaultValue={editingEmployee?.observacao} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary h-24 resize-none" />
+                      <textarea
+                        name="observacao"
+                        defaultValue={editingEmployee?.observacao || ''}
+                        className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary h-24 resize-none"
+                      />
                     </div>
                   </section>
                 </form>
@@ -936,7 +1123,11 @@ export const ServidoresPage = ({
               <div className="p-6 border-t border-border-dark flex justify-end gap-3 bg-slate-800/20">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingEmployee(null);
+                    closeConfirmSaveModal();
+                  }}
                   className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors"
                 >
                   Cancelar
@@ -947,6 +1138,61 @@ export const ServidoresPage = ({
                   className="bg-primary hover:bg-primary-hover text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all"
                 >
                   {editingEmployee ? 'Salvar Alterações' : 'Cadastrar Servidor'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isConfirmSaveOpen && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeConfirmSaveModal}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md rounded-3xl border border-border-dark bg-card-dark shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-border-dark">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <AlertTriangle size={22} className="text-amber-400" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-white">
+                      Confirmar alteração
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                      Deseja mesmo fazer essa alteração?
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 flex items-center justify-end gap-3 bg-slate-900/20">
+                <button
+                  type="button"
+                  onClick={closeConfirmSaveModal}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+                >
+                  Não, cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSaveEmployee}
+                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-lg shadow-primary/20 transition-all"
+                >
+                  Sim, salvar
                 </button>
               </div>
             </motion.div>
