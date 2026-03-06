@@ -56,6 +56,77 @@ const uniqueSorted = (values: string[]) =>
     a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
   );
 
+const formatDate = (value: string | null | undefined, options?: Intl.DateTimeFormatOptions) => {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleDateString(
+    'pt-BR',
+    options || {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }
+  );
+};
+
+const displayValue = (value: unknown, fallback = '-') => {
+  const safe = asString(value);
+  return safe || fallback;
+};
+
+const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join('') || '?';
+
+const formatSexoLabel = (sexo: string) => {
+  if (sexo === 'M') return 'MASCULINO';
+  if (sexo === 'F') return 'FEMININO';
+  if (sexo === 'OUTRO') return 'OUTRO';
+  return sexo || '-';
+};
+
+const getStatusBadge = (status: StatusServidor | string) => {
+  const safeStatus = asString(status, FALLBACK_STATUS) as StatusServidor;
+  const colors =
+    safeStatus === 'ATIVO'
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${colors}`}>
+      {safeStatus}
+    </span>
+  );
+};
+
+const DetailItem = ({
+  label,
+  value,
+  mono = false,
+  children
+}: {
+  label: string;
+  value?: React.ReactNode;
+  mono?: boolean;
+  children?: React.ReactNode;
+}) => (
+  <div className="rounded-xl border border-border-dark bg-slate-800/40 p-4">
+    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+      {label}
+    </p>
+    <div className={mono ? 'text-sm text-white font-mono break-words' : 'text-sm text-white break-words'}>
+      {children || value || '-'}
+    </div>
+  </div>
+);
+
 export const ServidoresPage = ({
   initialAction,
   onActionHandled
@@ -72,6 +143,8 @@ export const ServidoresPage = ({
   const [filterSexo, setFilterSexo] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Servidor | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Servidor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -196,6 +269,16 @@ export const ServidoresPage = ({
     filterSexo
   ]);
 
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedEmployee(null);
+  };
+
+  const handleOpenDetails = (emp: Servidor) => {
+    setSelectedEmployee(emp);
+    setIsDetailsModalOpen(true);
+  };
+
   const handleAddEmployee = () => {
     setEditingEmployee(null);
     setIsModalOpen(true);
@@ -206,18 +289,33 @@ export const ServidoresPage = ({
     setIsModalOpen(true);
   };
 
+  const handleEditFromDetails = () => {
+    if (!selectedEmployee) return;
+    setEditingEmployee(selectedEmployee);
+    setIsDetailsModalOpen(false);
+    setIsModalOpen(true);
+  };
+
   const handleDeleteEmployee = async (id: string) => {
     if (!window.confirm('Tem certeza que deseja excluir este servidor?')) return;
     try {
       setIsLoading(true);
       await servidoresService.excluir(id);
       setSuccessMessage('Servidor excluído com sucesso!');
+      if (selectedEmployee?.id === id) {
+        closeDetailsModal();
+      }
       await fetchEmployees();
     } catch (err: any) {
       setError(err?.message || 'Erro ao excluir servidor.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteFromDetails = async () => {
+    if (!selectedEmployee) return;
+    await handleDeleteEmployee(selectedEmployee.id);
   };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -264,6 +362,7 @@ export const ServidoresPage = ({
       }
 
       setIsModalOpen(false);
+      setEditingEmployee(null);
       await fetchEmployees();
     } catch (err: any) {
       setError(err?.message || 'Erro ao salvar servidor.');
@@ -271,6 +370,18 @@ export const ServidoresPage = ({
       setIsLoading(false);
     }
   };
+
+  const detailEmployee = selectedEmployee
+    ? {
+        ...selectedEmployee,
+        nomeCompleto: getEmployeeName(selectedEmployee),
+        matricula: getEmployeeMatricula(selectedEmployee),
+        categoria: getEmployeeCategoria(selectedEmployee),
+        setor: getEmployeeSetor(selectedEmployee),
+        status: getEmployeeStatus(selectedEmployee),
+        sexo: getEmployeeSexo(selectedEmployee)
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -420,13 +531,7 @@ export const ServidoresPage = ({
               ) : (
                 filteredEmployees.map((emp) => {
                   const safeName = getEmployeeName(emp);
-                  const safeInitials = safeName
-                    .split(' ')
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map(part => part.charAt(0).toUpperCase())
-                    .join('') || '?';
-
+                  const safeInitials = getInitials(safeName);
                   const safeMatricula = getEmployeeMatricula(emp);
 
                   return (
@@ -443,9 +548,9 @@ export const ServidoresPage = ({
                           <div className="min-w-0 flex-1">
                             <button
                               type="button"
-                              onClick={() => handleEditEmployee(emp)}
+                              onClick={() => handleOpenDetails(emp)}
                               className="max-w-full text-left group/name rounded-lg outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary/60"
-                              title={`Abrir servidor ${safeName}`}
+                              title={`Abrir detalhes de ${safeName}`}
                             >
                               <span className="block text-sm font-semibold text-white truncate transition-colors group-hover/name:text-primary">
                                 {safeName}
@@ -499,6 +604,156 @@ export const ServidoresPage = ({
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isDetailsModalOpen && detailEmployee && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeDetailsModal}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 20 }}
+              className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-dark bg-card-dark shadow-2xl"
+            >
+              <div className="border-b border-border-dark bg-slate-900/60 px-6 py-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-inner shrink-0">
+                      {getInitials(detailEmployee.nomeCompleto)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">
+                        Ficha do Servidor
+                      </p>
+                      <h2 className="text-2xl font-bold text-white truncate">
+                        {detailEmployee.nomeCompleto}
+                      </h2>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border-dark bg-slate-800 text-slate-300">
+                          Matrícula: {displayValue(detailEmployee.matricula)}
+                        </span>
+                        {getStatusBadge(detailEmployee.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end md:self-start">
+                    <button
+                      type="button"
+                      onClick={handleEditFromDetails}
+                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold transition-all shadow-lg shadow-primary/20"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteFromDetails}
+                      className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-sm font-bold transition-all"
+                    >
+                      Excluir
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeDetailsModal}
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                      title="Fechar"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-h-[calc(90vh-110px)] overflow-y-auto px-6 py-6 space-y-8">
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Dados Pessoais
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <DetailItem label="Nome Completo" value={displayValue(detailEmployee.nomeCompleto)} />
+                    <DetailItem label="Matrícula" value={displayValue(detailEmployee.matricula)} mono />
+                    <DetailItem label="Sexo" value={formatSexoLabel(detailEmployee.sexo)} />
+                    <DetailItem label="Data de Nascimento" value={formatDate(detailEmployee.dataNascimento)} />
+                    <DetailItem
+                      label="Aniversário"
+                      value={formatDate(detailEmployee.aniversario, { day: '2-digit', month: '2-digit' })}
+                    />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Documentação
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <DetailItem label="CPF" value={displayValue(detailEmployee.cpf)} mono />
+                    <DetailItem label="RG Número" value={displayValue(detailEmployee.rgNumero)} />
+                    <DetailItem label="Órgão Emissor" value={displayValue(detailEmployee.rgOrgaoEmissor)} />
+                    <DetailItem label="UF do RG" value={displayValue(detailEmployee.rgUf)} />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Contato
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DetailItem label="Telefone" value={displayValue(detailEmployee.telefone)} />
+                    <DetailItem label="Email" value={displayValue(detailEmployee.email)} />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Dados Funcionais
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <DetailItem label="Categoria" value={displayValue(detailEmployee.categoria)} />
+                    <DetailItem label="Setor" value={displayValue(detailEmployee.setor)} />
+                    <DetailItem label="Cargo" value={displayValue(detailEmployee.cargo)} />
+                    <DetailItem label="Função" value={displayValue(detailEmployee.funcao)} />
+                    <DetailItem label="Vínculo" value={displayValue(detailEmployee.vinculo)} />
+                    <DetailItem label="Profissão" value={displayValue(detailEmployee.profissao)} />
+                    <DetailItem label="Escolaridade" value={displayValue(detailEmployee.escolaridade)} />
+                    <DetailItem label="Carga Horária" value={displayValue(detailEmployee.cargaHoraria)} />
+                    <DetailItem label="Início de Exercício" value={formatDate(detailEmployee.inicioExercicio)} />
+                    <DetailItem label="Lotação Interna" value={displayValue(detailEmployee.lotacaoInterna)} />
+                    <DetailItem label="Turno" value={displayValue(detailEmployee.turno)} />
+                    <DetailItem label="Status">
+                      {getStatusBadge(detailEmployee.status)}
+                    </DetailItem>
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Observações
+                    </h3>
+                  </div>
+                  <DetailItem label="Observação" value={displayValue(detailEmployee.observacao)} />
+                </section>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isModalOpen && (
