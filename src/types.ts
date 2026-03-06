@@ -1,9 +1,9 @@
-export type Categoria = 
-  | 'EFETIVO SESAU' 
-  | 'SELETIVO SESAU' 
-  | 'EFETIVO SETRABES' 
-  | 'SELETIVO SETRABES' 
-  | 'FEDERAIS SETRABES' 
+export type Categoria =
+  | 'EFETIVO SESAU'
+  | 'SELETIVO SESAU'
+  | 'EFETIVO SETRABES'
+  | 'SELETIVO SETRABES'
+  | 'FEDERAIS SETRABES'
   | 'COMISSIONADOS';
 
 export type StatusServidor = 'ATIVO' | 'INATIVO';
@@ -11,12 +11,12 @@ export type Sexo = 'M' | 'F' | 'OUTRO';
 
 export interface Servidor {
   id: string;
-  nome: string; // Mantido para compatibilidade
+  nome: string;
   nomeCompleto: string;
   matricula: string;
   cpf: string;
-  dataNascimento: string;
-  sexo: Sexo;
+  dataNascimento: string | null;
+  sexo: Sexo | '';
   rgNumero: string;
   rgOrgaoEmissor: string;
   rgUf: string;
@@ -26,8 +26,8 @@ export interface Servidor {
   vinculo: string;
   funcao: string;
   cargaHoraria: string;
-  inicioExercicio: string;
-  categoria: Categoria;
+  inicioExercicio: string | null;
+  categoria: Categoria | '';
   setor: string;
   cargo: string;
   telefone: string;
@@ -70,7 +70,7 @@ export interface EventoCalendario {
 
 export interface LinhaMapa {
   ordem: number;
-  nome: string; // Mantido para compatibilidade
+  nome: string;
   nomeCompleto: string;
   matricula: string;
   frequencia: number;
