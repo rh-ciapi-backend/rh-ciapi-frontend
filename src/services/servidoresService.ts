@@ -53,6 +53,15 @@ const asStatus = (value: unknown): StatusServidor => {
   return (STATUS_VALIDOS as readonly string[]).includes(v) ? (v as StatusServidor) : 'ATIVO';
 };
 
+const getRowId = (data: any): string =>
+  asString(
+    data?.cpf ??
+    data?.servidor ??
+    data?.id ??
+    data?.servidor_id ??
+    data?.uuid
+  );
+
 const emptyServidor = (): Servidor => ({
   id: '',
   nome: '',
@@ -86,7 +95,7 @@ const mapFromDB = (data: any): Servidor => {
   const nomeCompleto = asString(data?.nome_completo ?? data?.nomeCompleto ?? data?.nome);
 
   return {
-    id: asString(data?.id),
+    id: asString(data?.cpf ?? getRowId(data)),
     nome: nomeCompleto,
     nomeCompleto,
     matricula: asString(data?.matricula),
@@ -184,7 +193,8 @@ const normalizeServidor = (row: any): Servidor => {
     'rg_orgao_emissor' in row ||
     'rg_uf' in row ||
     'lotacao_interna' in row ||
-    'inicio_exercicio' in row;
+    'inicio_exercicio' in row ||
+    'servidor' in row;
 
   if (hasSnakeCase) {
     return mapFromDB(row);
@@ -194,7 +204,7 @@ const normalizeServidor = (row: any): Servidor => {
   const nome = asString(row.nome ?? nomeCompleto);
 
   return {
-    id: asString(row.id),
+    id: asString(row.cpf ?? getRowId(row)),
     nome: nome || nomeCompleto,
     nomeCompleto: nomeCompleto || nome,
     matricula: asString(row.matricula),
@@ -394,7 +404,7 @@ export const apiServidores = {
   obterPorId: async (id: string): Promise<Servidor> => {
     if (API_CONFIG.useMock) {
       const s = Array.isArray(servidoresMock)
-        ? servidoresMock.find((item: any) => normalizeServidor(item).id === id)
+        ? servidoresMock.find((item: any) => normalizeServidor(item).cpf === id)
         : undefined;
 
       if (!s) throw new Error('Servidor não encontrado');
@@ -404,7 +414,7 @@ export const apiServidores = {
     const { data, error } = await supabase
       .from('servidores')
       .select('*')
-      .eq('id', id)
+      .eq('cpf', id)
       .single();
 
     if (error) throw error;
@@ -416,7 +426,7 @@ export const apiServidores = {
     if (API_CONFIG.useMock) {
       const novo: Servidor = normalizeServidor({
         ...servidor,
-        id: Math.random().toString(36).substring(2, 11),
+        id: asString(servidor.cpf || Math.random().toString(36).substring(2, 11)),
       });
 
       servidoresMock.push(novo);
@@ -440,8 +450,8 @@ export const apiServidores = {
       user_email: user?.email,
       acao: 'CRIAR',
       entidade: 'SERVIDOR',
-      entidade_id: data.id,
-      detalhes: { nome: data.nome_completo },
+      entidade_id: asString(data?.cpf),
+      detalhes: { nome: data?.nome_completo },
     });
 
     return normalizeServidor(data);
@@ -450,7 +460,7 @@ export const apiServidores = {
   editar: async (id: string, dados: Partial<Servidor>): Promise<Servidor> => {
     if (API_CONFIG.useMock) {
       const index = Array.isArray(servidoresMock)
-        ? servidoresMock.findIndex((s: any) => normalizeServidor(s).id === id)
+        ? servidoresMock.findIndex((s: any) => normalizeServidor(s).cpf === id)
         : -1;
 
       if (index === -1) throw new Error('Servidor não encontrado');
@@ -458,6 +468,7 @@ export const apiServidores = {
       servidoresMock[index] = normalizeServidor({
         ...servidoresMock[index],
         ...dados,
+        cpf: id,
         id,
       });
 
@@ -467,7 +478,7 @@ export const apiServidores = {
     const { data, error } = await supabase
       .from('servidores')
       .update(mapToDB(dados))
-      .eq('id', id)
+      .eq('cpf', id)
       .select()
       .single();
 
@@ -492,12 +503,16 @@ export const apiServidores = {
   excluir: async (id: string): Promise<void> => {
     if (API_CONFIG.useMock) {
       servidoresMock = Array.isArray(servidoresMock)
-        ? servidoresMock.filter((s: any) => normalizeServidor(s).id !== id)
+        ? servidoresMock.filter((s: any) => normalizeServidor(s).cpf !== id)
         : [];
       return;
     }
 
-    const { error } = await supabase.from('servidores').delete().eq('id', id);
+    const { error } = await supabase
+      .from('servidores')
+      .delete()
+      .eq('cpf', id);
+
     if (error) throw error;
 
     const {
