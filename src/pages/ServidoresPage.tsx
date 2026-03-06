@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  MoreHorizontal, 
-  Edit2, 
-  Trash2, 
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  Search,
+  Plus,
+  MoreHorizontal,
+  Edit2,
+  Trash2,
   UserPlus,
   ChevronLeft,
   ChevronRight,
@@ -17,16 +16,76 @@ import { API_BASE_URL } from '../config/api';
 import { CATEGORIAS, SETORES, ESCOLARIDADE, VINCULOS } from '../data/servidores';
 import { Servidor, Categoria, StatusServidor, Sexo } from '../types';
 
-const getStatusBadge = (status: StatusServidor) => {
-  const colors = status === 'ATIVO' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-  return <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${colors}`}>{status}</span>;
+const FALLBACK_SEXO = 'NÃO INFORMADO';
+const FALLBACK_SETOR = 'NÃO INFORMADO';
+const FALLBACK_CATEGORIA = 'NÃO INFORMADO';
+const FALLBACK_STATUS = 'ATIVO';
+
+const asString = (value: unknown, fallback = ''): string => {
+  if (value === null || value === undefined) return fallback;
+  return String(value).trim();
 };
 
-const getCategoryBadge = (cat: Categoria) => {
-  return <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">{cat}</span>;
+const normalizeText = (value: unknown): string =>
+  asString(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const getEmployeeName = (emp: Partial<Servidor>) =>
+  asString(emp.nomeCompleto || emp.nome, 'NOME NÃO INFORMADO');
+
+const getEmployeeMatricula = (emp: Partial<Servidor>) =>
+  asString(emp.matricula);
+
+const getEmployeeCategoria = (emp: Partial<Servidor>) =>
+  asString(emp.categoria, FALLBACK_CATEGORIA);
+
+const getEmployeeSetor = (emp: Partial<Servidor>) =>
+  asString(emp.setor, FALLBACK_SETOR);
+
+const getEmployeeStatus = (emp: Partial<Servidor>) =>
+  asString(emp.status, FALLBACK_STATUS);
+
+const getEmployeeSexo = (emp: Partial<Servidor>) =>
+  asString(emp.sexo, FALLBACK_SEXO);
+
+const uniqueSorted = (values: string[]) =>
+  [...new Set(values.map(v => asString(v)).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+  );
+
+const getStatusBadge = (status: StatusServidor | string) => {
+  const safeStatus = asString(status, FALLBACK_STATUS) as StatusServidor;
+  const colors =
+    safeStatus === 'ATIVO'
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${colors}`}>
+      {safeStatus}
+    </span>
+  );
 };
 
-export const ServidoresPage = ({ initialAction, onActionHandled }: { initialAction?: string | null, onActionHandled?: () => void }) => {
+const getCategoryBadge = (cat: Categoria | string) => {
+  const safeCat = asString(cat, FALLBACK_CATEGORIA);
+  return (
+    <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+      {safeCat}
+    </span>
+  );
+};
+
+export const ServidoresPage = ({
+  initialAction,
+  onActionHandled
+}: {
+  initialAction?: string | null;
+  onActionHandled?: () => void;
+}) => {
   const [employees, setEmployees] = useState<Servidor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -41,7 +100,6 @@ export const ServidoresPage = ({ initialAction, onActionHandled }: { initialActi
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loadTimeout, setLoadTimeout] = useState(false);
 
-  // Handle initial action
   useEffect(() => {
     if (initialAction === 'add') {
       handleAddEmployee();
@@ -49,11 +107,10 @@ export const ServidoresPage = ({ initialAction, onActionHandled }: { initialActi
     }
   }, [initialAction, onActionHandled]);
 
-  // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
@@ -64,36 +121,33 @@ export const ServidoresPage = ({ initialAction, onActionHandled }: { initialActi
       setLoadTimeout(false);
 
       console.log(`[Servidores] Fetching /api/servidores using BASE_URL: ${API_BASE_URL}`);
-      
-    const resp = await servidoresService.listar({
-  busca: debouncedSearchTerm,
-  categoria: filterCategory as Categoria,
-  setor: filterSetor,
-  status: filterStatus as StatusServidor,
-  sexo: filterSexo,
-});
 
-const lista = Array.isArray(resp)
-  ? resp
-  : (Array.isArray((resp as any)?.data) ? (resp as any).data : []);
+      const resp = await servidoresService.listar();
 
-console.log(`[Servidores] Sucesso: ${lista.length} registros carregados.`);
-setEmployees(lista);
-      
+      const lista = Array.isArray(resp)
+        ? resp
+        : Array.isArray((resp as any)?.data)
+          ? (resp as any).data
+          : [];
+
+      console.log(`[Servidores] Sucesso: ${lista.length} registros carregados.`);
+      setEmployees(Array.isArray(lista) ? lista : []);
     } catch (err: any) {
-      const isTimeout = err.message?.includes('Tempo limite') || err.name === 'AbortError';
-      console.error(`[Servidores] Erro no carregamento:`, err.message);
-      
+      const isTimeout = err?.message?.includes('Tempo limite') || err?.name === 'AbortError';
+      console.error('[Servidores] Erro no carregamento:', err?.message || err);
+
       if (isTimeout) {
         setLoadTimeout(true);
         setError('Tempo limite de carregamento excedido. Verifique sua conexão.');
       } else {
         setError('Falha ao carregar servidores. Verifique a conexão com o servidor.');
       }
+
+      setEmployees([]);
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm, filterCategory, filterSetor, filterStatus, filterSexo]);
+  }, []);
 
   useEffect(() => {
     fetchEmployees();
@@ -105,6 +159,65 @@ setEmployees(lista);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  const filterOptions = useMemo(() => {
+    const categorias = uniqueSorted(employees.map(emp => getEmployeeCategoria(emp)));
+    const setores = uniqueSorted(employees.map(emp => getEmployeeSetor(emp)));
+    const status = uniqueSorted(employees.map(emp => getEmployeeStatus(emp)));
+    const sexo = uniqueSorted(employees.map(emp => getEmployeeSexo(emp)));
+
+    return {
+      categorias,
+      setores,
+      status,
+      sexo
+    };
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    const search = normalizeText(debouncedSearchTerm);
+
+    return employees.filter((emp) => {
+      const nome = normalizeText(getEmployeeName(emp));
+      const matricula = normalizeText(getEmployeeMatricula(emp));
+      const categoria = getEmployeeCategoria(emp);
+      const setor = getEmployeeSetor(emp);
+      const status = getEmployeeStatus(emp);
+      const sexo = getEmployeeSexo(emp);
+
+      const matchesSearch =
+        !search ||
+        nome.includes(search) ||
+        matricula.includes(search);
+
+      const matchesCategory =
+        !filterCategory || categoria === filterCategory;
+
+      const matchesSetor =
+        !filterSetor || setor === filterSetor;
+
+      const matchesStatus =
+        !filterStatus || status === filterStatus;
+
+      const matchesSexo =
+        !filterSexo || sexo === filterSexo;
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesSetor &&
+        matchesStatus &&
+        matchesSexo
+      );
+    });
+  }, [
+    employees,
+    debouncedSearchTerm,
+    filterCategory,
+    filterSetor,
+    filterStatus,
+    filterSexo
+  ]);
 
   const handleAddEmployee = () => {
     setEditingEmployee(null);
@@ -122,9 +235,9 @@ setEmployees(lista);
       setIsLoading(true);
       await servidoresService.excluir(id);
       setSuccessMessage('Servidor excluído com sucesso!');
-      fetchEmployees();
+      await fetchEmployees();
     } catch (err: any) {
-      setError(err.message || 'Erro ao excluir servidor.');
+      setError(err?.message || 'Erro ao excluir servidor.');
     } finally {
       setIsLoading(false);
     }
@@ -133,8 +246,9 @@ setEmployees(lista);
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
     const dados = {
-      nome: formData.get('nomeCompleto') as string, // Mantido para compatibilidade
+      nome: formData.get('nomeCompleto') as string,
       nomeCompleto: formData.get('nomeCompleto') as string,
       matricula: formData.get('matricula') as string,
       cpf: formData.get('cpf') as string,
@@ -158,11 +272,12 @@ setEmployees(lista);
       turno: formData.get('turno') as string,
       status: formData.get('status') as StatusServidor,
       observacao: formData.get('observacao') as string,
-      aniversario: formData.get('aniversario') as string || null,
+      aniversario: (formData.get('aniversario') as string) || null,
     };
 
     try {
       setIsLoading(true);
+
       if (editingEmployee) {
         await servidoresService.editar(editingEmployee.id, dados);
         setSuccessMessage('Servidor atualizado com sucesso!');
@@ -170,10 +285,11 @@ setEmployees(lista);
         await servidoresService.adicionar(dados);
         setSuccessMessage('Servidor cadastrado com sucesso!');
       }
+
       setIsModalOpen(false);
-      fetchEmployees();
+      await fetchEmployees();
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar servidor.');
+      setError(err?.message || 'Erro ao salvar servidor.');
     } finally {
       setIsLoading(false);
     }
@@ -182,66 +298,79 @@ setEmployees(lista);
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <button 
+        <div className="flex items-center gap-4 w-full sm:w-auto flex-wrap">
+          <button
             onClick={() => fetchEmployees()}
             className="p-2.5 bg-slate-800 border border-border-dark rounded-xl text-slate-400 hover:text-white transition-all"
             title="Recarregar lista"
           >
             <motion.div
               animate={isLoading ? { rotate: 360 } : {}}
-              transition={isLoading ? { repeat: Infinity, duration: 1, ease: "linear" } : {}}
+              transition={isLoading ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
             >
               <MoreHorizontal size={18} />
             </motion.div>
           </button>
+
           <div className="relative flex-1 sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-            <input 
-              type="text" 
-              placeholder="Nome ou matrícula..." 
+            <input
+              type="text"
+              placeholder="Nome ou matrícula..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-card-dark border border-border-dark rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none transition-all"
             />
           </div>
-          <select 
+
+          <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
             className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden lg:block"
           >
             <option value="">Todas Categorias</option>
-            {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            {filterOptions.categorias.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
-          <select 
+
+          <select
             value={filterSetor}
             onChange={(e) => setFilterSetor(e.target.value)}
             className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden xl:block"
           >
             <option value="">Todos Setores</option>
-            {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
+            {filterOptions.setores.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
-          <select 
+
+          <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden xl:block"
           >
             <option value="">Todos Status</option>
-            <option value="ATIVO">ATIVO</option>
-            <option value="INATIVO">INATIVO</option>
+            {filterOptions.status.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
-          <select 
+
+          <select
             value={filterSexo}
             onChange={(e) => setFilterSexo(e.target.value)}
             className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden xl:block"
           >
             <option value="">Todos Sexos</option>
-            <option value="M">MASCULINO</option>
-            <option value="F">FEMININO</option>
-            <option value="OUTRO">OUTRO</option>
+            {filterOptions.sexo.map((s) => (
+              <option key={s} value={s}>
+                {s === 'M' ? 'MASCULINO' : s === 'F' ? 'FEMININO' : s === 'OUTRO' ? 'OUTRO' : s}
+              </option>
+            ))}
           </select>
         </div>
-        <button 
+
+        <button
           onClick={handleAddEmployee}
           className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-primary/20 transition-all w-full sm:w-auto justify-center"
         >
@@ -252,7 +381,7 @@ setEmployees(lista);
 
       <AnimatePresence>
         {(error || loadTimeout) && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -262,7 +391,7 @@ setEmployees(lista);
               <X size={18} className="cursor-pointer" onClick={() => { setError(null); setLoadTimeout(false); }} />
               <span>{error}</span>
             </div>
-            <button 
+            <button
               onClick={() => fetchEmployees()}
               className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-1.5 rounded-lg font-bold text-xs transition-all"
             >
@@ -270,8 +399,9 @@ setEmployees(lista);
             </button>
           </motion.div>
         )}
+
         {successMessage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -289,6 +419,7 @@ setEmployees(lista);
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -306,73 +437,117 @@ setEmployees(lista);
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-border-dark">
-              {employees.length === 0 && !isLoading ? (
+              {filteredEmployees.length === 0 && !isLoading ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
-                    Nenhum servidor encontrado com os filtros selecionados.
+                  <td colSpan={11} className="px-6 py-12 text-center text-slate-500">
+                    Nenhum servidor encontrado com os filtros informados.
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-primary border border-primary/20 text-xs shrink-0">
-                          {emp.nomeCompleto.charAt(0)}
+                filteredEmployees.map((emp) => {
+                  const safeName = getEmployeeName(emp);
+                  const safeInitial = safeName.charAt(0).toUpperCase() || '?';
+                  const safeSexo = getEmployeeSexo(emp);
+
+                  return (
+                    <tr key={emp.id} className="hover:bg-slate-800/30 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-primary border border-primary/20 text-xs shrink-0">
+                            {safeInitial}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white truncate" title={safeName}>
+                              {safeName}
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-mono">
+                              {getEmployeeMatricula(emp) || '-'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white truncate" title={emp.nomeCompleto}>{emp.nomeCompleto}</p>
-                          <p className="text-[10px] text-slate-500 font-mono">{emp.matricula}</p>
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-slate-300 font-mono whitespace-nowrap">
+                        {asString(emp.cpf, '-')}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-slate-400">
+                        {safeSexo === 'M' ? 'M' : safeSexo === 'F' ? 'F' : safeSexo === 'OUTRO' ? 'O' : safeSexo}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-slate-400 font-mono">
+                        {emp.aniversario
+                          ? new Date(emp.aniversario).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit'
+                            })
+                          : '-'}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-slate-400 truncate max-w-[180px]" title={asString(emp.email)}>
+                          {asString(emp.email, '-')}
+                        </p>
+                      </td>
+
+                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
+                        {getCategoryBadge(getEmployeeCategoria(emp))}
+                      </td>
+
+                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
+                        {getEmployeeSetor(emp)}
+                      </td>
+
+                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
+                        {asString(emp.funcao, '-')}
+                      </td>
+
+                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
+                        {asString(emp.cargaHoraria, '-')}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {getStatusBadge(getEmployeeStatus(emp))}
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleEditEmployee(emp)}
+                            className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            title="Editar"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEmployee(emp.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all"
+                            title="Excluir"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-300 font-mono whitespace-nowrap">{emp.cpf}</td>
-                    <td className="px-6 py-4 text-sm text-slate-400">{emp.sexo === 'M' ? 'M' : emp.sexo === 'F' ? 'F' : 'O'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-400 font-mono">
-                      {emp.aniversario ? new Date(emp.aniversario).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-slate-400 truncate max-w-[180px]" title={emp.email}>{emp.email}</p>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">{emp.categoria}</td>
-                    <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">{emp.setor}</td>
-                    <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">{emp.funcao}</td>
-                    <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">{emp.cargaHoraria}</td>
-                    <td className="px-6 py-4">{getStatusBadge(emp.status)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button 
-                          onClick={() => handleEditEmployee(emp)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                          title="Editar"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteEmployee(emp.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all"
-                          title="Excluir"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-        
+
         <div className="px-6 py-4 bg-slate-800/30 border-t border-border-dark flex items-center justify-between">
-          <p className="text-xs text-slate-500">Mostrando {employees.length} servidores</p>
+          <p className="text-xs text-slate-500">
+            Mostrando {filteredEmployees.length} servidor(es)
+          </p>
           <div className="flex items-center gap-2">
             <button className="p-2 text-slate-500 hover:text-white disabled:opacity-50" disabled>
               <ChevronLeft size={20} />
             </button>
             <button className="px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">1</button>
-            <button className="p-2 text-slate-500 hover:text-white">
+            <button className="p-2 text-slate-500 hover:text-white" disabled>
               <ChevronRight size={20} />
             </button>
           </div>
@@ -382,14 +557,14 @@ setEmployees(lista);
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -403,10 +578,9 @@ setEmployees(lista);
                   <X size={24} />
                 </button>
               </div>
-              
+
               <div className="p-6 max-h-[75vh] overflow-y-auto scrollbar-hide">
                 <form id="servidor-form" onSubmit={handleSave} className="space-y-8">
-                  {/* Dados Pessoais */}
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Dados Pessoais</h3>
@@ -418,11 +592,11 @@ setEmployees(lista);
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Nascimento</label>
-                        <input name="dataNascimento" type="date" defaultValue={editingEmployee?.dataNascimento} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input name="dataNascimento" type="date" defaultValue={editingEmployee?.dataNascimento || ''} required className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Sexo</label>
-                        <select name="sexo" defaultValue={editingEmployee?.sexo} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select name="sexo" defaultValue={editingEmployee?.sexo || 'M'} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
                           <option value="M">MASCULINO</option>
                           <option value="F">FEMININO</option>
                           <option value="OUTRO">OUTRO</option>
@@ -435,7 +609,6 @@ setEmployees(lista);
                     </div>
                   </section>
 
-                  {/* Documentação */}
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Documentação</h3>
@@ -460,7 +633,6 @@ setEmployees(lista);
                     </div>
                   </section>
 
-                  {/* Contato */}
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Contato</h3>
@@ -477,7 +649,6 @@ setEmployees(lista);
                     </div>
                   </section>
 
-                  {/* Dados Funcionais */}
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Dados Funcionais</h3>
@@ -489,13 +660,13 @@ setEmployees(lista);
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Categoria</label>
-                        <select name="categoria" defaultValue={editingEmployee?.categoria} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select name="categoria" defaultValue={editingEmployee?.categoria || CATEGORIAS[0]} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
                           {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Setor</label>
-                        <select name="setor" defaultValue={editingEmployee?.setor} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select name="setor" defaultValue={editingEmployee?.setor || SETORES[0]} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
                           {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
@@ -537,11 +708,11 @@ setEmployees(lista);
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Início Exercício</label>
-                        <input name="inicioExercicio" type="date" defaultValue={editingEmployee?.inicioExercicio} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
+                        <input name="inicioExercicio" type="date" defaultValue={editingEmployee?.inicioExercicio || ''} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Status</label>
-                        <select name="status" defaultValue={editingEmployee?.status} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
+                        <select name="status" defaultValue={editingEmployee?.status || 'ATIVO'} className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary">
                           <option value="ATIVO">ATIVO</option>
                           <option value="INATIVO">INATIVO</option>
                         </select>
@@ -549,7 +720,6 @@ setEmployees(lista);
                     </div>
                   </section>
 
-                  {/* Observações */}
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Observações</h3>
@@ -561,16 +731,16 @@ setEmployees(lista);
                   </section>
                 </form>
               </div>
-              
+
               <div className="p-6 border-t border-border-dark flex justify-end gap-3 bg-slate-800/20">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   form="servidor-form"
                   type="submit"
                   className="bg-primary hover:bg-primary-hover text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all"
