@@ -111,3 +111,8 @@ export interface UsuarioAdmin {
   role: 'admin' | 'editor' | 'viewer';
   created_at: string;
 }
+
+export interface OpcaoFiltro {
+  value: string;
+  label: string;
+}
