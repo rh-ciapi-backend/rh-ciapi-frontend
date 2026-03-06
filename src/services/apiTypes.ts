@@ -1,18 +1,26 @@
-import { Categoria, StatusServidor } from '../types';
+import { Categoria, Sexo, StatusServidor } from '../types';
 
 export interface ApiResponse<T> {
-  ok: boolean;
+  ok?: boolean;
   data?: T;
+  items?: T;
+  rows?: T;
+  results?: T;
+  list?: T;
+  payload?: T;
+  result?: T;
   erro?: string;
+  error?: string;
+  message?: string;
 }
 
 export interface ListarServidoresParams {
   nome?: string;
-  busca?: string; // Mantido para compatibilidade com o código atual
+  busca?: string;
   categoria?: Categoria;
   setor?: string;
   status?: StatusServidor;
-  sexo?: string;
+  sexo?: Sexo | '';
 }
 
 export interface ListarFeriasParams {
