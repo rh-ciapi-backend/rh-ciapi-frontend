@@ -176,6 +176,7 @@ export const ServidoresPage = ({
   const [selectedEmployee, setSelectedEmployee] = useState<Servidor | null>(null);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [pendingEmployeeData, setPendingEmployeeData] = useState<PendingEmployeePayload | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -300,14 +301,32 @@ export const ServidoresPage = ({
     filterSexo
   ]);
 
+  const resetConfirmSaveState = () => {
+    setIsConfirmSaveOpen(false);
+    setPendingEmployeeData(null);
+    setIsSaving(false);
+  };
+
   const closeDetailsModal = () => {
     setIsDetailsModalOpen(false);
     setSelectedEmployee(null);
   };
 
+  const closeEditModal = () => {
+    setIsModalOpen(false);
+    setEditingEmployee(null);
+    resetConfirmSaveState();
+  };
+
   const closeConfirmSaveModal = () => {
+    if (isSaving) return;
     setIsConfirmSaveOpen(false);
     setPendingEmployeeData(null);
+  };
+
+  const resetAllModalStates = () => {
+    closeDetailsModal();
+    closeEditModal();
   };
 
   const handleOpenDetails = (emp: Servidor) => {
@@ -318,11 +337,13 @@ export const ServidoresPage = ({
   const handleAddEmployee = () => {
     setEditingEmployee(null);
     setIsModalOpen(true);
+    resetConfirmSaveState();
   };
 
   const handleEditEmployee = (emp: Servidor) => {
     setEditingEmployee(emp);
     setIsModalOpen(true);
+    resetConfirmSaveState();
   };
 
   const handleEditFromDetails = () => {
@@ -330,6 +351,7 @@ export const ServidoresPage = ({
     setEditingEmployee(selectedEmployee);
     setIsDetailsModalOpen(false);
     setIsModalOpen(true);
+    resetConfirmSaveState();
   };
 
   const handleDeleteEmployee = async (id: string) => {
@@ -404,9 +426,10 @@ export const ServidoresPage = ({
   };
 
   const confirmSaveEmployee = async () => {
-    if (!pendingEmployeeData) return;
+    if (!pendingEmployeeData || isSaving) return;
 
     try {
+      setIsSaving(true);
       setIsLoading(true);
 
       if (editingEmployee) {
@@ -417,14 +440,14 @@ export const ServidoresPage = ({
         setSuccessMessage('Servidor cadastrado com sucesso!');
       }
 
-      setIsConfirmSaveOpen(false);
-      setPendingEmployeeData(null);
+      resetConfirmSaveState();
       setIsModalOpen(false);
       setEditingEmployee(null);
       await fetchEmployees();
     } catch (err: any) {
       setError(err?.message || 'Erro ao salvar servidor.');
     } finally {
+      setIsSaving(false);
       setIsLoading(false);
     }
   };
@@ -665,7 +688,7 @@ export const ServidoresPage = ({
 
       <AnimatePresence>
         {isDetailsModalOpen && detailEmployee && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -678,7 +701,7 @@ export const ServidoresPage = ({
               initial={{ scale: 0.96, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 20 }}
-              className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-dark bg-card-dark shadow-2xl"
+              className="relative z-[61] w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-dark bg-card-dark shadow-2xl"
             >
               <div className="border-b border-border-dark bg-slate-900/60 px-6 py-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -815,15 +838,13 @@ export const ServidoresPage = ({
 
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => {
-                setIsModalOpen(false);
-                setEditingEmployee(null);
-                closeConfirmSaveModal();
+                if (!isConfirmSaveOpen) closeEditModal();
               }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
@@ -831,18 +852,14 @@ export const ServidoresPage = ({
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-card-dark border border-border-dark rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden"
+              className="relative z-[71] bg-card-dark border border-border-dark rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden"
             >
               <div className="p-6 border-b border-border-dark flex justify-between items-center">
                 <h2 className="text-xl font-bold text-white">
                   {editingEmployee ? 'Editar Servidor' : 'Novo Servidor'}
                 </h2>
                 <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingEmployee(null);
-                    closeConfirmSaveModal();
-                  }}
+                  onClick={() => closeEditModal()}
                   className="text-slate-500 hover:text-white"
                 >
                   <X size={24} />
@@ -1123,11 +1140,7 @@ export const ServidoresPage = ({
               <div className="p-6 border-t border-border-dark flex justify-end gap-3 bg-slate-800/20">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingEmployee(null);
-                    closeConfirmSaveModal();
-                  }}
+                  onClick={closeEditModal}
                   className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors"
                 >
                   Cancelar
@@ -1147,7 +1160,7 @@ export const ServidoresPage = ({
 
       <AnimatePresence>
         {isConfirmSaveOpen && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 pointer-events-auto">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1160,7 +1173,8 @@ export const ServidoresPage = ({
               initial={{ scale: 0.92, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md rounded-3xl border border-border-dark bg-card-dark shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-[91] w-full max-w-md rounded-3xl border border-border-dark bg-card-dark shadow-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-border-dark">
                 <div className="flex items-start gap-4">
@@ -1183,16 +1197,18 @@ export const ServidoresPage = ({
                 <button
                   type="button"
                   onClick={closeConfirmSaveModal}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-50"
                 >
                   Não, cancelar
                 </button>
                 <button
                   type="button"
                   onClick={confirmSaveEmployee}
-                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-lg shadow-primary/20 transition-all"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
                 >
-                  Sim, salvar
+                  {isSaving ? 'Salvando...' : 'Sim, salvar'}
                 </button>
               </div>
             </motion.div>
