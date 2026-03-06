@@ -56,29 +56,6 @@ const uniqueSorted = (values: string[]) =>
     a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
   );
 
-const getStatusBadge = (status: StatusServidor | string) => {
-  const safeStatus = asString(status, FALLBACK_STATUS) as StatusServidor;
-  const colors =
-    safeStatus === 'ATIVO'
-      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-      : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-
-  return (
-    <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${colors}`}>
-      {safeStatus}
-    </span>
-  );
-};
-
-const getCategoryBadge = (cat: Categoria | string) => {
-  const safeCat = asString(cat, FALLBACK_CATEGORIA);
-  return (
-    <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
-      {safeCat}
-    </span>
-  );
-};
-
 export const ServidoresPage = ({
   initialAction,
   onActionHandled
@@ -423,110 +400,79 @@ export const ServidoresPage = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-800/50 border-b border-border-dark">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider min-w-[220px]">Servidor</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">CPF</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Sexo</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Aniversário</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider min-w-[180px]">Email</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Categoria</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Setor</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Função</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Carga</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Ações</th>
+              <tr className="bg-slate-800/40 border-b border-border-dark">
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider min-w-[320px]">
+                  Servidor
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right w-[120px]">
+                  Ações
+                </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-border-dark">
               {filteredEmployees.length === 0 && !isLoading ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={2} className="px-6 py-12 text-center text-slate-500">
                     Nenhum servidor encontrado com os filtros informados.
                   </td>
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => {
                   const safeName = getEmployeeName(emp);
-                  const safeInitial = safeName.charAt(0).toUpperCase() || '?';
-                  const safeSexo = getEmployeeSexo(emp);
+                  const safeInitials = safeName
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map(part => part.charAt(0).toUpperCase())
+                    .join('') || '?';
+
+                  const safeMatricula = getEmployeeMatricula(emp);
 
                   return (
-                    <tr key={emp.id} className="hover:bg-slate-800/30 transition-colors group">
+                    <tr
+                      key={emp.id}
+                      className="group transition-colors hover:bg-slate-800/25"
+                    >
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-primary border border-primary/20 text-xs shrink-0">
-                            {safeInitial}
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-slate-700/80 flex items-center justify-center font-bold text-primary border border-primary/20 text-xs shrink-0 shadow-inner">
+                            {safeInitials}
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white truncate" title={safeName}>
-                              {safeName}
-                            </p>
-                            <p className="text-[10px] text-slate-500 font-mono">
-                              {getEmployeeMatricula(emp) || '-'}
-                            </p>
+
+                          <div className="min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEditEmployee(emp)}
+                              className="max-w-full text-left group/name rounded-lg outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary/60"
+                              title={`Abrir servidor ${safeName}`}
+                            >
+                              <span className="block text-sm font-semibold text-white truncate transition-colors group-hover/name:text-primary">
+                                {safeName}
+                              </span>
+                              <span className="mt-1 block text-[11px] text-slate-500 font-mono truncate">
+                                {safeMatricula ? `Matrícula: ${safeMatricula}` : 'Matrícula não informada'}
+                              </span>
+                            </button>
                           </div>
                         </div>
-                      </td>
-
-                      <td className="px-6 py-4 text-sm text-slate-300 font-mono whitespace-nowrap">
-                        {asString(emp.cpf, '-')}
-                      </td>
-
-                      <td className="px-6 py-4 text-sm text-slate-400">
-                        {safeSexo === 'M' ? 'M' : safeSexo === 'F' ? 'F' : safeSexo === 'OUTRO' ? 'O' : safeSexo}
-                      </td>
-
-                      <td className="px-6 py-4 text-sm text-slate-400 font-mono">
-                        {emp.aniversario
-                          ? new Date(emp.aniversario).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit'
-                            })
-                          : '-'}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-slate-400 truncate max-w-[180px]" title={asString(emp.email)}>
-                          {asString(emp.email, '-')}
-                        </p>
-                      </td>
-
-                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
-                        {getCategoryBadge(getEmployeeCategoria(emp))}
-                      </td>
-
-                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
-                        {getEmployeeSetor(emp)}
-                      </td>
-
-                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
-                        {asString(emp.funcao, '-')}
-                      </td>
-
-                      <td className="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">
-                        {asString(emp.cargaHoraria, '-')}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {getStatusBadge(getEmployeeStatus(emp))}
                       </td>
 
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleEditEmployee(emp)}
-                            className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
                             title="Editar"
                           >
-                            <Edit2 size={14} />
+                            <Edit2 size={15} />
                           </button>
                           <button
                             onClick={() => handleDeleteEmployee(emp.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all"
+                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all"
                             title="Excluir"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
