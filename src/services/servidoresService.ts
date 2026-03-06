@@ -1,4 +1,4 @@
-import { Servidor, Categoria, Sexo, StatusServidor } from '../types';
+import { Servidor, Categoria, Sexo, StatusServidor, OpcaoFiltro } from '../types';
 import { MOCK_SERVIDORES } from '../data/servidores';
 import { API_CONFIG } from '../config/api';
 import { supabase } from '../lib/supabaseClient';
@@ -19,6 +19,11 @@ const CATEGORIAS_VALIDAS: readonly Categoria[] = [
 
 const SEXOS_VALIDOS: readonly Sexo[] = ['M', 'F', 'OUTRO'] as const;
 const STATUS_VALIDOS: readonly StatusServidor[] = ['ATIVO', 'INATIVO'] as const;
+
+const FALLBACK_SEXO = 'NÃO INFORMADO';
+const FALLBACK_SETOR = 'NÃO INFORMADO';
+const FALLBACK_CATEGORIA = 'NÃO INFORMADO';
+const FALLBACK_STATUS = 'ATIVO';
 
 const isObject = (value: unknown): value is Record<string, any> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -224,6 +229,26 @@ const normalizeServidores = (resp: any): Servidor[] => {
   return arr.map(normalizeServidor);
 };
 
+const normalizeTextForFilter = (value: unknown, fallback = '') =>
+  asString(value, fallback).trim();
+
+const uniqueSorted = (values: string[]) =>
+  [...new Set(values.map((v) => normalizeTextForFilter(v)).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+  );
+
+const getCategoriaFiltro = (servidor: Servidor) =>
+  normalizeTextForFilter(servidor.categoria, FALLBACK_CATEGORIA);
+
+const getSetorFiltro = (servidor: Servidor) =>
+  normalizeTextForFilter(servidor.setor, FALLBACK_SETOR);
+
+const getStatusFiltro = (servidor: Servidor) =>
+  normalizeTextForFilter(servidor.status, FALLBACK_STATUS);
+
+const getSexoFiltro = (servidor: Servidor) =>
+  normalizeTextForFilter(servidor.sexo, FALLBACK_SEXO);
+
 export const apiServidores = {
   listar: async (filtros?: ListarServidoresParams): Promise<Servidor[]> => {
     if (API_CONFIG.useMock) {
@@ -248,19 +273,27 @@ export const apiServidores = {
       }
 
       if (filtros?.categoria) {
-        result = result.filter((s: any) => normalizeServidor(s).categoria === filtros.categoria);
+        result = result.filter(
+          (s: any) => getCategoriaFiltro(normalizeServidor(s)) === filtros.categoria
+        );
       }
 
       if (filtros?.setor) {
-        result = result.filter((s: any) => normalizeServidor(s).setor === filtros.setor);
+        result = result.filter(
+          (s: any) => getSetorFiltro(normalizeServidor(s)) === filtros.setor
+        );
       }
 
       if (filtros?.status) {
-        result = result.filter((s: any) => normalizeServidor(s).status === filtros.status);
+        result = result.filter(
+          (s: any) => getStatusFiltro(normalizeServidor(s)) === filtros.status
+        );
       }
 
       if (filtros?.sexo) {
-        result = result.filter((s: any) => normalizeServidor(s).sexo === filtros.sexo);
+        result = result.filter(
+          (s: any) => getSexoFiltro(normalizeServidor(s)) === filtros.sexo
+        );
       }
 
       return result.map(normalizeServidor);
@@ -300,10 +333,21 @@ export const apiServidores = {
         query = query.ilike('nome_completo', `%${filtros.nome}%`);
       }
 
-      if (filtros?.categoria) query = query.eq('categoria', filtros.categoria);
-      if (filtros?.setor) query = query.eq('setor', filtros.setor);
-      if (filtros?.status) query = query.eq('status', filtros.status);
-      if (filtros?.sexo) query = query.eq('sexo', filtros.sexo);
+      if (filtros?.categoria && filtros.categoria !== FALLBACK_CATEGORIA) {
+        query = query.eq('categoria', filtros.categoria);
+      }
+
+      if (filtros?.setor && filtros.setor !== FALLBACK_SETOR) {
+        query = query.eq('setor', filtros.setor);
+      }
+
+      if (filtros?.status && filtros.status !== FALLBACK_STATUS) {
+        query = query.eq('status', filtros.status);
+      }
+
+      if (filtros?.sexo && filtros.sexo !== FALLBACK_SEXO) {
+        query = query.eq('sexo', filtros.sexo);
+      }
 
       const { data, error: sbError } = await query.order('nome_completo');
 
@@ -314,6 +358,37 @@ export const apiServidores = {
 
       return Array.isArray(data) ? data.map(mapFromDB) : [];
     }
+  },
+
+  listarFiltrosDisponiveis: async (): Promise<{
+    categorias: OpcaoFiltro[];
+    setores: OpcaoFiltro[];
+    status: OpcaoFiltro[];
+    sexo: OpcaoFiltro[];
+  }> => {
+    const servidores = await apiServidores.listar();
+
+    const categorias = uniqueSorted(servidores.map(getCategoriaFiltro)).map((value) => ({
+      value,
+      label: value,
+    }));
+
+    const setores = uniqueSorted(servidores.map(getSetorFiltro)).map((value) => ({
+      value,
+      label: value,
+    }));
+
+    const status = uniqueSorted(servidores.map(getStatusFiltro)).map((value) => ({
+      value,
+      label: value,
+    }));
+
+    const sexo = uniqueSorted(servidores.map(getSexoFiltro)).map((value) => ({
+      value,
+      label: value,
+    }));
+
+    return { categorias, setores, status, sexo };
   },
 
   obterPorId: async (id: string): Promise<Servidor> => {
