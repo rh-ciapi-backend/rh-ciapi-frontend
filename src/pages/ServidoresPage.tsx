@@ -79,6 +79,43 @@ const displayValue = (value: unknown, fallback = '-') => {
   return safe || fallback;
 };
 
+const formatCsvDate = (value: string | null | undefined) => {
+  if (!value) return '';
+
+  const trimmed = asString(value);
+  if (!trimmed) return '';
+
+  const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDateMatch) {
+    const [, year, month, day] = isoDateMatch;
+    return `${day}/${month}/${year}`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return trimmed;
+
+  return parsed.toLocaleDateString('pt-BR');
+};
+
+const escapeCsvValue = (value: unknown) => {
+  const safe = value === null || value === undefined ? '' : String(value);
+  return `"${safe.replace(/"/g, '""')}"`;
+};
+
+const downloadCsvFile = (filename: string, content: string) => {
+  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 const getInitials = (name: string) =>
   name
     .split(' ')
@@ -128,102 +165,6 @@ const DetailItem = ({
     </div>
   </div>
 );
-
-
-
-type CsvColumn = {
-  key: keyof Servidor;
-  label: string;
-};
-
-const CSV_COLUMNS: CsvColumn[] = [
-  { key: 'nomeCompleto', label: 'Nome Completo' },
-  { key: 'matricula', label: 'Matrícula' },
-  { key: 'dataNascimento', label: 'Data de Nascimento' },
-  { key: 'sexo', label: 'Sexo' },
-  { key: 'cpf', label: 'CPF' },
-  { key: 'rgNumero', label: 'RG Número' },
-  { key: 'rgOrgaoEmissor', label: 'Órgão Emissor' },
-  { key: 'rgUf', label: 'RG UF' },
-  { key: 'email', label: 'E-mail' },
-  { key: 'escolaridade', label: 'Escolaridade' },
-  { key: 'profissao', label: 'Profissão' },
-  { key: 'vinculo', label: 'Vínculo' },
-  { key: 'funcao', label: 'Função' },
-  { key: 'cargaHoraria', label: 'Carga Horária' },
-  { key: 'inicioExercicio', label: 'Início Exercício' },
-  { key: 'categoria', label: 'Categoria' },
-  { key: 'setor', label: 'Setor' },
-  { key: 'cargo', label: 'Cargo' },
-  { key: 'telefone', label: 'Telefone' },
-  { key: 'lotacaoInterna', label: 'Lotação Interna' },
-  { key: 'turno', label: 'Turno' },
-  { key: 'status', label: 'Status' },
-  { key: 'observacao', label: 'Observação' }
-];
-
-const formatCsvDate = (value: string | null | undefined) => {
-  if (!value) return '';
-  const trimmed = asString(value);
-  if (!trimmed) return '';
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const [year, month, day] = trimmed.split('-');
-    return `${day}/${month}/${year}`;
-  }
-
-  const date = new Date(trimmed);
-  if (Number.isNaN(date.getTime())) return trimmed;
-  return date.toLocaleDateString('pt-BR');
-};
-
-const formatCsvValue = (key: keyof Servidor, value: unknown) => {
-  if (value === null || value === undefined) return '';
-
-  if (key === 'dataNascimento' || key === 'inicioExercicio') {
-    return formatCsvDate(value as string | null | undefined);
-  }
-
-  if (key === 'sexo') {
-    const sexo = asString(value);
-    return sexo === 'M'
-      ? 'MASCULINO'
-      : sexo === 'F'
-        ? 'FEMININO'
-        : sexo === 'OUTRO'
-          ? 'OUTRO'
-          : sexo;
-  }
-
-  return asString(value);
-};
-
-const escapeCsvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-
-const buildServidoresCsv = (rows: Servidor[]) => {
-  const header = CSV_COLUMNS.map((column) => escapeCsvCell(column.label)).join(';');
-  const body = rows.map((row) =>
-    CSV_COLUMNS.map((column) => {
-      const rawValue = formatCsvValue(column.key, row[column.key]);
-      return escapeCsvCell(rawValue);
-    }).join(';')
-  );
-
-  return [header, ...body].join('
-');
-};
-
-const downloadCsvFile = (filename: string, content: string) => {
-  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 
 type PendingEmployeePayload = {
   nome: string;
@@ -398,21 +339,71 @@ export const ServidoresPage = ({
     filterSexo
   ]);
 
-
-
   const handleExportCsv = useCallback(() => {
-    const csv = buildServidoresCsv(filteredEmployees);
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+    const rows = Array.isArray(filteredEmployees) ? filteredEmployees : [];
 
-    downloadCsvFile(`servidores_${year}-${month}-${day}.csv`, csv);
-    setSuccessMessage(
-      filteredEmployees.length > 0
-        ? `CSV exportado com ${filteredEmployees.length} servidor(es).`
-        : 'CSV exportado sem registros, conforme os filtros atuais.'
-    );
+    const headers = [
+      'Nome Completo',
+      'Matrícula',
+      'Data de Nascimento',
+      'Sexo',
+      'CPF',
+      'RG Número',
+      'RG Órgão Emissor',
+      'RG UF',
+      'Email',
+      'Escolaridade',
+      'Profissão',
+      'Vínculo',
+      'Função',
+      'Carga Horária',
+      'Início Exercício',
+      'Categoria',
+      'Setor',
+      'Cargo',
+      'Telefone',
+      'Lotação Interna',
+      'Turno',
+      'Status',
+      'Observação'
+    ];
+
+    const csvRows = rows.map((emp) => [
+      asString(emp.nomeCompleto || emp.nome),
+      asString(emp.matricula),
+      formatCsvDate(emp.dataNascimento),
+      asString(emp.sexo),
+      asString(emp.cpf),
+      asString(emp.rgNumero),
+      asString(emp.rgOrgaoEmissor),
+      asString(emp.rgUf),
+      asString(emp.email),
+      asString(emp.escolaridade),
+      asString(emp.profissao),
+      asString(emp.vinculo),
+      asString(emp.funcao),
+      asString(emp.cargaHoraria),
+      formatCsvDate(emp.inicioExercicio),
+      asString(emp.categoria),
+      asString(emp.setor),
+      asString(emp.cargo),
+      asString(emp.telefone),
+      asString(emp.lotacaoInterna),
+      asString(emp.turno),
+      asString(emp.status),
+      asString(emp.observacao)
+    ]);
+
+    const csvContent = [headers, ...csvRows]
+      .map((row) => row.map(escapeCsvValue).join(';'))
+      .join('\r\n');
+
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+
+    downloadCsvFile(`servidores_${yyyy}-${mm}-${dd}.csv`, csvContent);
   }, [filteredEmployees]);
 
   const resetConfirmSaveState = () => {
@@ -658,7 +649,7 @@ export const ServidoresPage = ({
             type="button"
             onClick={handleExportCsv}
             className="bg-slate-800 hover:bg-slate-700 border border-border-dark text-slate-100 px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg transition-all w-full sm:w-auto justify-center"
-            title="Exportar servidores filtrados em CSV"
+            title="Exportar os servidores filtrados para CSV"
           >
             <Download size={18} />
             Exportar CSV
