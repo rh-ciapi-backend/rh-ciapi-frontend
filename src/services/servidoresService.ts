@@ -56,10 +56,10 @@ const asStatus = (value: unknown): StatusServidor => {
 const getRowId = (data: any): string =>
   asString(
     data?.cpf ??
-      data?.servidor ??
-      data?.id ??
-      data?.servidor_id ??
-      data?.uuid
+    data?.servidor ??
+    data?.id ??
+    data?.servidor_id ??
+    data?.uuid
   );
 
 const emptyServidor = (): Servidor => ({
