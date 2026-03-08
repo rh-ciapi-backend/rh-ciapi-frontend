@@ -339,8 +339,16 @@ export const ServidoresPage = ({
     filterSexo
   ]);
 
+  const displayedEmployees = useMemo(() => {
+    return [...filteredEmployees].sort((a, b) =>
+      getEmployeeName(a).localeCompare(getEmployeeName(b), 'pt-BR', {
+        sensitivity: 'base'
+      })
+    );
+  }, [filteredEmployees]);
+
   const handleExportCsv = useCallback(() => {
-    const rows = Array.isArray(filteredEmployees) ? filteredEmployees : [];
+    const rows = Array.isArray(displayedEmployees) ? displayedEmployees : [];
 
     const headers = [
       'Nome Completo',
@@ -404,7 +412,7 @@ export const ServidoresPage = ({
     const dd = String(today.getDate()).padStart(2, '0');
 
     downloadCsvFile(`servidores_${yyyy}-${mm}-${dd}.csv`, csvContent);
-  }, [filteredEmployees]);
+  }, [displayedEmployees]);
 
   const resetConfirmSaveState = () => {
     setIsConfirmSaveOpen(false);
@@ -720,17 +728,17 @@ export const ServidoresPage = ({
             </thead>
 
             <tbody className="divide-y divide-border-dark">
-              {filteredEmployees.length === 0 && !isLoading ? (
+              {displayedEmployees.length === 0 && !isLoading ? (
                 <tr>
                   <td colSpan={2} className="px-6 py-12 text-center text-slate-500">
                     Nenhum servidor encontrado com os filtros informados.
                   </td>
                 </tr>
               ) : (
-                filteredEmployees.map((emp) => {
+                displayedEmployees.map((emp, index) => {
                   const safeName = getEmployeeName(emp);
-                  const safeInitials = getInitials(safeName);
                   const safeMatricula = getEmployeeMatricula(emp);
+                  const displayIndex = String(index + 1).padStart(2, '0');
 
                   return (
                     <tr
@@ -739,8 +747,8 @@ export const ServidoresPage = ({
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-slate-700/80 flex items-center justify-center font-bold text-primary border border-primary/20 text-xs shrink-0 shadow-inner">
-                            {safeInitials}
+                          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs shrink-0 shadow-inner tracking-wide">
+                            {displayIndex}
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -750,10 +758,10 @@ export const ServidoresPage = ({
                               className="max-w-full text-left group/name rounded-lg outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary/60"
                               title={`Abrir detalhes de ${safeName}`}
                             >
-                              <span className="block text-sm font-semibold text-white truncate transition-colors group-hover/name:text-primary">
+                              <span className="block text-[15px] font-bold text-white truncate leading-tight tracking-[0.01em] transition-colors group-hover/name:text-primary">
                                 {safeName}
                               </span>
-                              <span className="mt-1 block text-[11px] text-slate-500 font-mono truncate">
+                              <span className="mt-1.5 block text-[11px] text-slate-500 font-mono truncate tracking-wide">
                                 {safeMatricula ? `Matrícula: ${safeMatricula}` : 'Matrícula não informada'}
                               </span>
                             </button>
@@ -789,7 +797,7 @@ export const ServidoresPage = ({
 
         <div className="px-6 py-4 bg-slate-800/30 border-t border-border-dark flex items-center justify-between">
           <p className="text-xs text-slate-500">
-            Mostrando {filteredEmployees.length} servidor(es)
+            Mostrando {displayedEmployees.length} servidor(es)
           </p>
           <div className="flex items-center gap-2">
             <button className="p-2 text-slate-500 hover:text-white disabled:opacity-50" disabled>
