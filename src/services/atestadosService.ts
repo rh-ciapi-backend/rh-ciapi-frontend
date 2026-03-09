@@ -1,22 +1,24 @@
 import { supabase } from '../lib/supabaseClient';
-import {
+import type {
   Atestado,
   AtestadoInput,
   AtestadoOperationResult,
   AtestadoUploadResult,
   FrequenciaConflict,
   FrequenciaSyncResult,
-} from '../types/atestados';
-import {
-  buildAtestadoStoragePath,
-  enumerateDates,
-  formatCpf,
-  normalizeCpf,
-  validateAtestadoFile,
-} from '../utils/atestados';
+} from '../types';
 
 const TABLE_ATESTADOS = 'atestados';
 const STORAGE_BUCKET_ATESTADOS = 'atestados';
+
+const MAX_ATESTADO_FILE_SIZE_MB = 3;
+const MAX_ATESTADO_FILE_SIZE_BYTES = MAX_ATESTADO_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_ATESTADO_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+] as const;
 
 const FREQUENCIA_TABLE_CANDIDATES = ['frequencia_ocorrencias', 'faltas'] as const;
 const FERIAS_TABLE_CANDIDATES = ['ferias'] as const;
@@ -45,6 +47,97 @@ type DbAtestadoRow = {
   considerar_dias_uteis: boolean | null;
   criado_em: string | null;
   atualizado_em: string | null;
+};
+
+const normalizeCpf = (value: string) => value.replace(/\D/g, '');
+
+const formatCpf = (value: string) => {
+  const digits = normalizeCpf(value).slice(0, 11);
+  return digits
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1-$2');
+};
+
+const slugifyFileName = (value: string) => {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9.\-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+};
+
+const buildAtestadoStoragePath = (cpf: string, fileName: string, dateBase?: string) => {
+  const baseDate = dateBase ? new Date(`${dateBase}T00:00:00`) : new Date();
+  const year = String(baseDate.getFullYear());
+  const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const cpfDigits = normalizeCpf(cpf);
+  const safeFileName = slugifyFileName(fileName);
+  const stamp = Date.now();
+  return `${year}/${month}/${cpfDigits}/${stamp}-${safeFileName}`;
+};
+
+const validateAtestadoFile = (file: File | null) => {
+  if (!file) return { valid: true as const };
+
+  const mimeValid = ALLOWED_ATESTADO_FILE_TYPES.includes(
+    file.type as (typeof ALLOWED_ATESTADO_FILE_TYPES)[number],
+  );
+  const lowerName = file.name.toLowerCase();
+  const extensionValid =
+    lowerName.endsWith('.pdf') ||
+    lowerName.endsWith('.jpg') ||
+    lowerName.endsWith('.jpeg') ||
+    lowerName.endsWith('.png');
+
+  if (!mimeValid && !extensionValid) {
+    return {
+      valid: false as const,
+      error: 'Formato inválido. Envie apenas PDF, JPG, JPEG ou PNG.',
+    };
+  }
+
+  if (file.size > MAX_ATESTADO_FILE_SIZE_BYTES) {
+    return {
+      valid: false as const,
+      error: `O arquivo excede o limite de ${MAX_ATESTADO_FILE_SIZE_MB} MB.`,
+    };
+  }
+
+  return { valid: true as const };
+};
+
+const enumerateDates = (start: string, end: string, onlyBusinessDays: boolean) => {
+  if (!start || !end) return [] as string[];
+
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return [];
+  if (endDate < startDate) return [];
+
+  const result: string[] = [];
+  const cursor = new Date(startDate);
+
+  while (cursor <= endDate) {
+    const day = cursor.getDay();
+    if (!onlyBusinessDays || (day !== 0 && day !== 6)) {
+      result.push(cursor.toISOString().slice(0, 10));
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return result;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'object' && error && 'message' in error && typeof (error as any).message === 'string') {
+    return (error as any).message;
+  }
+  return fallback;
 };
 
 const mapRowToAtestado = (row: Partial<DbAtestadoRow>): Atestado => ({
@@ -88,37 +181,13 @@ const mapInputToInsert = (input: AtestadoInput, fileMeta?: Partial<AtestadoUploa
   observacao: input.observacao?.trim() ?? '',
   status: input.status,
   arquivo_nome: fileMeta?.arquivoNome ?? input.arquivoAtualNome ?? '',
-  arquivo_url: fileMeta?.arquivoUrl ?? '',
+  arquivo_url: fileMeta?.arquivoUrl ?? input.arquivoAtualUrl ?? '',
   arquivo_path: fileMeta?.arquivoPath ?? input.arquivoAtualPath ?? '',
   arquivo_tipo: fileMeta?.arquivoTipo ?? input.arquivoAtualTipo ?? '',
   arquivo_tamanho: fileMeta?.arquivoTamanho ?? input.arquivoAtualTamanho ?? 0,
   lancar_na_frequencia: input.lancarNaFrequencia,
   considerar_dias_uteis: input.considerarDiasUteis,
 });
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'object' && error && 'message' in error && typeof (error as any).message === 'string') {
-    return (error as any).message;
-  }
-  return fallback;
-};
-
-const trySelectFromTable = async (table: string, filters: Record<string, unknown>) => {
-  let query = supabase.from(table).select('*');
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      query = query.eq(key, value as never);
-    }
-  });
-
-  return query;
-};
-
-const tryDeleteFromTable = async (table: string, column: string, value: string) => {
-  return supabase.from(table).delete().eq(column, value);
-};
 
 const queryFrequencyConflicts = async (
   cpf: string,
@@ -151,9 +220,11 @@ const queryFrequencyConflicts = async (
     for (const table of FREQUENCIA_TABLE_CANDIDATES) {
       try {
         const { data, error } = await supabase.from(table).select('*').eq('cpf', cpfDigits).eq('data', date);
+
         if (!error && Array.isArray(data) && data.length) {
           data.forEach((item: any) => {
-            if (item?.tipo && String(item.tipo).toUpperCase() !== 'ATESTADO') {
+            const tipo = String(item?.tipo ?? '').toUpperCase();
+            if (tipo && tipo !== 'ATESTADO') {
               conflicts.push({
                 data: date,
                 origem: table === 'faltas' ? 'FALTAS' : 'FREQUENCIA',
@@ -194,22 +265,28 @@ const queryFrequencyConflicts = async (
   return conflicts;
 };
 
-const syncToFrequenciaOcorrencias = async (atestado: Atestado) => {
-  const dates = enumerateDates(atestado.dataInicio, atestado.dataFim, atestado.considerarDiasUteis);
+const syncToFrequencia = async (atestado: Atestado): Promise<FrequenciaSyncResult> => {
+  const dates = enumerateDates(
+    atestado.dataInicio,
+    atestado.dataFim,
+    atestado.considerarDiasUteis,
+  );
+
   if (!dates.length) {
-    return { ok: true, conflitos: [], avisos: [] } as FrequenciaSyncResult;
+    return { ok: true, conflitos: [], avisos: [] };
   }
 
   const conflitos = await queryFrequencyConflicts(atestado.cpf, dates, atestado.id);
+
   if (conflitos.length) {
     return {
       ok: false,
       conflitos,
       avisos: ['Conflitos encontrados ao lançar na frequência.'],
-    } as FrequenciaSyncResult;
+    };
   }
 
-  const payload = dates.map((date) => ({
+  const ocorrenciasPayload = dates.map((date) => ({
     atestado_id: atestado.id,
     cpf: normalizeCpf(atestado.cpf),
     data: date,
@@ -222,10 +299,11 @@ const syncToFrequenciaOcorrencias = async (atestado: Atestado) => {
   for (const table of FREQUENCIA_TABLE_CANDIDATES) {
     try {
       if (table === 'frequencia_ocorrencias') {
-        const { error } = await supabase.from(table).upsert(payload, {
+        const { error } = await supabase.from(table).upsert(ocorrenciasPayload, {
           onConflict: 'cpf,data,tipo',
           ignoreDuplicates: false,
         });
+
         if (!error) {
           return { ok: true, conflitos: [], avisos: [] };
         }
@@ -269,7 +347,7 @@ const syncToFrequenciaOcorrencias = async (atestado: Atestado) => {
 const removeFromFrequencia = async (atestadoId: string) => {
   for (const table of FREQUENCIA_TABLE_CANDIDATES) {
     try {
-      const { error } = await tryDeleteFromTable(table, 'atestado_id', atestadoId);
+      const { error } = await supabase.from(table).delete().eq('atestado_id', atestadoId);
       if (!error) return;
     } catch {
       continue;
@@ -313,11 +391,14 @@ export const atestadosService = {
     }
 
     const path = buildAtestadoStoragePath(cpf, file.name, dateBase);
-    const { error } = await supabase.storage.from(STORAGE_BUCKET_ATESTADOS).upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type || undefined,
-    });
+
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET_ATESTADOS)
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || undefined,
+      });
 
     if (error) {
       throw new Error(getErrorMessage(error, 'Falha ao enviar arquivo para o Storage.'));
@@ -339,7 +420,10 @@ export const atestadosService = {
   async removerArquivo(path: string): Promise<void> {
     if (!path) return;
 
-    const { error } = await supabase.storage.from(STORAGE_BUCKET_ATESTADOS).remove([path]);
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET_ATESTADOS)
+      .remove([path]);
+
     if (error) {
       throw new Error(getErrorMessage(error, 'Falha ao remover arquivo do Storage.'));
     }
@@ -374,7 +458,7 @@ export const atestadosService = {
 
       if (input.arquivo) {
         fileMeta = await this.uploadArquivo(input.cpf, input.arquivo, input.dataInicio);
-        uploadedPath = fileMeta.arquivoPath;
+        uploadedPath = fileMeta.arquivoPath || '';
       }
 
       const payload = mapInputToInsert(input, fileMeta);
@@ -397,14 +481,17 @@ export const atestadosService = {
       const atestado = mapRowToAtestado(data);
 
       if (atestado.lancarNaFrequencia) {
-        const sync = await syncToFrequenciaOcorrencias(atestado);
+        const sync = await syncToFrequencia(atestado);
+
         if (!sync.ok) {
           await supabase.from(TABLE_ATESTADOS).delete().eq('id', atestado.id);
+
           if (uploadedPath) {
             try {
               await this.removerArquivo(uploadedPath);
             } catch {}
           }
+
           throw new Error(
             sync.conflitos.length
               ? `Conflito com frequência:\n${sync.conflitos
@@ -434,6 +521,7 @@ export const atestadosService = {
 
   async editar(id: string, input: AtestadoInput): Promise<AtestadoOperationResult> {
     const atual = await this.obterPorId(id);
+
     if (!atual) {
       throw new Error('Atestado não encontrado para edição.');
     }
@@ -445,7 +533,7 @@ export const atestadosService = {
     try {
       if (input.arquivo) {
         newUpload = await this.uploadArquivo(input.cpf, input.arquivo, input.dataInicio);
-        uploadedPath = newUpload.arquivoPath;
+        uploadedPath = newUpload.arquivoPath || '';
       }
 
       const payload = mapInputToInsert(input, newUpload);
@@ -470,16 +558,24 @@ export const atestadosService = {
 
       if (atualizado.lancarNaFrequencia) {
         await removeFromFrequencia(atualizado.id);
-        const sync = await syncToFrequenciaOcorrencias(atualizado);
+
+        const sync = await syncToFrequencia(atualizado);
+
         if (!sync.ok) {
-          await supabase.from(TABLE_ATESTADOS).update(mapInputToInsert({
-            ...input,
-            arquivoAtualNome: atual.arquivoNome,
-            arquivoAtualPath: atual.arquivoPath,
-            arquivoAtualTipo: atual.arquivoTipo,
-            arquivoAtualTamanho: atual.arquivoTamanho,
-            arquivo: null,
-          })).eq('id', id);
+          await supabase
+            .from(TABLE_ATESTADOS)
+            .update(
+              mapInputToInsert({
+                ...input,
+                arquivoAtualNome: atual.arquivoNome,
+                arquivoAtualUrl: atual.arquivoUrl,
+                arquivoAtualPath: atual.arquivoPath,
+                arquivoAtualTipo: atual.arquivoTipo,
+                arquivoAtualTamanho: atual.arquivoTamanho,
+                arquivo: null,
+              }),
+            )
+            .eq('id', id);
 
           if (uploadedPath) {
             try {
@@ -534,7 +630,11 @@ export const atestadosService = {
 
     await removeFromFrequencia(id);
 
-    const { error } = await supabase.from(TABLE_ATESTADOS).delete().eq('id', id);
+    const { error } = await supabase
+      .from(TABLE_ATESTADOS)
+      .delete()
+      .eq('id', id);
+
     if (error) {
       throw new Error(getErrorMessage(error, 'Falha ao excluir atestado.'));
     }
@@ -543,8 +643,10 @@ export const atestadosService = {
       try {
         await this.removerArquivo(atual.arquivoPath);
       } catch {
-        // mantém exclusão do registro mesmo se a limpeza do storage falhar
+        // não quebra a exclusão do registro se a limpeza do storage falhar
       }
     }
   },
 };
+
+export default atestadosService;
