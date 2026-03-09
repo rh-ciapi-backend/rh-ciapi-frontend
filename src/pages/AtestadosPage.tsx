@@ -55,7 +55,7 @@ const InputBaseClass =
 const TextAreaBaseClass =
   'min-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07]';
 
-const normalizeCpf = (value: string) => value.replace(/\D/g, '');
+const normalizeCpf = (value: string) => String(value || '').replace(/\D/g, '');
 
 const formatCpf = (value: string) => {
   const digits = normalizeCpf(value).slice(0, 11);
@@ -65,10 +65,16 @@ const formatCpf = (value: string) => {
     .replace(/\.(\d{3})(\d)/, '.$1-$2');
 };
 
+const safeText = (value: unknown) => String(value ?? '');
+const safeLower = (value: unknown) => safeText(value).toLowerCase();
+
 const formatDate = (value: string) => {
   if (!value) return '-';
-  const [year, month, day] = value.slice(0, 10).split('-');
-  if (!year || !month || !day) return value;
+  const normalized = String(value).slice(0, 10);
+  const parts = normalized.split('-');
+  if (parts.length !== 3) return String(value);
+  const [year, month, day] = parts;
+  if (!year || !month || !day) return String(value);
   return `${day}/${month}/${year}`;
 };
 
@@ -86,13 +92,13 @@ const formatFileSize = (bytes: number) => {
 
 const getMonthFromDate = (value: string) => {
   if (!value) return '';
-  const parts = value.slice(0, 10).split('-');
+  const parts = String(value).slice(0, 10).split('-');
   return parts.length >= 2 ? String(Number(parts[1])) : '';
 };
 
 const getYearFromDate = (value: string) => {
   if (!value) return '';
-  const parts = value.slice(0, 10).split('-');
+  const parts = String(value).slice(0, 10).split('-');
   return parts[0] || '';
 };
 
@@ -328,7 +334,7 @@ const KpiCard: React.FC<{
         </div>
       </div>
       <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-      <p className="mt-3 text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors">
+      <p className="mt-3 text-xs text-zinc-500 transition-colors group-hover:text-zinc-400">
         Indicador resumido da gestão de atestados
       </p>
     </motion.div>
@@ -380,7 +386,7 @@ const AtestadosPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadAtestados();
+    void loadAtestados();
   }, []);
 
   useEffect(() => {
@@ -400,9 +406,15 @@ const AtestadosPage: React.FC = () => {
     }));
   }, [formData.dataInicio, formData.dataFim, formData.considerarDiasUteis]);
 
-  const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => item.setor)), [items]);
-  const categoriaOptions = useMemo(() => getUniqueSorted(items.map((item) => String(item.categoria || ''))), [items]);
-  const yearOptions = useMemo(() => getUniqueSorted(items.map((item) => getYearFromDate(item.dataInicio))), [items]);
+  const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => safeText(item.setor))), [items]);
+  const categoriaOptions = useMemo(
+    () => getUniqueSorted(items.map((item) => safeText(item.categoria))),
+    [items],
+  );
+  const yearOptions = useMemo(
+    () => getUniqueSorted(items.map((item) => getYearFromDate(safeText(item.dataInicio)))),
+    [items],
+  );
 
   const filteredData = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -411,14 +423,14 @@ const AtestadosPage: React.FC = () => {
       .filter((item) => {
         const matchesSearch =
           !term ||
-          item.servidorNome.toLowerCase().includes(term) ||
-          item.cpf.toLowerCase().includes(term) ||
-          item.matricula.toLowerCase().includes(term);
+          safeLower(item.servidorNome).includes(term) ||
+          safeLower(item.cpf).includes(term) ||
+          safeLower(item.matricula).includes(term);
 
-        const matchesMonth = selectedMonth === 'TODOS' || getMonthFromDate(item.dataInicio) === selectedMonth;
-        const matchesYear = selectedYear === 'TODOS' || getYearFromDate(item.dataInicio) === selectedYear;
-        const matchesSetor = selectedSetor === 'TODOS' || item.setor === selectedSetor;
-        const matchesCategoria = selectedCategoria === 'TODOS' || String(item.categoria || '') === selectedCategoria;
+        const matchesMonth = selectedMonth === 'TODOS' || getMonthFromDate(safeText(item.dataInicio)) === selectedMonth;
+        const matchesYear = selectedYear === 'TODOS' || getYearFromDate(safeText(item.dataInicio)) === selectedYear;
+        const matchesSetor = selectedSetor === 'TODOS' || safeText(item.setor) === selectedSetor;
+        const matchesCategoria = selectedCategoria === 'TODOS' || safeText(item.categoria) === selectedCategoria;
         const matchesStatus = selectedStatus === 'TODOS' || item.status === selectedStatus;
         const matchesTipo = selectedTipo === 'TODOS' || item.tipo === selectedTipo;
 
@@ -432,7 +444,7 @@ const AtestadosPage: React.FC = () => {
           matchesTipo
         );
       })
-      .sort((a, b) => a.servidorNome.localeCompare(b.servidorNome, 'pt-BR'));
+      .sort((a, b) => safeText(a.servidorNome).localeCompare(safeText(b.servidorNome), 'pt-BR'));
   }, [
     items,
     search,
@@ -447,7 +459,7 @@ const AtestadosPage: React.FC = () => {
   const kpis = useMemo(() => {
     return {
       totalAtestados: filteredData.length,
-      servidoresAfastados: new Set(filteredData.map((item) => normalizeCpf(item.cpf))).size,
+      servidoresAfastados: new Set(filteredData.map((item) => normalizeCpf(safeText(item.cpf)))).size,
       diasAfastados: filteredData.reduce((acc, item) => acc + (Number(item.dias) || 0), 0),
       pendentes: filteredData.filter((item) => item.status === 'PENDENTE').length,
       validados: filteredData.filter((item) => item.status === 'VALIDADO').length,
@@ -553,7 +565,7 @@ const AtestadosPage: React.FC = () => {
       setFeedback({ type: null, message: '' });
 
       const payload = {
-        cpf: formData.cpf,
+        cpf: formatCpf(formData.cpf),
         servidorNome: formData.servidorNome.trim().toUpperCase(),
         matricula: formData.matricula.trim(),
         setor: formData.setor.trim().toUpperCase(),
@@ -690,7 +702,7 @@ const AtestadosPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={loadAtestados}
+              onClick={() => void loadAtestados()}
               className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
             >
               <RefreshCw size={18} />
@@ -702,7 +714,7 @@ const AtestadosPage: React.FC = () => {
 
       {feedback.type && (
         <section
-          className={`rounded-2xl border px-4 py-3 text-sm whitespace-pre-line ${
+          className={`whitespace-pre-line rounded-2xl border px-4 py-3 text-sm ${
             feedback.type === 'success'
               ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
               : feedback.type === 'warning'
@@ -906,43 +918,43 @@ const AtestadosPage: React.FC = () => {
                   <tr key={item.id} className="border-t border-white/5 transition hover:bg-white/[0.025]">
                     <td className="px-5 py-4">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-white">{item.servidorNome}</span>
-                        <span className="text-xs text-zinc-500">{item.id}</span>
+                        <span className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</span>
+                        <span className="text-xs text-zinc-500">{safeText(item.id)}</span>
                       </div>
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{item.cpf}</span>
-                        <span className="text-xs text-zinc-500">{item.matricula || '-'}</span>
+                        <span className="text-sm text-zinc-200">{safeText(item.cpf) || '-'}</span>
+                        <span className="text-xs text-zinc-500">{safeText(item.matricula) || '-'}</span>
                       </div>
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{item.setor || '-'}</span>
-                        <span className="text-xs text-zinc-500">{String(item.categoria || '-')}</span>
+                        <span className="text-sm text-zinc-200">{safeText(item.setor) || '-'}</span>
+                        <span className="text-xs text-zinc-500">{safeText(item.categoria) || '-'}</span>
                       </div>
                     </td>
 
                     <td className="px-5 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getTypeBadgeClass(item.tipo)}`}>
-                        {item.tipo}
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getTypeBadgeClass(safeText(item.tipo))}`}>
+                        {safeText(item.tipo) || '-'}
                       </span>
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{formatDate(item.dataInicio)}</span>
-                        <span className="text-xs text-zinc-500">até {formatDate(item.dataFim)}</span>
+                        <span className="text-sm text-zinc-200">{formatDate(safeText(item.dataInicio))}</span>
+                        <span className="text-xs text-zinc-500">até {formatDate(safeText(item.dataFim))}</span>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 text-sm font-semibold text-white">{item.dias}</td>
+                    <td className="px-5 py-4 text-sm font-semibold text-white">{Number(item.dias) || 0}</td>
 
                     <td className="px-5 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(item.status)}`}>
-                        {item.status}
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(safeText(item.status))}`}>
+                        {safeText(item.status) || '-'}
                       </span>
                     </td>
 
@@ -950,11 +962,11 @@ const AtestadosPage: React.FC = () => {
                       {item.arquivoNome ? (
                         <button
                           type="button"
-                          onClick={() => handleDownload(item)}
+                          onClick={() => void handleDownload(item)}
                           className="inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-cyan-200"
                         >
                           <Paperclip size={14} />
-                          {item.arquivoNome}
+                          {safeText(item.arquivoNome)}
                         </button>
                       ) : (
                         <span className="text-sm text-zinc-500">Sem arquivo</span>
@@ -965,7 +977,7 @@ const AtestadosPage: React.FC = () => {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={() => handleOpenDetails(item)}
+                          onClick={() => void handleOpenDetails(item)}
                           className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-white/10"
                         >
                           <Eye size={14} />
@@ -1007,39 +1019,39 @@ const AtestadosPage: React.FC = () => {
             <div key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-white">{item.servidorNome}</h3>
+                  <h3 className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</h3>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {item.cpf} • {item.matricula || '-'}
+                    {safeText(item.cpf) || '-'} • {safeText(item.matricula) || '-'}
                   </p>
                 </div>
-                <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${getStatusBadgeClass(item.status)}`}>
-                  {item.status}
+                <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${getStatusBadgeClass(safeText(item.status))}`}>
+                  {safeText(item.status) || '-'}
                 </span>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Setor</p>
-                  <p className="mt-1 text-zinc-200">{item.setor || '-'}</p>
+                  <p className="mt-1 text-zinc-200">{safeText(item.setor) || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Categoria</p>
-                  <p className="mt-1 text-zinc-200">{String(item.categoria || '-')}</p>
+                  <p className="mt-1 text-zinc-200">{safeText(item.categoria) || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Tipo</p>
-                  <p className="mt-1 text-zinc-200">{item.tipo}</p>
+                  <p className="mt-1 text-zinc-200">{safeText(item.tipo) || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Dias</p>
-                  <p className="mt-1 text-zinc-200">{item.dias}</p>
+                  <p className="mt-1 text-zinc-200">{Number(item.dias) || 0}</p>
                 </div>
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleOpenDetails(item)}
+                  onClick={() => void handleOpenDetails(item)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-white/10"
                 >
                   <Eye size={16} />
@@ -1331,6 +1343,14 @@ const AtestadosPage: React.FC = () => {
                                 handleInputChange('arquivoNome', file.name);
                                 handleInputChange('arquivoTipo', file.type);
                                 handleInputChange('arquivoTamanho', file.size);
+                                handleInputChange('arquivoUrl', '');
+                                handleInputChange('arquivoPath', '');
+                              } else {
+                                handleInputChange('arquivoNome', '');
+                                handleInputChange('arquivoTipo', '');
+                                handleInputChange('arquivoTamanho', 0);
+                                handleInputChange('arquivoUrl', '');
+                                handleInputChange('arquivoPath', '');
                               }
                             }}
                           />
@@ -1340,7 +1360,9 @@ const AtestadosPage: React.FC = () => {
 
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <FieldLabel>Arquivo Selecionado</FieldLabel>
-                        <p className="text-sm font-medium text-white">{formData.arquivo?.name || formData.arquivoNome || 'Nenhum arquivo enviado'}</p>
+                        <p className="text-sm font-medium text-white">
+                          {formData.arquivo?.name || formData.arquivoNome || 'Nenhum arquivo enviado'}
+                        </p>
                         <p className="mt-2 text-xs text-zinc-400">
                           {formData.arquivo
                             ? `${formData.arquivo.type || 'tipo não identificado'} • ${formatFileSize(formData.arquivo.size)}`
@@ -1411,7 +1433,7 @@ const AtestadosPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={handleSave}
+                    onClick={() => void handleSave()}
                     disabled={loadingAction}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/15 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/30 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -1444,7 +1466,7 @@ const AtestadosPage: React.FC = () => {
               <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 md:px-6">
                 <div>
                   <h3 className="text-2xl font-black text-white">Detalhes do Atestado</h3>
-                  <p className="mt-1 text-sm text-zinc-400">{detailsItem.servidorNome}</p>
+                  <p className="mt-1 text-sm text-zinc-400">{safeText(detailsItem.servidorNome) || '-'}</p>
                 </div>
                 <button
                   type="button"
@@ -1458,43 +1480,45 @@ const AtestadosPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 px-5 py-5 md:grid-cols-2 md:px-6">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Servidor</FieldLabel>
-                  <p className="text-white">{detailsItem.servidorNome}</p>
-                  <p className="mt-1 text-sm text-zinc-400">{detailsItem.cpf} • {detailsItem.matricula || '-'}</p>
+                  <p className="text-white">{safeText(detailsItem.servidorNome) || '-'}</p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    {safeText(detailsItem.cpf) || '-'} • {safeText(detailsItem.matricula) || '-'}
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Status</FieldLabel>
-                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(detailsItem.status)}`}>
-                    {detailsItem.status}
+                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(safeText(detailsItem.status))}`}>
+                    {safeText(detailsItem.status) || '-'}
                   </span>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Período</FieldLabel>
                   <p className="text-white">
-                    {formatDate(detailsItem.dataInicio)} até {formatDate(detailsItem.dataFim)}
+                    {formatDate(safeText(detailsItem.dataInicio))} até {formatDate(safeText(detailsItem.dataFim))}
                   </p>
-                  <p className="mt-1 text-sm text-zinc-400">{detailsItem.dias} dia(s)</p>
+                  <p className="mt-1 text-sm text-zinc-400">{Number(detailsItem.dias) || 0} dia(s)</p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Tipo / CID</FieldLabel>
-                  <p className="text-white">{detailsItem.tipo}</p>
-                  <p className="mt-1 text-sm text-zinc-400">CID: {detailsItem.cid || '-'}</p>
+                  <p className="text-white">{safeText(detailsItem.tipo) || '-'}</p>
+                  <p className="mt-1 text-sm text-zinc-400">CID: {safeText(detailsItem.cid) || '-'}</p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:col-span-2">
                   <FieldLabel>Arquivo</FieldLabel>
                   {detailsItem.arquivoNome ? (
                     <>
-                      <p className="text-white">{detailsItem.arquivoNome}</p>
+                      <p className="text-white">{safeText(detailsItem.arquivoNome)}</p>
                       <p className="mt-1 text-sm text-zinc-400">
-                        {detailsItem.arquivoTipo || 'tipo não informado'} • {formatFileSize(detailsItem.arquivoTamanho)}
+                        {safeText(detailsItem.arquivoTipo) || 'tipo não informado'} • {formatFileSize(Number(detailsItem.arquivoTamanho) || 0)}
                       </p>
                       <div className="mt-3">
                         <button
                           type="button"
-                          onClick={() => handleDownload(detailsItem)}
+                          onClick={() => void handleDownload(detailsItem)}
                           className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
                         >
                           <Download size={16} />
@@ -1509,7 +1533,7 @@ const AtestadosPage: React.FC = () => {
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:col-span-2">
                   <FieldLabel>Observação</FieldLabel>
-                  <p className="whitespace-pre-line text-sm text-zinc-200">{detailsItem.observacao || '-'}</p>
+                  <p className="whitespace-pre-line text-sm text-zinc-200">{safeText(detailsItem.observacao) || '-'}</p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1524,8 +1548,8 @@ const AtestadosPage: React.FC = () => {
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Auditoria</FieldLabel>
-                  <p className="text-sm text-zinc-200">Criado em: {formatDate(detailsItem.criadoEm)}</p>
-                  <p className="mt-1 text-sm text-zinc-400">Atualizado em: {formatDate(detailsItem.atualizadoEm)}</p>
+                  <p className="text-sm text-zinc-200">Criado em: {formatDate(safeText(detailsItem.criadoEm))}</p>
+                  <p className="mt-1 text-sm text-zinc-400">Atualizado em: {formatDate(safeText(detailsItem.atualizadoEm))}</p>
                 </div>
               </div>
             </motion.div>
@@ -1550,7 +1574,7 @@ const AtestadosPage: React.FC = () => {
             >
               <h3 className="text-2xl font-black text-white">Excluir atestado</h3>
               <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Tem certeza que deseja excluir o atestado de <span className="font-semibold text-zinc-200">{deleteItem.servidorNome}</span>?
+                Tem certeza que deseja excluir o atestado de <span className="font-semibold text-zinc-200">{safeText(deleteItem.servidorNome) || '-'}</span>?
                 O registro será removido do banco, o arquivo associado será apagado do Storage e a integração com frequência também será limpa.
               </p>
 
@@ -1564,7 +1588,7 @@ const AtestadosPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleDelete}
+                  onClick={() => void handleDelete()}
                   disabled={loadingAction}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
