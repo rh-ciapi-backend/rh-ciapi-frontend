@@ -21,41 +21,284 @@ import {
   Edit2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { atestadosService } from '../services/atestadosService';
+import atestadosService from '../services/atestadosService';
 import type {
   Atestado,
   AtestadoFormData,
   StatusAtestado,
   TipoAtestado,
-} from '../types/atestados';
-import {
-  MONTH_OPTIONS,
-  STATUS_OPTIONS,
-  TIPO_OPTIONS,
-  calculateBusinessDays,
-  calculateCalendarDays,
-  createEmptyAtestadoForm,
-  exportAtestadosToCsv,
-  formatConflictMessage,
-  formatCpf,
-  formatDate,
-  formatFileSize,
-  getMonthFromDate,
-  getStatusBadgeClass,
-  getTypeBadgeClass,
-  getUniqueSorted,
-  getYearFromDate,
-  mapAtestadoToForm,
-  normalizeCpf,
-  validateAtestadoFile,
-} from '../utils/atestados';
+} from '../types';
 
 type FormErrors = Partial<Record<keyof AtestadoFormData, string>>;
+
+const STATUS_OPTIONS: Array<'TODOS' | StatusAtestado> = ['TODOS', 'PENDENTE', 'VALIDADO', 'REJEITADO'];
+const TIPO_OPTIONS: Array<'TODOS' | TipoAtestado> = ['TODOS', 'MÉDICO', 'ODONTOLÓGICO', 'PSICOLÓGICO', 'ACOMPANHAMENTO'];
+
+const MONTH_OPTIONS = [
+  { value: 'TODOS', label: 'Todos os meses' },
+  { value: '1', label: 'Janeiro' },
+  { value: '2', label: 'Fevereiro' },
+  { value: '3', label: 'Março' },
+  { value: '4', label: 'Abril' },
+  { value: '5', label: 'Maio' },
+  { value: '6', label: 'Junho' },
+  { value: '7', label: 'Julho' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Setembro' },
+  { value: '10', label: 'Outubro' },
+  { value: '11', label: 'Novembro' },
+  { value: '12', label: 'Dezembro' },
+];
 
 const InputBaseClass =
   'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07]';
 const TextAreaBaseClass =
   'min-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07]';
+
+const normalizeCpf = (value: string) => value.replace(/\D/g, '');
+
+const formatCpf = (value: string) => {
+  const digits = normalizeCpf(value).slice(0, 11);
+  return digits
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1-$2');
+};
+
+const formatDate = (value: string) => {
+  if (!value) return '-';
+  const [year, month, day] = value.slice(0, 10).split('-');
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+};
+
+const formatFileSize = (bytes: number) => {
+  if (!bytes || bytes <= 0) return '0 KB';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+};
+
+const getMonthFromDate = (value: string) => {
+  if (!value) return '';
+  const parts = value.slice(0, 10).split('-');
+  return parts.length >= 2 ? String(Number(parts[1])) : '';
+};
+
+const getYearFromDate = (value: string) => {
+  if (!value) return '';
+  const parts = value.slice(0, 10).split('-');
+  return parts[0] || '';
+};
+
+const getUniqueSorted = (values: string[]) =>
+  ['TODOS', ...Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
+
+const calculateCalendarDays = (start: string, end: string) => {
+  if (!start || !end) return 0;
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 0;
+  if (endDate < startDate) return 0;
+  const diff = endDate.getTime() - startDate.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+};
+
+const calculateBusinessDays = (start: string, end: string) => {
+  if (!start || !end) return 0;
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 0;
+  if (endDate < startDate) return 0;
+
+  let count = 0;
+  const cursor = new Date(startDate);
+
+  while (cursor <= endDate) {
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) count += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return count;
+};
+
+const createEmptyAtestadoForm = (): AtestadoFormData => ({
+  cpf: '',
+  servidorNome: '',
+  matricula: '',
+  setor: '',
+  categoria: '',
+  tipo: '',
+  dataEmissao: '',
+  dataInicio: '',
+  dataFim: '',
+  dias: '',
+  cid: '',
+  observacao: '',
+  status: 'PENDENTE',
+  arquivo: null,
+  arquivoNome: '',
+  arquivoUrl: '',
+  arquivoPath: '',
+  arquivoTipo: '',
+  arquivoTamanho: 0,
+  lancarNaFrequencia: true,
+  considerarDiasUteis: false,
+});
+
+const mapAtestadoToForm = (item: Atestado): AtestadoFormData => ({
+  id: item.id,
+  cpf: item.cpf ?? '',
+  servidorNome: item.servidorNome ?? '',
+  matricula: item.matricula ?? '',
+  setor: item.setor ?? '',
+  categoria: item.categoria ?? '',
+  tipo: item.tipo ?? '',
+  dataEmissao: item.dataEmissao ?? '',
+  dataInicio: item.dataInicio ?? '',
+  dataFim: item.dataFim ?? '',
+  dias: String(item.dias ?? ''),
+  cid: item.cid ?? '',
+  observacao: item.observacao ?? '',
+  status: item.status ?? 'PENDENTE',
+  arquivo: null,
+  arquivoNome: item.arquivoNome ?? '',
+  arquivoUrl: item.arquivoUrl ?? '',
+  arquivoPath: item.arquivoPath ?? '',
+  arquivoTipo: item.arquivoTipo ?? '',
+  arquivoTamanho: item.arquivoTamanho ?? 0,
+  lancarNaFrequencia: Boolean(item.lancarNaFrequencia),
+  considerarDiasUteis: Boolean(item.considerarDiasUteis),
+});
+
+const getStatusBadgeClass = (status: string) => {
+  if (status === 'VALIDADO') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+  if (status === 'PENDENTE') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20';
+  return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+};
+
+const getTypeBadgeClass = (tipo: string) => {
+  switch (tipo) {
+    case 'MÉDICO':
+      return 'bg-sky-500/10 text-sky-300 border border-sky-500/20';
+    case 'ODONTOLÓGICO':
+      return 'bg-violet-500/10 text-violet-300 border border-violet-500/20';
+    case 'PSICOLÓGICO':
+      return 'bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20';
+    case 'ACOMPANHAMENTO':
+      return 'bg-orange-500/10 text-orange-300 border border-orange-500/20';
+    default:
+      return 'bg-zinc-500/10 text-zinc-300 border border-zinc-500/20';
+  }
+};
+
+const validateSelectedFile = (file: File | null) => {
+  if (!file) return { valid: true as const };
+
+  const maxSizeBytes = 3 * 1024 * 1024;
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const lowerName = file.name.toLowerCase();
+  const validExtension =
+    lowerName.endsWith('.pdf') ||
+    lowerName.endsWith('.jpg') ||
+    lowerName.endsWith('.jpeg') ||
+    lowerName.endsWith('.png');
+
+  if (!allowedTypes.includes(file.type) && !validExtension) {
+    return {
+      valid: false as const,
+      error: 'Formato inválido. Envie apenas PDF, JPG, JPEG ou PNG.',
+    };
+  }
+
+  if (file.size > maxSizeBytes) {
+    return {
+      valid: false as const,
+      error: 'O arquivo excede o limite de 3 MB.',
+    };
+  }
+
+  return { valid: true as const };
+};
+
+const exportAtestadosToCsv = (rows: Atestado[]) => {
+  const headers = [
+    'ID',
+    'CPF',
+    'SERVIDOR',
+    'MATRICULA',
+    'SETOR',
+    'CATEGORIA',
+    'TIPO',
+    'DATA EMISSAO',
+    'DATA INICIO',
+    'DATA FIM',
+    'DIAS',
+    'CID',
+    'OBSERVACAO',
+    'STATUS',
+    'ARQUIVO NOME',
+    'ARQUIVO TIPO',
+    'ARQUIVO TAMANHO',
+    'LANCAR NA FREQUENCIA',
+    'CONSIDERAR DIAS UTEIS',
+    'CRIADO EM',
+    'ATUALIZADO EM',
+  ];
+
+  const escapeValue = (value: unknown) => {
+    const stringValue = value == null ? '' : String(value);
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  };
+
+  const content = [
+    headers.join(';'),
+    ...rows.map((item) =>
+      [
+        item.id,
+        item.cpf,
+        item.servidorNome,
+        item.matricula,
+        item.setor,
+        item.categoria,
+        item.tipo,
+        item.dataEmissao,
+        item.dataInicio,
+        item.dataFim,
+        item.dias,
+        item.cid,
+        item.observacao,
+        item.status,
+        item.arquivoNome,
+        item.arquivoTipo,
+        item.arquivoTamanho,
+        item.lancarNaFrequencia ? 'SIM' : 'NAO',
+        item.considerarDiasUteis ? 'SIM' : 'NAO',
+        item.criadoEm,
+        item.atualizadoEm,
+      ]
+        .map(escapeValue)
+        .join(';'),
+    ),
+  ].join('\n');
+
+  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  const today = new Date().toISOString().slice(0, 10);
+  anchor.href = url;
+  anchor.download = `atestados_${today}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+};
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400">{children}</span>
@@ -124,12 +367,13 @@ const AtestadosPage: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await atestadosService.listar();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       setFeedback({
         type: 'error',
         message: error instanceof Error ? error.message : 'Falha ao carregar os atestados.',
       });
+      setItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -141,9 +385,10 @@ const AtestadosPage: React.FC = () => {
 
   useEffect(() => {
     if (!formData.dataInicio || !formData.dataFim) return;
+
     const start = new Date(`${formData.dataInicio}T00:00:00`);
     const end = new Date(`${formData.dataFim}T00:00:00`);
-    if (end < start) return;
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return;
 
     const calculated = formData.considerarDiasUteis
       ? calculateBusinessDays(formData.dataInicio, formData.dataFim)
@@ -156,7 +401,7 @@ const AtestadosPage: React.FC = () => {
   }, [formData.dataInicio, formData.dataFim, formData.considerarDiasUteis]);
 
   const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => item.setor)), [items]);
-  const categoriaOptions = useMemo(() => getUniqueSorted(items.map((item) => item.categoria)), [items]);
+  const categoriaOptions = useMemo(() => getUniqueSorted(items.map((item) => String(item.categoria || ''))), [items]);
   const yearOptions = useMemo(() => getUniqueSorted(items.map((item) => getYearFromDate(item.dataInicio))), [items]);
 
   const filteredData = useMemo(() => {
@@ -173,7 +418,7 @@ const AtestadosPage: React.FC = () => {
         const matchesMonth = selectedMonth === 'TODOS' || getMonthFromDate(item.dataInicio) === selectedMonth;
         const matchesYear = selectedYear === 'TODOS' || getYearFromDate(item.dataInicio) === selectedYear;
         const matchesSetor = selectedSetor === 'TODOS' || item.setor === selectedSetor;
-        const matchesCategoria = selectedCategoria === 'TODOS' || item.categoria === selectedCategoria;
+        const matchesCategoria = selectedCategoria === 'TODOS' || String(item.categoria || '') === selectedCategoria;
         const matchesStatus = selectedStatus === 'TODOS' || item.status === selectedStatus;
         const matchesTipo = selectedTipo === 'TODOS' || item.tipo === selectedTipo;
 
@@ -203,7 +448,7 @@ const AtestadosPage: React.FC = () => {
     return {
       totalAtestados: filteredData.length,
       servidoresAfastados: new Set(filteredData.map((item) => normalizeCpf(item.cpf))).size,
-      diasAfastados: filteredData.reduce((acc, item) => acc + item.dias, 0),
+      diasAfastados: filteredData.reduce((acc, item) => acc + (Number(item.dias) || 0), 0),
       pendentes: filteredData.filter((item) => item.status === 'PENDENTE').length,
       validados: filteredData.filter((item) => item.status === 'VALIDADO').length,
     };
@@ -283,7 +528,7 @@ const AtestadosPage: React.FC = () => {
       errors.dias = `A quantidade de dias deve ser ${calculatedDays}.`;
     }
 
-    const fileValidation = validateAtestadoFile(formData.arquivo);
+    const fileValidation = validateSelectedFile(formData.arquivo);
     if (!fileValidation.valid) {
       errors.arquivo = fileValidation.error;
     }
@@ -312,7 +557,7 @@ const AtestadosPage: React.FC = () => {
         servidorNome: formData.servidorNome.trim().toUpperCase(),
         matricula: formData.matricula.trim(),
         setor: formData.setor.trim().toUpperCase(),
-        categoria: formData.categoria.trim().toUpperCase(),
+        categoria: formData.categoria,
         tipo: formData.tipo as TipoAtestado,
         dataEmissao: formData.dataEmissao,
         dataInicio: formData.dataInicio,
@@ -323,6 +568,7 @@ const AtestadosPage: React.FC = () => {
         status: formData.status as StatusAtestado,
         arquivo: formData.arquivo,
         arquivoAtualNome: formData.arquivoNome,
+        arquivoAtualUrl: formData.arquivoUrl,
         arquivoAtualPath: formData.arquivoPath,
         arquivoAtualTipo: formData.arquivoTipo,
         arquivoAtualTamanho: formData.arquivoTamanho,
@@ -330,9 +576,10 @@ const AtestadosPage: React.FC = () => {
         considerarDiasUteis: formData.considerarDiasUteis,
       };
 
-      const result = isEditing && editingId
-        ? await atestadosService.editar(editingId, payload)
-        : await atestadosService.adicionar(payload);
+      const result =
+        isEditing && editingId
+          ? await atestadosService.editar(editingId, payload)
+          : await atestadosService.adicionar(payload);
 
       await loadAtestados();
       closeFormModal();
@@ -469,10 +716,30 @@ const AtestadosPage: React.FC = () => {
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard title="Total de Atestados" value={kpis.totalAtestados} icon={<FileText size={20} />} />
-        <KpiCard title="Servidores Afastados" value={kpis.servidoresAfastados} icon={<Users size={20} />} accent="from-indigo-500/20 to-sky-500/10" />
-        <KpiCard title="Dias Afastados" value={kpis.diasAfastados} icon={<CalendarDays size={20} />} accent="from-violet-500/20 to-fuchsia-500/10" />
-        <KpiCard title="Pendentes" value={kpis.pendentes} icon={<AlertCircle size={20} />} accent="from-amber-500/20 to-orange-500/10" />
-        <KpiCard title="Validados" value={kpis.validados} icon={<ShieldCheck size={20} />} accent="from-emerald-500/20 to-green-500/10" />
+        <KpiCard
+          title="Servidores Afastados"
+          value={kpis.servidoresAfastados}
+          icon={<Users size={20} />}
+          accent="from-indigo-500/20 to-sky-500/10"
+        />
+        <KpiCard
+          title="Dias Afastados"
+          value={kpis.diasAfastados}
+          icon={<CalendarDays size={20} />}
+          accent="from-violet-500/20 to-fuchsia-500/10"
+        />
+        <KpiCard
+          title="Pendentes"
+          value={kpis.pendentes}
+          icon={<AlertCircle size={20} />}
+          accent="from-amber-500/20 to-orange-500/10"
+        />
+        <KpiCard
+          title="Validados"
+          value={kpis.validados}
+          icon={<ShieldCheck size={20} />}
+          accent="from-emerald-500/20 to-green-500/10"
+        />
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-[#0F172A]/80 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.18)]">
@@ -535,7 +802,11 @@ const AtestadosPage: React.FC = () => {
 
           <label className="block">
             <FieldLabel>Categoria</FieldLabel>
-            <select value={selectedCategoria} onChange={(e) => setSelectedCategoria(e.target.value)} className={InputBaseClass}>
+            <select
+              value={selectedCategoria}
+              onChange={(e) => setSelectedCategoria(e.target.value)}
+              className={InputBaseClass}
+            >
               {categoriaOptions.map((option) => (
                 <option key={option} value={option} className="bg-slate-900 text-white">
                   {option === 'TODOS' ? 'Todas as categorias' : option}
@@ -650,7 +921,7 @@ const AtestadosPage: React.FC = () => {
                     <td className="px-5 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm text-zinc-200">{item.setor || '-'}</span>
-                        <span className="text-xs text-zinc-500">{item.categoria || '-'}</span>
+                        <span className="text-xs text-zinc-500">{String(item.categoria || '-')}</span>
                       </div>
                     </td>
 
@@ -726,6 +997,12 @@ const AtestadosPage: React.FC = () => {
         </div>
 
         <div className="space-y-3 p-4 lg:hidden">
+          {!isLoading && filteredData.length === 0 && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-zinc-400">
+              Nenhum atestado encontrado com os filtros atuais.
+            </div>
+          )}
+
           {filteredData.map((item) => (
             <div key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-start justify-between gap-3">
@@ -747,7 +1024,7 @@ const AtestadosPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Categoria</p>
-                  <p className="mt-1 text-zinc-200">{item.categoria || '-'}</p>
+                  <p className="mt-1 text-zinc-200">{String(item.categoria || '-')}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Tipo</p>
@@ -888,7 +1165,7 @@ const AtestadosPage: React.FC = () => {
                       <label className="md:col-span-2 xl:col-span-2">
                         <FieldLabel>Categoria</FieldLabel>
                         <input
-                          value={formData.categoria}
+                          value={String(formData.categoria || '')}
                           onChange={(e) => handleInputChange('categoria', e.target.value)}
                           className={InputBaseClass}
                           placeholder="Categoria"
@@ -1049,6 +1326,7 @@ const AtestadosPage: React.FC = () => {
                             onChange={(e) => {
                               const file = e.target.files?.[0] ?? null;
                               handleInputChange('arquivo', file);
+
                               if (file) {
                                 handleInputChange('arquivoNome', file.name);
                                 handleInputChange('arquivoTipo', file.type);
@@ -1246,8 +1524,8 @@ const AtestadosPage: React.FC = () => {
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Auditoria</FieldLabel>
-                  <p className="text-sm text-zinc-200">Criado em: {formatDate(detailsItem.criadoEm?.slice(0, 10) || '')}</p>
-                  <p className="mt-1 text-sm text-zinc-400">Atualizado em: {formatDate(detailsItem.atualizadoEm?.slice(0, 10) || '')}</p>
+                  <p className="text-sm text-zinc-200">Criado em: {formatDate(detailsItem.criadoEm)}</p>
+                  <p className="mt-1 text-sm text-zinc-400">Atualizado em: {formatDate(detailsItem.atualizadoEm)}</p>
                 </div>
               </div>
             </motion.div>
