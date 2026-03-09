@@ -49,7 +49,7 @@ type DbAtestadoRow = {
   atualizado_em: string | null;
 };
 
-const normalizeCpf = (value: string) => value.replace(/\D/g, '');
+const normalizeCpf = (value: string) => String(value || '').replace(/\D/g, '');
 
 const formatCpf = (value: string) => {
   const digits = normalizeCpf(value).slice(0, 11);
@@ -60,7 +60,7 @@ const formatCpf = (value: string) => {
 };
 
 const slugifyFileName = (value: string) => {
-  return value
+  return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9.\-_]+/g, '-')
@@ -134,15 +134,29 @@ const enumerateDates = (start: string, end: string, onlyBusinessDays: boolean) =
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'object' && error && 'message' in error && typeof (error as any).message === 'string') {
-    return (error as any).message;
+  if (typeof error === 'object' && error && 'message' in error && typeof (error as { message?: unknown }).message === 'string') {
+    return (error as { message: string }).message;
   }
+  return fallback;
+};
+
+const formatSyncError = (sync: FrequenciaSyncResult, fallback: string) => {
+  if (sync.conflitos.length) {
+    return `Conflito com frequência:\n${sync.conflitos
+      .map((item) => `${item.data} - ${item.descricao}`)
+      .join('\n')}`;
+  }
+
+  if (sync.avisos.length) {
+    return sync.avisos.join('\n');
+  }
+
   return fallback;
 };
 
 const mapRowToAtestado = (row: Partial<DbAtestadoRow>): Atestado => ({
   id: String(row.id ?? ''),
-  cpf: formatCpf(row.cpf ?? ''),
+  cpf: formatCpf(String(row.cpf ?? '')),
   servidorNome: String(row.servidor_nome ?? ''),
   matricula: String(row.matricula ?? ''),
   setor: String(row.setor ?? ''),
@@ -168,25 +182,48 @@ const mapRowToAtestado = (row: Partial<DbAtestadoRow>): Atestado => ({
 
 const mapInputToInsert = (input: AtestadoInput, fileMeta?: Partial<AtestadoUploadResult>) => ({
   cpf: normalizeCpf(input.cpf),
-  servidor_nome: input.servidorNome.trim(),
-  matricula: input.matricula?.trim() ?? '',
-  setor: input.setor?.trim() ?? '',
-  categoria: input.categoria?.trim() ?? '',
+  servidor_nome: String(input.servidorNome || '').trim(),
+  matricula: String(input.matricula || '').trim(),
+  setor: String(input.setor || '').trim(),
+  categoria: String(input.categoria || '').trim(),
   tipo: input.tipo,
   data_emissao: input.dataEmissao || null,
   data_inicio: input.dataInicio,
   data_fim: input.dataFim,
-  dias: input.dias,
-  cid: input.cid?.trim() ?? '',
-  observacao: input.observacao?.trim() ?? '',
+  dias: Number(input.dias || 0),
+  cid: String(input.cid || '').trim(),
+  observacao: String(input.observacao || '').trim(),
   status: input.status,
   arquivo_nome: fileMeta?.arquivoNome ?? input.arquivoAtualNome ?? '',
   arquivo_url: fileMeta?.arquivoUrl ?? input.arquivoAtualUrl ?? '',
   arquivo_path: fileMeta?.arquivoPath ?? input.arquivoAtualPath ?? '',
   arquivo_tipo: fileMeta?.arquivoTipo ?? input.arquivoAtualTipo ?? '',
   arquivo_tamanho: fileMeta?.arquivoTamanho ?? input.arquivoAtualTamanho ?? 0,
-  lancar_na_frequencia: input.lancarNaFrequencia,
-  considerar_dias_uteis: input.considerarDiasUteis,
+  lancar_na_frequencia: Boolean(input.lancarNaFrequencia),
+  considerar_dias_uteis: Boolean(input.considerarDiasUteis),
+});
+
+const mapAtestadoToInsert = (item: Atestado) => ({
+  cpf: normalizeCpf(item.cpf),
+  servidor_nome: String(item.servidorNome || '').trim(),
+  matricula: String(item.matricula || '').trim(),
+  setor: String(item.setor || '').trim(),
+  categoria: String(item.categoria || '').trim(),
+  tipo: item.tipo,
+  data_emissao: item.dataEmissao || null,
+  data_inicio: item.dataInicio,
+  data_fim: item.dataFim,
+  dias: Number(item.dias || 0),
+  cid: String(item.cid || '').trim(),
+  observacao: String(item.observacao || '').trim(),
+  status: item.status,
+  arquivo_nome: item.arquivoNome || '',
+  arquivo_url: item.arquivoUrl || '',
+  arquivo_path: item.arquivoPath || '',
+  arquivo_tipo: item.arquivoTipo || '',
+  arquivo_tamanho: Number(item.arquivoTamanho || 0),
+  lancar_na_frequencia: Boolean(item.lancarNaFrequencia),
+  considerar_dias_uteis: Boolean(item.considerarDiasUteis),
 });
 
 const queryFrequencyConflicts = async (
@@ -200,35 +237,39 @@ const queryFrequencyConflicts = async (
   if (!cpfDigits || !dates.length) return conflicts;
 
   for (const date of dates) {
-    const { data: otherAtestados } = await supabase
-      .from(TABLE_ATESTADOS)
-      .select('id, data_inicio, data_fim, servidor_nome')
-      .eq('cpf', cpfDigits)
-      .lte('data_inicio', date)
-      .gte('data_fim', date);
+    try {
+      const { data: otherAtestados } = await supabase
+        .from(TABLE_ATESTADOS)
+        .select('id, data_inicio, data_fim, servidor_nome')
+        .eq('cpf', cpfDigits)
+        .lte('data_inicio', date)
+        .gte('data_fim', date);
 
-    (otherAtestados || []).forEach((row: any) => {
-      if (!atestadoId || row.id !== atestadoId) {
-        conflicts.push({
-          data: date,
-          origem: 'ATESTADO',
-          descricao: `Outro atestado já cobre esta data${row.servidor_nome ? ` (${row.servidor_nome})` : ''}.`,
-        });
-      }
-    });
+      (otherAtestados || []).forEach((row: { id?: string; servidor_nome?: string | null }) => {
+        if (!atestadoId || row.id !== atestadoId) {
+          conflicts.push({
+            data: date,
+            origem: 'ATESTADO',
+            descricao: `Outro atestado já cobre esta data${row.servidor_nome ? ` (${row.servidor_nome})` : ''}.`,
+          });
+        }
+      });
+    } catch {
+      // ignora e segue para demais checagens
+    }
 
     for (const table of FREQUENCIA_TABLE_CANDIDATES) {
       try {
         const { data, error } = await supabase.from(table).select('*').eq('cpf', cpfDigits).eq('data', date);
 
         if (!error && Array.isArray(data) && data.length) {
-          data.forEach((item: any) => {
+          data.forEach((item: { tipo?: string | null }) => {
             const tipo = String(item?.tipo ?? '').toUpperCase();
             if (tipo && tipo !== 'ATESTADO') {
               conflicts.push({
                 data: date,
                 origem: table === 'faltas' ? 'FALTAS' : 'FREQUENCIA',
-                descricao: `Já existe ocorrência "${item.tipo}" nesta data.`,
+                descricao: `Já existe ocorrência "${item?.tipo ?? ''}" nesta data.`,
               });
             }
           });
@@ -375,9 +416,9 @@ export const atestadosService = {
       .from(TABLE_ATESTADOS)
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       throw new Error(getErrorMessage(error, 'Falha ao obter o atestado.'));
     }
 
@@ -480,39 +521,33 @@ export const atestadosService = {
 
       const atestado = mapRowToAtestado(data);
 
-      if (atestado.lancarNaFrequencia) {
-        const sync = await syncToFrequencia(atestado);
-
-        if (!sync.ok) {
-          await supabase.from(TABLE_ATESTADOS).delete().eq('id', atestado.id);
-
-          if (uploadedPath) {
-            try {
-              await this.removerArquivo(uploadedPath);
-            } catch {}
-          }
-
-          throw new Error(
-            sync.conflitos.length
-              ? `Conflito com frequência:\n${sync.conflitos
-                  .map((item) => `${item.data} - ${item.descricao}`)
-                  .join('\n')}`
-              : sync.avisos.join('\n') || 'Falha ao integrar com frequência.',
-          );
-        }
-
+      if (!atestado.lancarNaFrequencia) {
         return {
           ok: true,
           data: atestado,
           message: 'Atestado salvo com sucesso.',
-          warning: sync.avisos[0],
         };
+      }
+
+      const sync = await syncToFrequencia(atestado);
+
+      if (!sync.ok) {
+        await supabase.from(TABLE_ATESTADOS).delete().eq('id', atestado.id);
+
+        if (uploadedPath) {
+          try {
+            await this.removerArquivo(uploadedPath);
+          } catch {}
+        }
+
+        throw new Error(formatSyncError(sync, 'Falha ao integrar com frequência.'));
       }
 
       return {
         ok: true,
         data: atestado,
         message: 'Atestado salvo com sucesso.',
+        warning: sync.avisos[0],
       };
     } catch (error) {
       throw new Error(getErrorMessage(error, 'Falha ao adicionar atestado.'));
@@ -564,18 +599,14 @@ export const atestadosService = {
         if (!sync.ok) {
           await supabase
             .from(TABLE_ATESTADOS)
-            .update(
-              mapInputToInsert({
-                ...input,
-                arquivoAtualNome: atual.arquivoNome,
-                arquivoAtualUrl: atual.arquivoUrl,
-                arquivoAtualPath: atual.arquivoPath,
-                arquivoAtualTipo: atual.arquivoTipo,
-                arquivoAtualTamanho: atual.arquivoTamanho,
-                arquivo: null,
-              }),
-            )
+            .update(mapAtestadoToInsert(atual))
             .eq('id', id);
+
+          await removeFromFrequencia(id);
+
+          if (atual.lancarNaFrequencia) {
+            await syncToFrequencia(atual);
+          }
 
           if (uploadedPath) {
             try {
@@ -583,13 +614,7 @@ export const atestadosService = {
             } catch {}
           }
 
-          throw new Error(
-            sync.conflitos.length
-              ? `Conflito com frequência:\n${sync.conflitos
-                  .map((item) => `${item.data} - ${item.descricao}`)
-                  .join('\n')}`
-              : sync.avisos.join('\n') || 'Falha ao integrar com frequência.',
-          );
+          throw new Error(formatSyncError(sync, 'Falha ao integrar com frequência.'));
         }
 
         if (newUpload && oldFilePath && oldFilePath !== newUpload.arquivoPath) {
