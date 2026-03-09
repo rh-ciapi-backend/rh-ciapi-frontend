@@ -19,6 +19,7 @@ import {
   Users,
   X,
   Edit2,
+  Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import atestadosService from '../services/atestadosService';
@@ -51,9 +52,9 @@ const MONTH_OPTIONS = [
 ];
 
 const InputBaseClass =
-  'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07]';
+  'h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition-all duration-200 placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.06)]';
 const TextAreaBaseClass =
-  'min-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07]';
+  'min-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition-all duration-200 placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.06)]';
 
 const normalizeCpf = (value: string) => String(value || '').replace(/\D/g, '');
 
@@ -76,6 +77,14 @@ const formatDate = (value: string) => {
   const [year, month, day] = parts;
   if (!year || !month || !day) return String(value);
   return `${day}/${month}/${year}`;
+};
+
+const formatTechnicalError = (message: string) => {
+  if (!message) return '';
+  if (message.toLowerCase().includes("could not find the table 'public.atestados'")) {
+    return 'Tabela "atestados" ainda não configurada no banco.';
+  }
+  return message;
 };
 
 const formatFileSize = (bytes: number) => {
@@ -184,9 +193,9 @@ const mapAtestadoToForm = (item: Atestado): AtestadoFormData => ({
 });
 
 const getStatusBadgeClass = (status: string) => {
-  if (status === 'VALIDADO') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+  if (status === 'VALIDADO') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20';
   if (status === 'PENDENTE') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20';
-  return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+  return 'bg-rose-500/10 text-rose-300 border border-rose-500/20';
 };
 
 const getTypeBadgeClass = (tipo: string) => {
@@ -307,7 +316,17 @@ const exportAtestadosToCsv = (rows: Atestado[]) => {
 };
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400">{children}</span>
+  <span className="mb-2.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+    {children}
+  </span>
+);
+
+const SectionCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <section
+    className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.9),rgba(9,15,31,0.88))] shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-sm ${className}`}
+  >
+    {children}
+  </section>
 );
 
 const KpiCard: React.FC<{
@@ -320,24 +339,106 @@ const KpiCard: React.FC<{
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.18 }}
-      className="group rounded-2xl border border-white/10 bg-[#111827]/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm"
+      className="group rounded-[24px] border border-white/10 bg-[#10192d]/88 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.18)]"
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">{title}</p>
-          <h3 className="mt-2 text-2xl font-bold text-white">{value}</h3>
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">{title}</p>
+          <h3 className="mt-2 text-[30px] font-black leading-none text-white">{value}</h3>
         </div>
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br ${accent} text-white/90`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br ${accent} text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
         >
           {icon}
         </div>
       </div>
-      <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-      <p className="mt-3 text-xs text-zinc-500 transition-colors group-hover:text-zinc-400">
+      <p className="mt-3 text-[11px] leading-5 text-zinc-500 transition-colors group-hover:text-zinc-400">
         Indicador resumido da gestão de atestados
       </p>
     </motion.div>
+  );
+};
+
+const ActionButton: React.FC<{
+  children: React.ReactNode;
+  onClick?: () => void;
+  primary?: boolean;
+}> = ({ children, onClick, primary = false }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={
+      primary
+        ? 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/15 px-4 text-sm font-semibold text-cyan-100 shadow-[0_10px_30px_rgba(6,182,212,0.08)] transition-all hover:-translate-y-[1px] hover:border-cyan-300/30 hover:bg-cyan-500/20'
+        : 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-zinc-200 transition-all hover:-translate-y-[1px] hover:bg-white/[0.08]'
+    }
+  >
+    {children}
+  </button>
+);
+
+const FeedbackBanner: React.FC<{
+  type: 'success' | 'error' | 'warning';
+  message: string;
+  onClose: () => void;
+}> = ({ type, message, onClose }) => {
+  const mainMessage = type === 'error' ? formatTechnicalError(message) : message;
+  const showDetail = type === 'error' && mainMessage !== message;
+
+  const palette =
+    type === 'success'
+      ? {
+          wrap: 'border-emerald-500/20 bg-emerald-500/[0.08]',
+          icon: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+          title: 'text-emerald-200',
+          text: 'text-emerald-100/85',
+          detail: 'text-emerald-200/50',
+        }
+      : type === 'warning'
+      ? {
+          wrap: 'border-amber-500/20 bg-amber-500/[0.08]',
+          icon: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+          title: 'text-amber-100',
+          text: 'text-amber-100/85',
+          detail: 'text-amber-200/60',
+        }
+      : {
+          wrap: 'border-rose-500/20 bg-rose-500/[0.08]',
+          icon: 'bg-rose-500/10 text-rose-200 border-rose-500/20',
+          title: 'text-rose-100',
+          text: 'text-rose-100/85',
+          detail: 'text-rose-200/60',
+        };
+
+  const title =
+    type === 'success'
+      ? 'Operação concluída'
+      : type === 'warning'
+      ? 'Atenção'
+      : 'Configuração pendente';
+
+  return (
+    <section className={`rounded-[22px] border px-4 py-3 ${palette.wrap}`}>
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${palette.icon}`}>
+          {type === 'success' ? <CheckCircle2 size={16} /> : type === 'warning' ? <Info size={16} /> : <AlertCircle size={16} />}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm font-semibold ${palette.title}`}>{title}</p>
+          <p className={`mt-1 text-sm leading-6 whitespace-pre-line ${palette.text}`}>{mainMessage}</p>
+          {showDetail && <p className={`mt-2 text-xs ${palette.detail}`}>Detalhe técnico: {message}</p>}
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </section>
   );
 };
 
@@ -664,223 +765,217 @@ const AtestadosPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full space-y-6">
-      <section className="rounded-3xl border border-white/10 bg-[#0B1220]/85 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-sm">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+    <div className="min-h-full space-y-5 xl:space-y-6">
+      <SectionCard className="px-5 py-5 md:px-6 md:py-5">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
-              <BriefcaseMedical size={14} />
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">
+              <BriefcaseMedical size={13} />
               Gestão de Saúde Ocupacional
             </div>
 
-            <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">
+            <h1 className="text-[34px] font-black leading-tight tracking-tight text-white md:text-[42px]">
               Gestão de Atestados
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 md:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 md:text-[15px]">
               Cadastre, acompanhe e consulte afastamentos médicos dos servidores.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/15 px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:border-cyan-300/30 hover:bg-cyan-500/20"
-            >
-              <FilePlus2 size={18} />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <ActionButton primary onClick={openCreateModal}>
+              <FilePlus2 size={16} />
               Novo Atestado
-            </button>
+            </ActionButton>
 
-            <button
-              type="button"
-              onClick={() => exportAtestadosToCsv(filteredData)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
-            >
-              <Download size={18} />
+            <ActionButton onClick={() => exportAtestadosToCsv(filteredData)}>
+              <Download size={16} />
               Exportar CSV
-            </button>
+            </ActionButton>
 
-            <button
-              type="button"
-              onClick={() => void loadAtestados()}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
-            >
-              <RefreshCw size={18} />
+            <ActionButton onClick={() => void loadAtestados()}>
+              <RefreshCw size={16} />
               Atualizar
-            </button>
+            </ActionButton>
           </div>
         </div>
-      </section>
+      </SectionCard>
 
       {feedback.type && (
-        <section
-          className={`whitespace-pre-line rounded-2xl border px-4 py-3 text-sm ${
-            feedback.type === 'success'
-              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
-              : feedback.type === 'warning'
-              ? 'border-amber-500/20 bg-amber-500/10 text-amber-200'
-              : 'border-rose-500/20 bg-rose-500/10 text-rose-200'
-          }`}
-        >
-          {feedback.message}
-        </section>
+        <FeedbackBanner
+          type={feedback.type}
+          message={feedback.message}
+          onClose={() => setFeedback({ type: null, message: '' })}
+        />
       )}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard title="Total de Atestados" value={kpis.totalAtestados} icon={<FileText size={20} />} />
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiCard title="Total de Atestados" value={kpis.totalAtestados} icon={<FileText size={19} />} />
         <KpiCard
           title="Servidores Afastados"
           value={kpis.servidoresAfastados}
-          icon={<Users size={20} />}
+          icon={<Users size={19} />}
           accent="from-indigo-500/20 to-sky-500/10"
         />
         <KpiCard
           title="Dias Afastados"
           value={kpis.diasAfastados}
-          icon={<CalendarDays size={20} />}
+          icon={<CalendarDays size={19} />}
           accent="from-violet-500/20 to-fuchsia-500/10"
         />
         <KpiCard
           title="Pendentes"
           value={kpis.pendentes}
-          icon={<AlertCircle size={20} />}
+          icon={<AlertCircle size={19} />}
           accent="from-amber-500/20 to-orange-500/10"
         />
         <KpiCard
           title="Validados"
           value={kpis.validados}
-          icon={<ShieldCheck size={20} />}
+          icon={<ShieldCheck size={19} />}
           accent="from-emerald-500/20 to-green-500/10"
         />
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-[#0F172A]/80 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.18)]">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-300">
-            <Filter size={18} />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">Filtros</h2>
-            <p className="text-sm text-zinc-400">Refine a consulta por servidor, período e classificação.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-          <label className="block">
-            <FieldLabel>Busca</FieldLabel>
-            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-              <Search size={16} className="text-zinc-400" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nome, CPF ou matrícula"
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
-              />
+      <SectionCard className="p-5 md:p-6">
+        <div className="flex flex-col gap-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+              <Filter size={18} />
             </div>
-          </label>
-
-          <label className="block">
-            <FieldLabel>Mês</FieldLabel>
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className={InputBaseClass}>
-              {MONTH_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value} className="bg-slate-900 text-white">
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <FieldLabel>Ano</FieldLabel>
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className={InputBaseClass}>
-              {yearOptions.map((option) => (
-                <option key={option} value={option} className="bg-slate-900 text-white">
-                  {option === 'TODOS' ? 'Todos os anos' : option}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <FieldLabel>Setor</FieldLabel>
-            <select value={selectedSetor} onChange={(e) => setSelectedSetor(e.target.value)} className={InputBaseClass}>
-              {setorOptions.map((option) => (
-                <option key={option} value={option} className="bg-slate-900 text-white">
-                  {option === 'TODOS' ? 'Todos os setores' : option}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <FieldLabel>Categoria</FieldLabel>
-            <select
-              value={selectedCategoria}
-              onChange={(e) => setSelectedCategoria(e.target.value)}
-              className={InputBaseClass}
-            >
-              {categoriaOptions.map((option) => (
-                <option key={option} value={option} className="bg-slate-900 text-white">
-                  {option === 'TODOS' ? 'Todas as categorias' : option}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <FieldLabel>Status</FieldLabel>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value as 'TODOS' | StatusAtestado)}
-              className={InputBaseClass}
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option} value={option} className="bg-slate-900 text-white">
-                  {option === 'TODOS' ? 'Todos os status' : option}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <FieldLabel>Tipo</FieldLabel>
-            <select
-              value={selectedTipo}
-              onChange={(e) => setSelectedTipo(e.target.value as 'TODOS' | TipoAtestado)}
-              className={InputBaseClass}
-            >
-              {TIPO_OPTIONS.map((option) => (
-                <option key={option} value={option} className="bg-slate-900 text-white">
-                  {option === 'TODOS' ? 'Todos os tipos' : option}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-400">
-            Exibindo <span className="font-semibold text-zinc-200">{filteredData.length}</span> registro(s).
-          </p>
-
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
-          >
-            Limpar filtros
-          </button>
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#0F172A]/80 shadow-[0_16px_40px_rgba(0,0,0,0.18)]">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div>
-            <h2 className="text-lg font-bold text-white">Lista de Atestados</h2>
-            <p className="text-sm text-zinc-400">Conectado ao Supabase com upload real e integração com frequência.</p>
+            <div>
+              <h2 className="text-[20px] font-bold text-white">Filtros</h2>
+              <p className="mt-0.5 text-sm text-zinc-400">
+                Refine a consulta por servidor, período e classificação.
+              </p>
+            </div>
           </div>
 
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-300">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+            <label className="block 2xl:col-span-1">
+              <FieldLabel>Busca</FieldLabel>
+              <div className="flex h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 transition-all duration-200 focus-within:border-cyan-400/30 focus-within:bg-white/[0.07] focus-within:shadow-[0_0_0_4px_rgba(34,211,238,0.06)]">
+                <Search size={16} className="shrink-0 text-zinc-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Nome, CPF ou matrícula"
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
+                />
+              </div>
+            </label>
+
+            <label className="block">
+              <FieldLabel>Mês</FieldLabel>
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className={InputBaseClass}>
+                {MONTH_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value} className="bg-slate-900 text-white">
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <FieldLabel>Ano</FieldLabel>
+              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className={InputBaseClass}>
+                {yearOptions.map((option) => (
+                  <option key={option} value={option} className="bg-slate-900 text-white">
+                    {option === 'TODOS' ? 'Todos os anos' : option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <FieldLabel>Setor</FieldLabel>
+              <select value={selectedSetor} onChange={(e) => setSelectedSetor(e.target.value)} className={InputBaseClass}>
+                {setorOptions.map((option) => (
+                  <option key={option} value={option} className="bg-slate-900 text-white">
+                    {option === 'TODOS' ? 'Todos os setores' : option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <FieldLabel>Categoria</FieldLabel>
+              <select
+                value={selectedCategoria}
+                onChange={(e) => setSelectedCategoria(e.target.value)}
+                className={InputBaseClass}
+              >
+                {categoriaOptions.map((option) => (
+                  <option key={option} value={option} className="bg-slate-900 text-white">
+                    {option === 'TODOS' ? 'Todas as categorias' : option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <FieldLabel>Status</FieldLabel>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as 'TODOS' | StatusAtestado)}
+                className={InputBaseClass}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option} className="bg-slate-900 text-white">
+                    {option === 'TODOS' ? 'Todos os status' : option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <FieldLabel>Tipo</FieldLabel>
+              <select
+                value={selectedTipo}
+                onChange={(e) => setSelectedTipo(e.target.value as 'TODOS' | TipoAtestado)}
+                className={InputBaseClass}
+              >
+                {TIPO_OPTIONS.map((option) => (
+                  <option key={option} value={option} className="bg-slate-900 text-white">
+                    {option === 'TODOS' ? 'Todos os tipos' : option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-zinc-400">
+              {filteredData.length === 0 ? (
+                <>Nenhum registro encontrado no momento.</>
+              ) : (
+                <>
+                  Exibindo <span className="font-semibold text-zinc-200">{filteredData.length}</span> registro(s).
+                </>
+              )}
+            </p>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-zinc-200 transition-all hover:bg-white/[0.08]"
+            >
+              Limpar filtros
+            </button>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard className="overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+          <div>
+            <h2 className="text-[20px] font-bold text-white">Lista de Atestados</h2>
+            <p className="mt-0.5 text-sm text-zinc-400">
+              Conectado ao Supabase com upload real e integração com frequência.
+            </p>
+          </div>
+
+          <div className="inline-flex h-10 items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.05] px-3.5 text-xs font-semibold text-zinc-300">
             <Clock3 size={14} />
             {isLoading ? 'Carregando...' : `${filteredData.length} registro(s)`}
           </div>
@@ -892,7 +987,10 @@ const AtestadosPage: React.FC = () => {
               <tr className="text-left">
                 {['Servidor', 'CPF / Matrícula', 'Setor / Categoria', 'Tipo', 'Período', 'Dias', 'Status', 'Arquivo', 'Ações'].map(
                   (header) => (
-                    <th key={header} className="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+                    <th
+                      key={header}
+                      className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500"
+                    >
                       {header}
                     </th>
                   ),
@@ -903,62 +1001,62 @@ const AtestadosPage: React.FC = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-14 text-center text-sm text-zinc-400">
+                  <td colSpan={9} className="px-6 py-16 text-center text-sm text-zinc-400">
                     Carregando atestados...
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-14 text-center text-sm text-zinc-400">
+                  <td colSpan={9} className="px-6 py-16 text-center text-sm text-zinc-400">
                     Nenhum atestado encontrado com os filtros atuais.
                   </td>
                 </tr>
               ) : (
                 filteredData.map((item) => (
                   <tr key={item.id} className="border-t border-white/5 transition hover:bg-white/[0.025]">
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</span>
-                        <span className="text-xs text-zinc-500">{safeText(item.id)}</span>
+                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.id)}</span>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm text-zinc-200">{safeText(item.cpf) || '-'}</span>
-                        <span className="text-xs text-zinc-500">{safeText(item.matricula) || '-'}</span>
+                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.matricula) || '-'}</span>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm text-zinc-200">{safeText(item.setor) || '-'}</span>
-                        <span className="text-xs text-zinc-500">{safeText(item.categoria) || '-'}</span>
+                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.categoria) || '-'}</span>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getTypeBadgeClass(safeText(item.tipo))}`}>
                         {safeText(item.tipo) || '-'}
                       </span>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm text-zinc-200">{formatDate(safeText(item.dataInicio))}</span>
-                        <span className="text-xs text-zinc-500">até {formatDate(safeText(item.dataFim))}</span>
+                        <span className="mt-1 text-xs text-zinc-500">até {formatDate(safeText(item.dataFim))}</span>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 text-sm font-semibold text-white">{Number(item.dias) || 0}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-white">{Number(item.dias) || 0}</td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(safeText(item.status))}`}>
                         {safeText(item.status) || '-'}
                       </span>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       {item.arquivoNome ? (
                         <button
                           type="button"
@@ -973,12 +1071,12 @@ const AtestadosPage: React.FC = () => {
                       )}
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => void handleOpenDetails(item)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-white/10"
+                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.08]"
                         >
                           <Eye size={14} />
                           Detalhes
@@ -986,7 +1084,7 @@ const AtestadosPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => openEditModal(item)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-white/10"
+                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.08]"
                         >
                           <Edit2 size={14} />
                           Editar
@@ -994,7 +1092,7 @@ const AtestadosPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setDeleteItem(item)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20"
+                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20"
                         >
                           <Trash2 size={14} />
                           Excluir
@@ -1010,13 +1108,13 @@ const AtestadosPage: React.FC = () => {
 
         <div className="space-y-3 p-4 lg:hidden">
           {!isLoading && filteredData.length === 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-zinc-400">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-10 text-center text-sm text-zinc-400">
               Nenhum atestado encontrado com os filtros atuais.
             </div>
           )}
 
           {filteredData.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</h3>
@@ -1052,7 +1150,7 @@ const AtestadosPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => void handleOpenDetails(item)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-white/10"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm font-semibold text-zinc-100 transition hover:bg-white/[0.08]"
                 >
                   <Eye size={16} />
                   Detalhes
@@ -1060,7 +1158,7 @@ const AtestadosPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => openEditModal(item)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-white/10"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm font-semibold text-zinc-100 transition hover:bg-white/[0.08]"
                 >
                   <Edit2 size={16} />
                   Editar
@@ -1068,7 +1166,7 @@ const AtestadosPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDeleteItem(item)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20"
                 >
                   <Trash2 size={16} />
                   Excluir
@@ -1077,7 +1175,7 @@ const AtestadosPage: React.FC = () => {
             </div>
           ))}
         </div>
-      </section>
+      </SectionCard>
 
       <AnimatePresence>
         {isFormOpen && (
