@@ -17,7 +17,7 @@ import { AdminCategoriasPage } from './pages/AdminCategoriasPage';
 import { AdminSetoresPage } from './pages/AdminSetoresPage';
 import { AdminLogsPage } from './pages/AdminLogsPage';
 import { LoginPage } from './pages/LoginPage';
-import { AtestadosPage } from './pages/AtestadosPage';
+import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './contexts/AuthContext';
@@ -43,53 +43,84 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
-      case 'servidores': return <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
-      case 'atestados': return <AtestadosPage />;
-      case 'ferias': return <FeriasPage />;
-      case 'frequencia': return <FrequenciaPage />;
-      case 'mapas': return <MapasPage />;
-      case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
-      case 'admin-usuarios': return <AdminUsuariosPage />;
-      case 'admin-categorias': return <AdminCategoriasPage />;
-      case 'admin-setores': return <AdminSetoresPage />;
-      case 'admin-logs': return <AdminLogsPage />;
-      case 'diagnostico': return <DiagnosticoPage />;
-      default: return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'dashboard':
+        return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'servidores':
+        return (
+          <ServidoresPage
+            initialAction={initialAction}
+            onActionHandled={() => setInitialAction(null)}
+          />
+        );
+      case 'atestados':
+        return <AtestadosPage />;
+      case 'ferias':
+        return <FeriasPage />;
+      case 'frequencia':
+        return <FrequenciaPage />;
+      case 'mapas':
+        return <MapasPage />;
+      case 'admin':
+        return <AdminPage onNavigate={navigateWithAction} />;
+      case 'admin-usuarios':
+        return <AdminUsuariosPage />;
+      case 'admin-categorias':
+        return <AdminCategoriasPage />;
+      case 'admin-setores':
+        return <AdminSetoresPage />;
+      case 'admin-logs':
+        return <AdminLogsPage />;
+      case 'diagnostico':
+        return <DiagnosticoPage />;
+      default:
+        return <DashboardPage onNavigate={navigateWithAction} />;
     }
   };
 
   const getPageTitle = () => {
     switch (activeTab) {
-      case 'dashboard': return 'Dashboard';
-      case 'servidores': return 'Gestão de Servidores';
-      case 'atestados': return 'Gestão de Atestados';
-      case 'ferias': return 'Controle de Férias';
-      case 'frequencia': return 'Frequência Mensal';
-      case 'mapas': return 'Mapas Institucionais';
-      case 'admin': return 'Administração do Sistema';
-      case 'admin-usuarios': return 'Usuários do Sistema';
-      case 'admin-categorias': return 'Gestão de Categorias';
-      case 'admin-setores': return 'Gestão de Setores';
-      case 'admin-logs': return 'Logs de Atividade';
-      case 'diagnostico': return 'Diagnóstico de Conexão';
-      default: return 'CIAPI RH';
+      case 'dashboard':
+        return 'Dashboard';
+      case 'servidores':
+        return 'Gestão de Servidores';
+      case 'atestados':
+        return 'Gestão de Atestados';
+      case 'ferias':
+        return 'Controle de Férias';
+      case 'frequencia':
+        return 'Frequência Mensal';
+      case 'mapas':
+        return 'Mapas Institucionais';
+      case 'admin':
+        return 'Administração do Sistema';
+      case 'admin-usuarios':
+        return 'Usuários do Sistema';
+      case 'admin-categorias':
+        return 'Gestão de Categorias';
+      case 'admin-setores':
+        return 'Gestão de Setores';
+      case 'admin-logs':
+        return 'Logs de Atividade';
+      case 'diagnostico':
+        return 'Diagnóstico de Conexão';
+      default:
+        return 'CIAPI RH';
     }
   };
 
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen bg-bg-dark">
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={(tab) => navigateWithAction(tab)} 
-          onLogout={handleLogout} 
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => navigateWithAction(tab)}
+          onLogout={handleLogout}
         />
-        
-        <div className="flex-1 flex flex-col min-w-0">
+
+        <div className="flex min-w-0 flex-1 flex-col">
           <Topbar title={getPageTitle()} />
-          
-          <main className="flex-1 p-8 overflow-y-auto">
+
+          <main className="flex-1 overflow-y-auto p-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
