@@ -116,3 +116,135 @@ export interface OpcaoFiltro {
   value: string;
   label: string;
 }
+
+/* =========================
+   ATESTADOS
+========================= */
+
+export type StatusAtestado = 'PENDENTE' | 'VALIDADO' | 'REJEITADO';
+
+export type TipoAtestado =
+  | 'MÉDICO'
+  | 'ODONTOLÓGICO'
+  | 'PSICOLÓGICO'
+  | 'ACOMPANHAMENTO';
+
+export interface AtestadoArquivoMetadata {
+  arquivoNome: string;
+  arquivoUrl: string;
+  arquivoPath: string;
+  arquivoTipo: string;
+  arquivoTamanho: number;
+}
+
+export interface Atestado {
+  id: string;
+  cpf: string;
+  servidorNome: string;
+  matricula: string;
+  setor: string;
+  categoria: Categoria | '' | string;
+  tipo: TipoAtestado;
+  dataEmissao: string;
+  dataInicio: string;
+  dataFim: string;
+  dias: number;
+  cid: string;
+  observacao: string;
+  status: StatusAtestado;
+  arquivoNome: string;
+  arquivoUrl: string;
+  arquivoPath: string;
+  arquivoTipo: string;
+  arquivoTamanho: number;
+  lancarNaFrequencia: boolean;
+  considerarDiasUteis: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface AtestadoInput {
+  cpf: string;
+  servidorNome: string;
+  matricula?: string;
+  setor?: string;
+  categoria?: Categoria | '' | string;
+  tipo: TipoAtestado;
+  dataEmissao?: string;
+  dataInicio: string;
+  dataFim: string;
+  dias: number;
+  cid?: string;
+  observacao?: string;
+  status: StatusAtestado;
+  arquivo?: File | null;
+  arquivoAtualNome?: string;
+  arquivoAtualUrl?: string;
+  arquivoAtualPath?: string;
+  arquivoAtualTipo?: string;
+  arquivoAtualTamanho?: number;
+  lancarNaFrequencia: boolean;
+  considerarDiasUteis: boolean;
+}
+
+export interface AtestadoFormData {
+  id?: string;
+  cpf: string;
+  servidorNome: string;
+  matricula: string;
+  setor: string;
+  categoria: Categoria | '' | string;
+  tipo: '' | TipoAtestado;
+  dataEmissao: string;
+  dataInicio: string;
+  dataFim: string;
+  dias: string;
+  cid: string;
+  observacao: string;
+  status: '' | StatusAtestado;
+  arquivo: File | null;
+  arquivoNome: string;
+  arquivoUrl: string;
+  arquivoPath: string;
+  arquivoTipo: string;
+  arquivoTamanho: number;
+  lancarNaFrequencia: boolean;
+  considerarDiasUteis: boolean;
+}
+
+export interface AtestadoFilters {
+  busca?: string;
+  mes?: string;
+  ano?: string;
+  setor?: string;
+  categoria?: string;
+  status?: 'TODOS' | StatusAtestado;
+  tipo?: 'TODOS' | TipoAtestado;
+}
+
+export interface AtestadoUploadResult {
+  arquivoNome: string;
+  arquivoUrl: string;
+  arquivoPath: string;
+  arquivoTipo: string;
+  arquivoTamanho: number;
+}
+
+export interface FrequenciaConflict {
+  data: string;
+  origem: 'FREQUENCIA' | 'FALTAS' | 'FERIAS' | 'ATESTADO';
+  descricao: string;
+}
+
+export interface FrequenciaSyncResult {
+  ok: boolean;
+  conflitos: FrequenciaConflict[];
+  avisos: string[];
+}
+
+export interface AtestadoOperationResult {
+  ok: boolean;
+  data?: Atestado;
+  message?: string;
+  warning?: string;
+}
