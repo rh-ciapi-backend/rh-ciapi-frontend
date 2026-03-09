@@ -134,7 +134,12 @@ const enumerateDates = (start: string, end: string, onlyBusinessDays: boolean) =
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'object' && error && 'message' in error && typeof (error as { message?: unknown }).message === 'string') {
+  if (
+    typeof error === 'object' &&
+    error &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string'
+  ) {
     return (error as { message: string }).message;
   }
   return fallback;
@@ -255,7 +260,7 @@ const queryFrequencyConflicts = async (
         }
       });
     } catch {
-      // ignora e segue para demais checagens
+      // segue
     }
 
     for (const table of FREQUENCIA_TABLE_CANDIDATES) {
@@ -389,10 +394,19 @@ const removeFromFrequencia = async (atestadoId: string) => {
   for (const table of FREQUENCIA_TABLE_CANDIDATES) {
     try {
       const { error } = await supabase.from(table).delete().eq('atestado_id', atestadoId);
-      if (!error) return;
+      if (!error) return true;
     } catch {
       continue;
     }
+  }
+  return false;
+};
+
+const restorePreviousState = async (id: string, previous: Atestado) => {
+  await supabase.from(TABLE_ATESTADOS).update(mapAtestadoToInsert(previous)).eq('id', id);
+  await removeFromFrequencia(id);
+  if (previous.lancarNaFrequencia) {
+    await syncToFrequencia(previous);
   }
 };
 
@@ -591,22 +605,13 @@ export const atestadosService = {
 
       const atualizado = mapRowToAtestado(data);
 
-      if (atualizado.lancarNaFrequencia) {
-        await removeFromFrequencia(atualizado.id);
+      await removeFromFrequencia(id);
 
+      if (atualizado.lancarNaFrequencia) {
         const sync = await syncToFrequencia(atualizado);
 
         if (!sync.ok) {
-          await supabase
-            .from(TABLE_ATESTADOS)
-            .update(mapAtestadoToInsert(atual))
-            .eq('id', id);
-
-          await removeFromFrequencia(id);
-
-          if (atual.lancarNaFrequencia) {
-            await syncToFrequencia(atual);
-          }
+          await restorePreviousState(id, atual);
 
           if (uploadedPath) {
             try {
@@ -616,22 +621,7 @@ export const atestadosService = {
 
           throw new Error(formatSyncError(sync, 'Falha ao integrar com frequência.'));
         }
-
-        if (newUpload && oldFilePath && oldFilePath !== newUpload.arquivoPath) {
-          try {
-            await this.removerArquivo(oldFilePath);
-          } catch {}
-        }
-
-        return {
-          ok: true,
-          data: atualizado,
-          message: 'Atestado atualizado com sucesso.',
-          warning: sync.avisos[0],
-        };
       }
-
-      await removeFromFrequencia(atualizado.id);
 
       if (newUpload && oldFilePath && oldFilePath !== newUpload.arquivoPath) {
         try {
