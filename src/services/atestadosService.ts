@@ -208,6 +208,13 @@ const mapInputToInsert = (input: AtestadoInput, fileMeta?: Partial<AtestadoUploa
   considerar_dias_uteis: Boolean(input.considerarDiasUteis),
 });
 
+const isMeaningfulAtestadoRow = (row: Partial<DbAtestadoRow>) => {
+  const hasPeriodo = Boolean(String(row.data_inicio ?? '').trim()) || Boolean(String(row.data_fim ?? '').trim());
+  const hasTipo = Boolean(String(row.tipo ?? '').trim());
+  const hasIdentificacao = Boolean(String(row.cpf ?? '').trim()) || Boolean(String(row.servidor_nome ?? '').trim());
+  return hasIdentificacao && (hasPeriodo || hasTipo);
+};
+
 const mapAtestadoToInsert = (item: Atestado) => ({
   cpf: normalizeCpf(item.cpf),
   servidor_nome: String(item.servidorNome || '').trim(),
@@ -422,7 +429,9 @@ export const atestadosService = {
       throw new Error(getErrorMessage(error, 'Falha ao listar atestados.'));
     }
 
-    return (data || []).map(mapRowToAtestado);
+    return (data || [])
+      .filter((row) => isMeaningfulAtestadoRow(row))
+      .map(mapRowToAtestado);
   },
 
   async obterPorId(id: string): Promise<Atestado | null> {
