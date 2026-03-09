@@ -1,12 +1,10 @@
-import { Servidor, Categoria, Sexo, StatusServidor, OpcaoFiltro } from '../types';
-import { MOCK_SERVIDORES } from '../data/servidores';
-import { API_CONFIG } from '../config/api';
 import { supabase } from '../lib/supabaseClient';
-import { ListarServidoresParams } from './apiTypes';
-import { logsService } from './logsService';
-import { http } from './http';
+import type { Categoria, Servidor, Sexo, StatusServidor } from '../types';
+import type { ListarServidoresParams } from './apiTypes';
 
-let servidoresMock = Array.isArray(MOCK_SERVIDORES) ? [...MOCK_SERVIDORES] : [];
+type DbServidorRow = Record<string, unknown>;
+
+const TABLE_SERVIDORES = 'servidores';
 
 const CATEGORIAS_VALIDAS: readonly Categoria[] = [
   'EFETIVO SESAU',
@@ -17,517 +15,340 @@ const CATEGORIAS_VALIDAS: readonly Categoria[] = [
   'COMISSIONADOS',
 ] as const;
 
-const SEXOS_VALIDOS: readonly Sexo[] = ['M', 'F', 'OUTRO'] as const;
 const STATUS_VALIDOS: readonly StatusServidor[] = ['ATIVO', 'INATIVO'] as const;
+const SEXOS_VALIDOS: readonly Sexo[] = ['M', 'F', 'OUTRO'] as const;
 
-const FALLBACK_SEXO = 'NÃO INFORMADO';
-const FALLBACK_SETOR = 'NÃO INFORMADO';
-const FALLBACK_CATEGORIA = 'NÃO INFORMADO';
-const FALLBACK_STATUS = 'ATIVO';
+const normalizeCpf = (value: unknown) => String(value ?? '').replace(/\D/g, '');
 
-const isObject = (value: unknown): value is Record<string, any> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
-
-const asString = (value: unknown, fallback = ''): string => {
-  if (value === null || value === undefined) return fallback;
-  return String(value).trim();
+const formatCpf = (value: unknown) => {
+  const digits = normalizeCpf(value).slice(0, 11);
+  return digits
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1-$2');
 };
 
-const asNullableString = (value: unknown): string | null => {
-  const v = asString(value, '');
-  return v ? v : null;
+const safeString = (value: unknown) => String(value ?? '').trim();
+
+const firstFilled = (...values: unknown[]) => {
+  for (const value of values) {
+    const normalized = safeString(value);
+    if (normalized) return normalized;
+  }
+  return '';
 };
 
-const asCategoria = (value: unknown): Categoria | '' => {
-  const v = asString(value);
-  return (CATEGORIAS_VALIDAS as readonly string[]).includes(v) ? (v as Categoria) : '';
+const normalizeCategoria = (value: unknown): Categoria | '' => {
+  const normalized = safeString(value).toUpperCase();
+  return CATEGORIAS_VALIDAS.includes(normalized as Categoria) ? (normalized as Categoria) : '';
 };
 
-const asSexo = (value: unknown): Sexo | '' => {
-  const v = asString(value).toUpperCase();
-  return (SEXOS_VALIDOS as readonly string[]).includes(v) ? (v as Sexo) : '';
+const normalizeStatus = (value: unknown): StatusServidor => {
+  const normalized = safeString(value).toUpperCase();
+  return STATUS_VALIDOS.includes(normalized as StatusServidor) ? (normalized as StatusServidor) : 'ATIVO';
 };
 
-const asStatus = (value: unknown): StatusServidor => {
-  const v = asString(value).toUpperCase();
-  return (STATUS_VALIDOS as readonly string[]).includes(v) ? (v as StatusServidor) : 'ATIVO';
+const normalizeSexo = (value: unknown): Sexo | '' => {
+  const normalized = safeString(value).toUpperCase();
+  return SEXOS_VALIDOS.includes(normalized as Sexo) ? (normalized as Sexo) : '';
 };
 
-const getRowId = (data: any): string =>
-  asString(
-    data?.cpf ??
-    data?.servidor ??
-    data?.id ??
-    data?.servidor_id ??
-    data?.uuid
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) return error.message;
+  if (
+    typeof error === 'object' &&
+    error &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message;
+  }
+  return fallback;
+};
+
+const mapFromDB = (row: DbServidorRow): Servidor => {
+  const nomeCompleto = firstFilled(
+    row.nome_completo,
+    row.nomeCompleto,
+    row.nome,
+    row.servidor_nome,
+    row.servidorNome,
   );
 
-const emptyServidor = (): Servidor => ({
-  id: '',
-  nome: '',
-  nomeCompleto: '',
-  matricula: '',
-  cpf: '',
-  dataNascimento: null,
-  sexo: '',
-  rgNumero: '',
-  rgOrgaoEmissor: '',
-  rgUf: '',
-  email: '',
-  escolaridade: '',
-  profissao: '',
-  vinculo: '',
-  funcao: '',
-  cargaHoraria: '',
-  inicioExercicio: null,
-  categoria: '',
-  setor: '',
-  cargo: '',
-  telefone: '',
-  lotacaoInterna: '',
-  turno: '',
-  status: 'ATIVO',
-  observacao: '',
-  aniversario: null,
-});
-
-const mapFromDB = (data: any): Servidor => {
-  const nomeCompleto = asString(data?.nome_completo ?? data?.nomeCompleto ?? data?.nome);
+  const cpfDigits = normalizeCpf(firstFilled(row.cpf, row.cpf_numero));
+  const matricula = firstFilled(row.matricula, row.matricula_funcional, row.matriculaFuncional);
 
   return {
-    id: asString(data?.cpf ?? getRowId(data)),
-    nome: nomeCompleto,
+    id: firstFilled(row.servidor, row.id, row.servidor_id, row.uuid, cpfDigits, matricula, nomeCompleto),
+    nome: nomeCompleto || firstFilled(row.nome, row.apelido),
     nomeCompleto,
-    matricula: asString(data?.matricula),
-    cpf: asString(data?.cpf),
-    dataNascimento: asNullableString(data?.data_nascimento ?? data?.dataNascimento),
-    sexo: asSexo(data?.sexo),
-    rgNumero: asString(data?.rg_numero ?? data?.rgNumero),
-    rgOrgaoEmissor: asString(data?.rg_orgao_emissor ?? data?.rgOrgaoEmissor),
-    rgUf: asString(data?.rg_uf ?? data?.rgUf),
-    email: asString(data?.email),
-    escolaridade: asString(data?.escolaridade),
-    profissao: asString(data?.profissao),
-    vinculo: asString(data?.vinculo),
-    funcao: asString(data?.funcao),
-    cargaHoraria: asString(data?.carga_horaria ?? data?.cargaHoraria),
-    inicioExercicio: asNullableString(data?.inicio_exercicio ?? data?.inicioExercicio),
-    categoria: asCategoria(data?.categoria),
-    setor: asString(data?.setor),
-    cargo: asString(data?.cargo),
-    telefone: asString(data?.telefone),
-    lotacaoInterna: asString(data?.lotacao_interna ?? data?.lotacaoInterna),
-    turno: asString(data?.turno),
-    status: asStatus(data?.status),
-    observacao: asString(data?.observacao),
-    aniversario: asNullableString(data?.aniversario),
+    matricula,
+    cpf: formatCpf(cpfDigits),
+    dataNascimento: firstFilled(row.data_nascimento, row.dataNascimento, row.nascimento) || null,
+    sexo: normalizeSexo(firstFilled(row.sexo, row.genero)),
+    rgNumero: firstFilled(row.rg_numero, row.rgNumero, row.rg),
+    rgOrgaoEmissor: firstFilled(row.rg_orgao_emissor, row.rgOrgaoEmissor, row.orgao_emissor, row.orgaoEmissor),
+    rgUf: firstFilled(row.rg_uf, row.rgUf),
+    email: firstFilled(row.email),
+    escolaridade: firstFilled(row.escolaridade),
+    profissao: firstFilled(row.profissao, row.profissão),
+    vinculo: firstFilled(row.vinculo, row.vínculo),
+    funcao: firstFilled(row.funcao, row.função),
+    cargaHoraria: firstFilled(row.carga_horaria, row.cargaHoraria, row.ch, row['c/h']),
+    inicioExercicio: firstFilled(row.inicio_exercicio, row.inicioExercicio) || null,
+    categoria: normalizeCategoria(firstFilled(row.categoria_canonica, row.categoria, row.categoriaCanonica)),
+    setor: firstFilled(row.setor, row.lotacao, row.lotação, row.lotacao_interna, row.lotacaoInterna),
+    cargo: firstFilled(row.cargo),
+    telefone: firstFilled(row.telefone, row.celular),
+    lotacaoInterna: firstFilled(row.lotacao_interna, row.lotacaoInterna),
+    turno: firstFilled(row.turno),
+    status: normalizeStatus(firstFilled(row.status, row.ativo ? 'ATIVO' : 'INATIVO')),
+    observacao: firstFilled(row.observacao, row.observação),
+    aniversario: firstFilled(row.aniversario, row.data_nascimento, row.dataNascimento) || null,
   };
 };
 
-const mapToDB = (data: Partial<Servidor> | any) => ({
-  nome_completo: asString(data?.nomeCompleto ?? data?.nome),
-  matricula: asString(data?.matricula),
-  cpf: asString(data?.cpf),
-  data_nascimento: asNullableString(data?.dataNascimento),
-  sexo: asString(data?.sexo),
-  rg_numero: asString(data?.rgNumero),
-  rg_orgao_emissor: asString(data?.rgOrgaoEmissor),
-  rg_uf: asString(data?.rgUf),
-  email: asString(data?.email),
-  escolaridade: asString(data?.escolaridade),
-  profissao: asString(data?.profissao),
-  vinculo: asString(data?.vinculo),
-  funcao: asString(data?.funcao),
-  carga_horaria: asString(data?.cargaHoraria),
-  inicio_exercicio: asNullableString(data?.inicioExercicio),
-  categoria: asString(data?.categoria),
-  setor: asString(data?.setor),
-  cargo: asString(data?.cargo),
-  telefone: asString(data?.telefone),
-  lotacao_interna: asString(data?.lotacaoInterna),
-  turno: asString(data?.turno),
-  status: asStatus(data?.status),
-  observacao: asString(data?.observacao),
-  aniversario: asNullableString(data?.aniversario),
+const mapToInsert = (input: Partial<Servidor>) => ({
+  nome_completo: safeString(input.nomeCompleto || input.nome),
+  matricula: safeString(input.matricula),
+  cpf: normalizeCpf(input.cpf),
+  data_nascimento: input.dataNascimento || null,
+  sexo: safeString(input.sexo),
+  rg_numero: safeString(input.rgNumero),
+  rg_orgao_emissor: safeString(input.rgOrgaoEmissor),
+  rg_uf: safeString(input.rgUf),
+  email: safeString(input.email),
+  escolaridade: safeString(input.escolaridade),
+  profissao: safeString(input.profissao),
+  vinculo: safeString(input.vinculo),
+  funcao: safeString(input.funcao),
+  carga_horaria: safeString(input.cargaHoraria),
+  inicio_exercicio: input.inicioExercicio || null,
+  categoria: safeString(input.categoria),
+  setor: safeString(input.setor),
+  cargo: safeString(input.cargo),
+  telefone: safeString(input.telefone),
+  lotacao_interna: safeString(input.lotacaoInterna),
+  turno: safeString(input.turno),
+  status: safeString(input.status || 'ATIVO'),
+  observacao: safeString(input.observacao),
 });
 
-const normalizeToArray = <T = any>(resp: any): T[] => {
-  if (Array.isArray(resp)) return resp;
-  if (!isObject(resp)) return [];
+const buildListQuery = (params?: ListarServidoresParams) => {
+  let query = supabase.from(TABLE_SERVIDORES).select('*');
 
-  const candidates = [
-    resp.data,
-    resp.items,
-    resp.rows,
-    resp.results,
-    resp.list,
-    resp.content,
-    resp.records,
-    resp.payload,
-    resp.result,
-    isObject(resp.data) ? resp.data.items : undefined,
-    isObject(resp.data) ? resp.data.rows : undefined,
-    isObject(resp.data) ? resp.data.results : undefined,
-    isObject(resp.data) ? resp.data.list : undefined,
-    isObject(resp.payload) ? resp.payload.items : undefined,
-    isObject(resp.payload) ? resp.payload.rows : undefined,
-    isObject(resp.payload) ? resp.payload.results : undefined,
-  ];
+  if (params?.busca) {
+    const busca = safeString(params.busca);
+    const cpfDigits = normalizeCpf(busca);
+    const orParts: string[] = [];
 
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate;
+    if (busca) {
+      orParts.push(`nome_completo.ilike.%${busca}%`);
+      orParts.push(`matricula.ilike.%${busca}%`);
+      orParts.push(`setor.ilike.%${busca}%`);
+      orParts.push(`categoria.ilike.%${busca}%`);
+    }
+
+    if (cpfDigits) {
+      orParts.push(`cpf.ilike.%${cpfDigits}%`);
+    }
+
+    if (orParts.length) {
+      query = query.or(orParts.join(','));
+    }
   }
 
-  return [];
-};
-
-const normalizeServidor = (row: any): Servidor => {
-  if (!isObject(row)) {
-    return emptyServidor();
+  if (params?.categoria && safeString(params.categoria) !== 'TODOS') {
+    query = query.eq('categoria', safeString(params.categoria));
   }
 
-  const hasSnakeCase =
-    'nome_completo' in row ||
-    'data_nascimento' in row ||
-    'rg_numero' in row ||
-    'rg_orgao_emissor' in row ||
-    'rg_uf' in row ||
-    'lotacao_interna' in row ||
-    'inicio_exercicio' in row ||
-    'servidor' in row;
-
-  if (hasSnakeCase) {
-    return mapFromDB(row);
+  if (params?.setor && safeString(params.setor) !== 'TODOS') {
+    query = query.eq('setor', safeString(params.setor));
   }
 
-  const nomeCompleto = asString(row.nomeCompleto ?? row.nome);
-  const nome = asString(row.nome ?? nomeCompleto);
+  if (params?.status && safeString(params.status) !== 'TODOS') {
+    query = query.eq('status', safeString(params.status).toUpperCase());
+  }
 
-  return {
-    id: asString(row.cpf ?? getRowId(row)),
-    nome: nome || nomeCompleto,
-    nomeCompleto: nomeCompleto || nome,
-    matricula: asString(row.matricula),
-    cpf: asString(row.cpf),
-    dataNascimento: asNullableString(row.dataNascimento),
-    sexo: asSexo(row.sexo),
-    rgNumero: asString(row.rgNumero),
-    rgOrgaoEmissor: asString(row.rgOrgaoEmissor),
-    rgUf: asString(row.rgUf),
-    email: asString(row.email),
-    escolaridade: asString(row.escolaridade),
-    profissao: asString(row.profissao),
-    vinculo: asString(row.vinculo),
-    funcao: asString(row.funcao),
-    cargaHoraria: asString(row.cargaHoraria),
-    inicioExercicio: asNullableString(row.inicioExercicio),
-    categoria: asCategoria(row.categoria),
-    setor: asString(row.setor),
-    cargo: asString(row.cargo),
-    telefone: asString(row.telefone),
-    lotacaoInterna: asString(row.lotacaoInterna),
-    turno: asString(row.turno),
-    status: asStatus(row.status),
-    observacao: asString(row.observacao),
-    aniversario: asNullableString(row.aniversario),
-  };
+  return query;
 };
 
-const normalizeServidores = (resp: any): Servidor[] => {
-  const arr = normalizeToArray<any>(resp);
-  if (!Array.isArray(arr)) return [];
-  return arr.map(normalizeServidor);
-};
-
-const normalizeTextForFilter = (value: unknown, fallback = '') =>
-  asString(value, fallback).trim();
-
-const uniqueSorted = (values: string[]) =>
-  [...new Set(values.map((v) => normalizeTextForFilter(v)).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+const sortServidores = (list: Servidor[]) =>
+  [...list].sort((a, b) =>
+    safeString(a.nomeCompleto || a.nome).localeCompare(safeString(b.nomeCompleto || b.nome), 'pt-BR'),
   );
 
-const getCategoriaFiltro = (servidor: Servidor) =>
-  normalizeTextForFilter(servidor.categoria, FALLBACK_CATEGORIA);
+export const servidoresService = {
+  async listar(params?: ListarServidoresParams): Promise<Servidor[]> {
+    try {
+      const query = buildListQuery(params)
+        .order('nome_completo', { ascending: true })
+        .limit(params?.limite && Number(params.limite) > 0 ? Number(params.limite) : 1000);
 
-const getSetorFiltro = (servidor: Servidor) =>
-  normalizeTextForFilter(servidor.setor, FALLBACK_SETOR);
+      const { data, error } = await query;
 
-const getStatusFiltro = (servidor: Servidor) =>
-  normalizeTextForFilter(servidor.status, FALLBACK_STATUS);
-
-const getSexoFiltro = (servidor: Servidor) =>
-  normalizeTextForFilter(servidor.sexo, FALLBACK_SEXO);
-
-export const apiServidores = {
-  listar: async (filtros?: ListarServidoresParams): Promise<Servidor[]> => {
-    if (API_CONFIG.useMock) {
-      let result = Array.isArray(servidoresMock) ? [...servidoresMock] : [];
-
-      if (filtros?.busca) {
-        const b = asString(filtros.busca).toLowerCase();
-        result = result.filter((s: any) => {
-          const normalizado = normalizeServidor(s);
-          const nome = normalizado.nomeCompleto.toLowerCase();
-          const mat = normalizado.matricula.toLowerCase();
-          const cpf = normalizado.cpf.toLowerCase();
-          const email = normalizado.email.toLowerCase();
-
-          return (
-            nome.includes(b) ||
-            mat.includes(b) ||
-            cpf.includes(b) ||
-            email.includes(b)
-          );
-        });
+      if (error) {
+        throw new Error(getErrorMessage(error, 'Falha ao listar servidores.'));
       }
 
-      if (filtros?.categoria) {
-        result = result.filter(
-          (s: any) => getCategoriaFiltro(normalizeServidor(s)) === filtros.categoria
-        );
+      return sortServidores((Array.isArray(data) ? data : []).map(mapFromDB));
+    } catch (error) {
+      throw new Error(getErrorMessage(error, 'Falha ao listar servidores.'));
+    }
+  },
+
+  async obterPorId(idOrCpf: string): Promise<Servidor | null> {
+    try {
+      const raw = safeString(idOrCpf);
+      const cpfDigits = normalizeCpf(raw);
+
+      const searchValue = raw.replace(/,/g, ' ');
+      const orParts = [
+        `servidor.eq.${searchValue}`,
+        `id.eq.${searchValue}`,
+        `servidor_id.eq.${searchValue}`,
+        `uuid.eq.${searchValue}`,
+      ];
+
+      if (cpfDigits.length === 11) {
+        orParts.unshift(`cpf.eq.${cpfDigits}`);
       }
 
-      if (filtros?.setor) {
-        result = result.filter(
-          (s: any) => getSetorFiltro(normalizeServidor(s)) === filtros.setor
-        );
+      const { data, error } = await supabase
+        .from(TABLE_SERVIDORES)
+        .select('*')
+        .or(orParts.join(','))
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(getErrorMessage(error, 'Falha ao obter servidor.'));
       }
 
-      if (filtros?.status) {
-        result = result.filter(
-          (s: any) => getStatusFiltro(normalizeServidor(s)) === filtros.status
-        );
-      }
+      return data ? mapFromDB(data) : null;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, 'Falha ao obter servidor.'));
+    }
+  },
 
-      if (filtros?.sexo) {
-        result = result.filter(
-          (s: any) => getSexoFiltro(normalizeServidor(s)) === filtros.sexo
-        );
-      }
+  async buscarSugestoes(term: string, limite = 8): Promise<Servidor[]> {
+    const searchTerm = safeString(term);
 
-      return result.map(normalizeServidor);
+    if (searchTerm.length < 3) {
+      return [];
     }
 
     try {
-      const queryParams = new URLSearchParams();
+      const cpfDigits = normalizeCpf(searchTerm);
+      const orParts: string[] = [
+        `nome_completo.ilike.%${searchTerm}%`,
+        `matricula.ilike.%${searchTerm}%`,
+      ];
 
-      if (filtros?.busca) queryParams.append('busca', filtros.busca);
-      if (filtros?.nome) queryParams.append('nome', filtros.nome);
-      if (filtros?.categoria) queryParams.append('categoria', filtros.categoria);
-      if (filtros?.setor) queryParams.append('setor', filtros.setor);
-      if (filtros?.status) queryParams.append('status', filtros.status);
-      if (filtros?.sexo) queryParams.append('sexo', filtros.sexo);
+      if (cpfDigits) {
+        orParts.push(`cpf.ilike.%${cpfDigits}%`);
+      }
 
-      const queryString = queryParams.toString();
-      const path = `/api/servidores${queryString ? `?${queryString}` : ''}`;
+      const { data, error } = await supabase
+        .from(TABLE_SERVIDORES)
+        .select('*')
+        .or(orParts.join(','))
+        .order('nome_completo', { ascending: true })
+        .limit(Math.max(1, Math.min(limite || 8, 20)));
 
-      const resp = await http.get<any>(path);
-      return normalizeServidores(resp);
+      if (error) {
+        throw new Error(getErrorMessage(error, 'Falha ao buscar sugestões de servidores.'));
+      }
+
+      const mapped = sortServidores((Array.isArray(data) ? data : []).map(mapFromDB));
+
+      const unique = new Map<string, Servidor>();
+      for (const item of mapped) {
+        const key = [
+          normalizeCpf(item.cpf),
+          safeString(item.matricula),
+          safeString(item.nomeCompleto || item.nome),
+        ].join('|');
+
+        if (!unique.has(key)) {
+          unique.set(key, item);
+        }
+      }
+
+      return Array.from(unique.values()).slice(0, Math.max(1, Math.min(limite || 8, 20)));
     } catch (error) {
-      console.warn(
-        '[ServidoresService] Falha ao buscar da API, tentando Supabase diretamente...',
-        error
-      );
-
-      let query = supabase.from('servidores').select('*');
-
-      if (filtros?.busca) {
-        const b = asString(filtros.busca);
-        query = query.or(
-          `nome_completo.ilike.%${b}%,matricula.ilike.%${b}%,cpf.ilike.%${b}%`
-        );
-      }
-
-      if (filtros?.nome) {
-        query = query.ilike('nome_completo', `%${filtros.nome}%`);
-      }
-
-      if (filtros?.categoria && filtros.categoria !== FALLBACK_CATEGORIA) {
-        query = query.eq('categoria', filtros.categoria);
-      }
-
-      if (filtros?.setor && filtros.setor !== FALLBACK_SETOR) {
-        query = query.eq('setor', filtros.setor);
-      }
-
-      if (filtros?.status && filtros.status !== FALLBACK_STATUS) {
-        query = query.eq('status', filtros.status);
-      }
-
-      if (filtros?.sexo && filtros.sexo !== FALLBACK_SEXO) {
-        query = query.eq('sexo', filtros.sexo);
-      }
-
-      const { data, error: sbError } = await query.order('nome_completo');
-
-      if (sbError) {
-        console.error('Erro detalhado na consulta ao Supabase (servidores):', sbError);
-        throw sbError;
-      }
-
-      return Array.isArray(data) ? data.map(mapFromDB) : [];
+      throw new Error(getErrorMessage(error, 'Falha ao buscar sugestões de servidores.'));
     }
   },
 
-  listarFiltrosDisponiveis: async (): Promise<{
-    categorias: OpcaoFiltro[];
-    setores: OpcaoFiltro[];
-    status: OpcaoFiltro[];
-    sexo: OpcaoFiltro[];
-  }> => {
-    const servidores = await apiServidores.listar();
+  async adicionar(input: Partial<Servidor>): Promise<Servidor> {
+    try {
+      const payload = mapToInsert(input);
 
-    const categorias = uniqueSorted(servidores.map(getCategoriaFiltro)).map((value) => ({
-      value,
-      label: value,
-    }));
+      const { data, error } = await supabase
+        .from(TABLE_SERVIDORES)
+        .insert(payload)
+        .select('*')
+        .single();
 
-    const setores = uniqueSorted(servidores.map(getSetorFiltro)).map((value) => ({
-      value,
-      label: value,
-    }));
+      if (error || !data) {
+        throw new Error(getErrorMessage(error, 'Falha ao adicionar servidor.'));
+      }
 
-    const status = uniqueSorted(servidores.map(getStatusFiltro)).map((value) => ({
-      value,
-      label: value,
-    }));
-
-    const sexo = uniqueSorted(servidores.map(getSexoFiltro)).map((value) => ({
-      value,
-      label: value,
-    }));
-
-    return { categorias, setores, status, sexo };
+      return mapFromDB(data);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, 'Falha ao adicionar servidor.'));
+    }
   },
 
-  obterPorId: async (id: string): Promise<Servidor> => {
-    if (API_CONFIG.useMock) {
-      const s = Array.isArray(servidoresMock)
-        ? servidoresMock.find((item: any) => normalizeServidor(item).cpf === id)
-        : undefined;
+  async editar(idOrCpf: string, input: Partial<Servidor>): Promise<Servidor> {
+    try {
+      const payload = mapToInsert(input);
+      const raw = safeString(idOrCpf);
+      const cpfDigits = normalizeCpf(raw);
 
-      if (!s) throw new Error('Servidor não encontrado');
-      return normalizeServidor(s);
+      let query = supabase.from(TABLE_SERVIDORES).update(payload).select('*');
+
+      if (cpfDigits.length === 11) {
+        query = query.eq('cpf', cpfDigits);
+      } else {
+        query = query.eq('servidor', raw);
+      }
+
+      const { data, error } = await query.single();
+
+      if (error || !data) {
+        throw new Error(getErrorMessage(error, 'Falha ao editar servidor.'));
+      }
+
+      return mapFromDB(data);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, 'Falha ao editar servidor.'));
     }
-
-    const { data, error } = await supabase
-      .from('servidores')
-      .select('*')
-      .eq('cpf', id)
-      .single();
-
-    if (error) throw error;
-
-    return normalizeServidor(data);
   },
 
-  adicionar: async (servidor: Omit<Servidor, 'id'>): Promise<Servidor> => {
-    if (API_CONFIG.useMock) {
-      const novo: Servidor = normalizeServidor({
-        ...servidor,
-        id: asString(servidor.cpf || Math.random().toString(36).substring(2, 11)),
-      });
+  async excluir(idOrCpf: string): Promise<void> {
+    try {
+      const raw = safeString(idOrCpf);
+      const cpfDigits = normalizeCpf(raw);
 
-      servidoresMock.push(novo);
-      return novo;
+      let query = supabase.from(TABLE_SERVIDORES).delete();
+
+      if (cpfDigits.length === 11) {
+        query = query.eq('cpf', cpfDigits);
+      } else {
+        query = query.eq('servidor', raw);
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        throw new Error(getErrorMessage(error, 'Falha ao excluir servidor.'));
+      }
+    } catch (error) {
+      throw new Error(getErrorMessage(error, 'Falha ao excluir servidor.'));
     }
-
-    const { data, error } = await supabase
-      .from('servidores')
-      .insert(mapToDB(servidor))
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    await logsService.registrar({
-      user_id: user?.id || 'sistema',
-      user_email: user?.email,
-      acao: 'CRIAR',
-      entidade: 'SERVIDOR',
-      entidade_id: asString(data?.cpf),
-      detalhes: { nome: data?.nome_completo },
-    });
-
-    return normalizeServidor(data);
-  },
-
-  editar: async (id: string, dados: Partial<Servidor>): Promise<Servidor> => {
-    if (API_CONFIG.useMock) {
-      const index = Array.isArray(servidoresMock)
-        ? servidoresMock.findIndex((s: any) => normalizeServidor(s).cpf === id)
-        : -1;
-
-      if (index === -1) throw new Error('Servidor não encontrado');
-
-      servidoresMock[index] = normalizeServidor({
-        ...servidoresMock[index],
-        ...dados,
-        cpf: id,
-        id,
-      });
-
-      return servidoresMock[index];
-    }
-
-    const { data, error } = await supabase
-      .from('servidores')
-      .update(mapToDB(dados))
-      .eq('cpf', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    await logsService.registrar({
-      user_id: user?.id || 'sistema',
-      user_email: user?.email,
-      acao: 'EDITAR',
-      entidade: 'SERVIDOR',
-      entidade_id: id,
-      detalhes: dados,
-    });
-
-    return normalizeServidor(data);
-  },
-
-  excluir: async (id: string): Promise<void> => {
-    if (API_CONFIG.useMock) {
-      servidoresMock = Array.isArray(servidoresMock)
-        ? servidoresMock.filter((s: any) => normalizeServidor(s).cpf !== id)
-        : [];
-      return;
-    }
-
-    const { error } = await supabase
-      .from('servidores')
-      .delete()
-      .eq('cpf', id);
-
-    if (error) throw error;
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    await logsService.registrar({
-      user_id: user?.id || 'sistema',
-      user_email: user?.email,
-      acao: 'EXCLUIR',
-      entidade: 'SERVIDOR',
-      entidade_id: id,
-      detalhes: {},
-    });
   },
 };
 
-export const servidoresService = apiServidores;
+export default servidoresService;
