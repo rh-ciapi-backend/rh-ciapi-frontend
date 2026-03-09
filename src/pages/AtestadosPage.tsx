@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   BriefcaseMedical,
@@ -23,9 +23,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import atestadosService from '../services/atestadosService';
+import servidoresService from '../services/servidoresService';
 import type {
   Atestado,
   AtestadoFormData,
+  Servidor,
   StatusAtestado,
   TipoAtestado,
 } from '../types';
@@ -463,6 +465,16 @@ const AtestadosPage: React.FC = () => {
   const [detailsItem, setDetailsItem] = useState<Atestado | null>(null);
   const [deleteItem, setDeleteItem] = useState<Atestado | null>(null);
 
+  const [serverSuggestions, setServerSuggestions] = useState<Servidor[]>([]);
+  const [isServerSuggestionsLoading, setIsServerSuggestionsLoading] = useState(false);
+  const [showServerSuggestions, setShowServerSuggestions] = useState(false);
+  const [serverSuggestionMessage, setServerSuggestionMessage] = useState('');
+  const [activeServerSuggestionIndex, setActiveServerSuggestionIndex] = useState(-1);
+
+  const serverAutocompleteRef = useRef<HTMLDivElement | null>(null);
+  const serverAutocompleteRequestRef = useRef(0);
+  const suppressNextServerSearchRef = useRef(false);
+
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error' | 'warning' | null;
     message: string;
@@ -506,6 +518,77 @@ const AtestadosPage: React.FC = () => {
       dias: calculated > 0 ? String(calculated) : '',
     }));
   }, [formData.dataInicio, formData.dataFim, formData.considerarDiasUteis]);
+
+  useEffect(() => {
+    if (!isFormOpen) {
+      setServerSuggestions([]);
+      setShowServerSuggestions(false);
+      setServerSuggestionMessage('');
+      setIsServerSuggestionsLoading(false);
+      setActiveServerSuggestionIndex(-1);
+      return;
+    }
+
+    if (suppressNextServerSearchRef.current) {
+      suppressNextServerSearchRef.current = false;
+      return;
+    }
+
+    const term = formData.servidorNome.trim();
+
+    if (term.length < 3) {
+      setServerSuggestions([]);
+      setIsServerSuggestionsLoading(false);
+      setServerSuggestionMessage(term.length > 0 ? 'Digite pelo menos 3 caracteres para buscar.' : '');
+      setShowServerSuggestions(false);
+      setActiveServerSuggestionIndex(-1);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      const requestId = Date.now();
+      serverAutocompleteRequestRef.current = requestId;
+      setIsServerSuggestionsLoading(true);
+      setServerSuggestionMessage('');
+      setShowServerSuggestions(true);
+
+      try {
+        const results = await servidoresService.buscarSugestoes(term, 8);
+
+        if (serverAutocompleteRequestRef.current !== requestId) return;
+
+        setServerSuggestions(Array.isArray(results) ? results : []);
+        setActiveServerSuggestionIndex(-1);
+        setServerSuggestionMessage(results.length === 0 ? 'Nenhum servidor encontrado' : '');
+      } catch (error) {
+        if (serverAutocompleteRequestRef.current !== requestId) return;
+        setServerSuggestions([]);
+        setActiveServerSuggestionIndex(-1);
+        setServerSuggestionMessage(error instanceof Error ? error.message : 'Falha ao buscar servidores.');
+      } finally {
+        if (serverAutocompleteRequestRef.current === requestId) {
+          setIsServerSuggestionsLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [formData.servidorNome, isFormOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!serverAutocompleteRef.current) return;
+      if (!serverAutocompleteRef.current.contains(event.target as Node)) {
+        setShowServerSuggestions(false);
+        setActiveServerSuggestionIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => safeText(item.setor))), [items]);
   const categoriaOptions = useMemo(
@@ -577,11 +660,20 @@ const AtestadosPage: React.FC = () => {
     setSelectedTipo('TODOS');
   };
 
+  const resetServerAutocomplete = () => {
+    setServerSuggestions([]);
+    setShowServerSuggestions(false);
+    setServerSuggestionMessage('');
+    setIsServerSuggestionsLoading(false);
+    setActiveServerSuggestionIndex(-1);
+  };
+
   const openCreateModal = () => {
     setEditingId(null);
     setFormData(createEmptyAtestadoForm());
     setFormErrors({});
     setFeedback({ type: null, message: '' });
+    resetServerAutocomplete();
     setIsFormOpen(true);
   };
 
@@ -590,6 +682,7 @@ const AtestadosPage: React.FC = () => {
     setFormData(mapAtestadoToForm(item));
     setFormErrors({});
     setFeedback({ type: null, message: '' });
+    resetServerAutocomplete();
     setIsFormOpen(true);
   };
 
@@ -598,11 +691,86 @@ const AtestadosPage: React.FC = () => {
     setEditingId(null);
     setFormData(createEmptyAtestadoForm());
     setFormErrors({});
+    resetServerAutocomplete();
   };
 
   const handleInputChange = <K extends keyof AtestadoFormData>(field: K, value: AtestadoFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleSelectServerSuggestion = (server: Servidor) => {
+    suppressNextServerSearchRef.current = true;
+
+    setFormData((prev) => ({
+      ...prev,
+      servidorNome: safeText(server.nomeCompleto || server.nome),
+      cpf: formatCpf(safeText(server.cpf)),
+      matricula: safeText(server.matricula),
+      setor: safeText(server.setor),
+      categoria: safeText(server.categoria),
+    }));
+
+    setFormErrors((prev) => ({
+      ...prev,
+      servidorNome: undefined,
+      cpf: undefined,
+    }));
+
+    setServerSuggestions([]);
+    setShowServerSuggestions(false);
+    setServerSuggestionMessage('');
+    setActiveServerSuggestionIndex(-1);
+  };
+
+  const handleServerNameChange = (value: string) => {
+    handleInputChange('servidorNome', value);
+    setActiveServerSuggestionIndex(-1);
+
+    if (value.trim().length >= 3) {
+      setShowServerSuggestions(true);
+      setServerSuggestionMessage('');
+    } else {
+      setShowServerSuggestions(false);
+      setServerSuggestions([]);
+      setServerSuggestionMessage(value.trim().length > 0 ? 'Digite pelo menos 3 caracteres para buscar.' : '');
+    }
+  };
+
+  const handleServerInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showServerSuggestions) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveServerSuggestionIndex((prev) => {
+        const next = prev + 1;
+        return next >= serverSuggestions.length ? 0 : next;
+      });
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveServerSuggestionIndex((prev) => {
+        if (prev <= 0) return serverSuggestions.length - 1;
+        return prev - 1;
+      });
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      if (activeServerSuggestionIndex >= 0 && activeServerSuggestionIndex < serverSuggestions.length) {
+        event.preventDefault();
+        handleSelectServerSuggestion(serverSuggestions[activeServerSuggestionIndex]);
+      }
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setShowServerSuggestions(false);
+      setActiveServerSuggestionIndex(-1);
+    }
   };
 
   const validateForm = (): FormErrors => {
@@ -1232,12 +1400,83 @@ const AtestadosPage: React.FC = () => {
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                       <label className="xl:col-span-2">
                         <FieldLabel>Nome do Servidor *</FieldLabel>
-                        <input
-                          value={formData.servidorNome}
-                          onChange={(e) => handleInputChange('servidorNome', e.target.value)}
-                          className={InputBaseClass}
-                          placeholder="Digite o nome completo"
-                        />
+                        <div className="relative" ref={serverAutocompleteRef}>
+                          <input
+                            value={formData.servidorNome}
+                            onChange={(e) => handleServerNameChange(e.target.value)}
+                            onFocus={() => {
+                              if (formData.servidorNome.trim().length >= 3) {
+                                setShowServerSuggestions(true);
+                              }
+                            }}
+                            onKeyDown={handleServerInputKeyDown}
+                            className={InputBaseClass}
+                            placeholder="Digite nome, CPF ou matrícula"
+                            autoComplete="off"
+                          />
+
+                          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+                            {isServerSuggestionsLoading ? (
+                              <RefreshCw size={16} className="animate-spin text-cyan-300" />
+                            ) : (
+                              <Search size={16} className="text-zinc-500" />
+                            )}
+                          </div>
+
+                          <AnimatePresence>
+                            {showServerSuggestions && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 4 }}
+                                transition={{ duration: 0.14 }}
+                                className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]/98 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+                              >
+                                <div className="max-h-72 overflow-y-auto py-2">
+                                  {isServerSuggestionsLoading && (
+                                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-300">
+                                      <RefreshCw size={15} className="animate-spin text-cyan-300" />
+                                      Buscando servidores...
+                                    </div>
+                                  )}
+
+                                  {!isServerSuggestionsLoading && serverSuggestions.length > 0 && (
+                                    <>
+                                      {serverSuggestions.map((server, index) => (
+                                        <button
+                                          key={`${server.id}-${server.cpf}-${server.matricula}-${index}`}
+                                          type="button"
+                                          onClick={() => handleSelectServerSuggestion(server)}
+                                          className={`flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition ${
+                                            index === activeServerSuggestionIndex
+                                              ? 'bg-cyan-500/12'
+                                              : 'hover:bg-white/[0.06]'
+                                          }`}
+                                        >
+                                          <span className="text-sm font-semibold text-white">
+                                            {safeText(server.nomeCompleto || server.nome) || 'Servidor sem nome'}
+                                          </span>
+                                          <span className="text-xs text-zinc-400">
+                                            CPF: {formatCpf(safeText(server.cpf) || '') || '-'} • Matrícula: {safeText(server.matricula) || '-'}
+                                          </span>
+                                          <span className="text-[11px] text-zinc-500">
+                                            {safeText(server.setor) || 'Sem setor'} • {safeText(server.categoria) || 'Sem categoria'}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </>
+                                  )}
+
+                                  {!isServerSuggestionsLoading && serverSuggestions.length === 0 && serverSuggestionMessage && (
+                                    <div className="px-4 py-3 text-sm text-zinc-400">
+                                      {serverSuggestionMessage}
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                         {formErrors.servidorNome && <p className="mt-2 text-xs text-rose-400">{formErrors.servidorNome}</p>}
                       </label>
 
@@ -1397,7 +1636,7 @@ const AtestadosPage: React.FC = () => {
                         </p>
                       </div>
 
-                      <label className="md:col-span-2 xl:col-span-4">
+                      <label className="md:col-span-2 xl:grid-cols-4 xl:col-span-4">
                         <FieldLabel>Observação</FieldLabel>
                         <textarea
                           value={formData.observacao}
