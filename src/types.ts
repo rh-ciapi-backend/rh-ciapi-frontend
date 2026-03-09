@@ -101,7 +101,7 @@ export interface LogAtividade {
   acao: string;
   entidade: string;
   entidade_id: string;
-  detalhes: any;
+  detalhes: unknown;
   created_at: string;
 }
 
@@ -129,6 +129,8 @@ export type TipoAtestado =
   | 'PSICOLÓGICO'
   | 'ACOMPANHAMENTO';
 
+export type CategoriaAtestado = Categoria | '' | string;
+
 export interface AtestadoArquivoMetadata {
   arquivoNome: string;
   arquivoUrl: string;
@@ -143,7 +145,7 @@ export interface Atestado {
   servidorNome: string;
   matricula: string;
   setor: string;
-  categoria: Categoria | '' | string;
+  categoria: CategoriaAtestado;
   tipo: TipoAtestado;
   dataEmissao: string;
   dataInicio: string;
@@ -168,7 +170,7 @@ export interface AtestadoInput {
   servidorNome: string;
   matricula?: string;
   setor?: string;
-  categoria?: Categoria | '' | string;
+  categoria?: CategoriaAtestado;
   tipo: TipoAtestado;
   dataEmissao?: string;
   dataInicio: string;
@@ -193,15 +195,15 @@ export interface AtestadoFormData {
   servidorNome: string;
   matricula: string;
   setor: string;
-  categoria: Categoria | '' | string;
-  tipo: '' | TipoAtestado;
+  categoria: CategoriaAtestado;
+  tipo: TipoAtestado | '';
   dataEmissao: string;
   dataInicio: string;
   dataFim: string;
   dias: string;
   cid: string;
   observacao: string;
-  status: '' | StatusAtestado;
+  status: StatusAtestado | '';
   arquivo: File | null;
   arquivoNome: string;
   arquivoUrl: string;
