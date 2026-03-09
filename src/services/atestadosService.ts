@@ -208,13 +208,6 @@ const mapInputToInsert = (input: AtestadoInput, fileMeta?: Partial<AtestadoUploa
   considerar_dias_uteis: Boolean(input.considerarDiasUteis),
 });
 
-const isMeaningfulAtestadoRow = (row: Partial<DbAtestadoRow>) => {
-  const hasPeriodo = Boolean(String(row.data_inicio ?? '').trim()) || Boolean(String(row.data_fim ?? '').trim());
-  const hasTipo = Boolean(String(row.tipo ?? '').trim());
-  const hasIdentificacao = Boolean(String(row.cpf ?? '').trim()) || Boolean(String(row.servidor_nome ?? '').trim());
-  return hasIdentificacao && (hasPeriodo || hasTipo);
-};
-
 const mapAtestadoToInsert = (item: Atestado) => ({
   cpf: normalizeCpf(item.cpf),
   servidor_nome: String(item.servidorNome || '').trim(),
@@ -429,9 +422,7 @@ export const atestadosService = {
       throw new Error(getErrorMessage(error, 'Falha ao listar atestados.'));
     }
 
-    return (data || [])
-      .filter((row) => isMeaningfulAtestadoRow(row))
-      .map(mapRowToAtestado);
+    return (data || []).map(mapRowToAtestado);
   },
 
   async obterPorId(id: string): Promise<Atestado | null> {
@@ -555,15 +546,12 @@ export const atestadosService = {
       const sync = await syncToFrequencia(atestado);
 
       if (!sync.ok) {
-        await supabase.from(TABLE_ATESTADOS).delete().eq('id', atestado.id);
-
-        if (uploadedPath) {
-          try {
-            await this.removerArquivo(uploadedPath);
-          } catch {}
-        }
-
-        throw new Error(formatSyncError(sync, 'Falha ao integrar com frequência.'));
+        return {
+          ok: true,
+          data: atestado,
+          message: 'Atestado salvo com sucesso.',
+          warning: buildSyncWarningMessage(sync),
+        };
       }
 
       return {
@@ -620,15 +608,18 @@ export const atestadosService = {
         const sync = await syncToFrequencia(atualizado);
 
         if (!sync.ok) {
-          await restorePreviousState(id, atual);
-
-          if (uploadedPath) {
+          if (newUpload && oldFilePath && oldFilePath !== newUpload.arquivoPath) {
             try {
-              await this.removerArquivo(uploadedPath);
+              await this.removerArquivo(oldFilePath);
             } catch {}
           }
 
-          throw new Error(formatSyncError(sync, 'Falha ao integrar com frequência.'));
+          return {
+            ok: true,
+            data: atualizado,
+            message: 'Atestado atualizado com sucesso.',
+            warning: buildSyncWarningMessage(sync),
+          };
         }
       }
 
