@@ -159,6 +159,9 @@ const formatSyncError = (sync: FrequenciaSyncResult, fallback: string) => {
   return fallback;
 };
 
+const buildSyncWarningMessage = (sync: FrequenciaSyncResult) =>
+  formatSyncError(sync, 'Não foi possível sincronizar com a frequência.');
+
 const mapRowToAtestado = (row: Partial<DbAtestadoRow>): Atestado => ({
   id: String(row.id ?? ''),
   cpf: formatCpf(String(row.cpf ?? '')),
