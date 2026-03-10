@@ -66,6 +66,8 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const escapeSupabaseLikeTerm = (value: string) => value.replace(/[%_,]/g, ' ').trim();
+
 const mapFromDB = (row: DbServidorRow): Servidor => {
   const nomeCompleto = firstFilled(
     row.nome_completo,
@@ -91,19 +93,19 @@ const mapFromDB = (row: DbServidorRow): Servidor => {
     rgUf: firstFilled(row.rg_uf, row.rgUf),
     email: firstFilled(row.email),
     escolaridade: firstFilled(row.escolaridade),
-    profissao: firstFilled(row.profissao, row.profissão),
-    vinculo: firstFilled(row.vinculo, row.vínculo),
-    funcao: firstFilled(row.funcao, row.função),
+    profissao: firstFilled(row.profissao, row['profissão']),
+    vinculo: firstFilled(row.vinculo, row['vínculo']),
+    funcao: firstFilled(row.funcao, row['função']),
     cargaHoraria: firstFilled(row.carga_horaria, row.cargaHoraria, row.ch, row['c/h']),
     inicioExercicio: firstFilled(row.inicio_exercicio, row.inicioExercicio) || null,
     categoria: normalizeCategoria(firstFilled(row.categoria_canonica, row.categoria, row.categoriaCanonica)),
-    setor: firstFilled(row.setor, row.lotacao, row.lotação, row.lotacao_interna, row.lotacaoInterna),
+    setor: firstFilled(row.setor, row.lotacao, row['lotação'], row.lotacao_interna, row.lotacaoInterna),
     cargo: firstFilled(row.cargo),
     telefone: firstFilled(row.telefone, row.celular),
     lotacaoInterna: firstFilled(row.lotacao_interna, row.lotacaoInterna),
     turno: firstFilled(row.turno),
     status: normalizeStatus(firstFilled(row.status, row.ativo ? 'ATIVO' : 'INATIVO')),
-    observacao: firstFilled(row.observacao, row.observação),
+    observacao: firstFilled(row.observacao, row['observação']),
     aniversario: firstFilled(row.aniversario, row.data_nascimento, row.dataNascimento) || null,
   };
 };
@@ -138,7 +140,7 @@ const buildListQuery = (params?: ListarServidoresParams) => {
   let query = supabase.from(TABLE_SERVIDORES).select('*');
 
   if (params?.busca) {
-    const busca = safeString(params.busca);
+    const busca = escapeSupabaseLikeTerm(safeString(params.busca));
     const cpfDigits = normalizeCpf(busca);
     const orParts: string[] = [];
 
@@ -178,6 +180,24 @@ const sortServidores = (list: Servidor[]) =>
     safeString(a.nomeCompleto || a.nome).localeCompare(safeString(b.nomeCompleto || b.nome), 'pt-BR'),
   );
 
+const uniqueServidores = (items: Servidor[]) => {
+  const unique = new Map<string, Servidor>();
+
+  for (const item of items) {
+    const key = [
+      normalizeCpf(item.cpf),
+      safeString(item.matricula),
+      safeString(item.nomeCompleto || item.nome),
+    ].join('|');
+
+    if (!unique.has(key)) {
+      unique.set(key, item);
+    }
+  }
+
+  return Array.from(unique.values());
+};
+
 export const servidoresService = {
   async listar(params?: ListarServidoresParams): Promise<Servidor[]> {
     try {
@@ -191,7 +211,7 @@ export const servidoresService = {
         throw new Error(getErrorMessage(error, 'Falha ao listar servidores.'));
       }
 
-      return sortServidores((Array.isArray(data) ? data : []).map(mapFromDB));
+      return sortServidores(uniqueServidores((Array.isArray(data) ? data : []).map(mapFromDB)));
     } catch (error) {
       throw new Error(getErrorMessage(error, 'Falha ao listar servidores.'));
     }
@@ -202,12 +222,11 @@ export const servidoresService = {
       const raw = safeString(idOrCpf);
       const cpfDigits = normalizeCpf(raw);
 
-      const searchValue = raw.replace(/,/g, ' ');
       const orParts = [
-        `servidor.eq.${searchValue}`,
-        `id.eq.${searchValue}`,
-        `servidor_id.eq.${searchValue}`,
-        `uuid.eq.${searchValue}`,
+        `servidor.eq.${raw}`,
+        `id.eq.${raw}`,
+        `servidor_id.eq.${raw}`,
+        `uuid.eq.${raw}`,
       ];
 
       if (cpfDigits.length === 11) {
@@ -232,14 +251,15 @@ export const servidoresService = {
   },
 
   async buscarSugestoes(term: string, limite = 8): Promise<Servidor[]> {
-    const searchTerm = safeString(term);
+    const rawTerm = safeString(term);
 
-    if (searchTerm.length < 3) {
+    if (rawTerm.length < 3) {
       return [];
     }
 
     try {
-      const cpfDigits = normalizeCpf(searchTerm);
+      const searchTerm = escapeSupabaseLikeTerm(rawTerm);
+      const cpfDigits = normalizeCpf(rawTerm);
       const orParts: string[] = [
         `nome_completo.ilike.%${searchTerm}%`,
         `matricula.ilike.%${searchTerm}%`,
@@ -257,27 +277,17 @@ export const servidoresService = {
         .limit(Math.max(1, Math.min(limite || 8, 20)));
 
       if (error) {
-        throw new Error(getErrorMessage(error, 'Falha ao buscar sugestões de servidores.'));
+        console.error('Erro ao buscar sugestões de servidores:', error);
+        return [];
       }
 
-      const mapped = sortServidores((Array.isArray(data) ? data : []).map(mapFromDB));
-
-      const unique = new Map<string, Servidor>();
-      for (const item of mapped) {
-        const key = [
-          normalizeCpf(item.cpf),
-          safeString(item.matricula),
-          safeString(item.nomeCompleto || item.nome),
-        ].join('|');
-
-        if (!unique.has(key)) {
-          unique.set(key, item);
-        }
-      }
-
-      return Array.from(unique.values()).slice(0, Math.max(1, Math.min(limite || 8, 20)));
+      return uniqueServidores(sortServidores((Array.isArray(data) ? data : []).map(mapFromDB))).slice(
+        0,
+        Math.max(1, Math.min(limite || 8, 20)),
+      );
     } catch (error) {
-      throw new Error(getErrorMessage(error, 'Falha ao buscar sugestões de servidores.'));
+      console.error('Erro inesperado ao buscar sugestões de servidores:', error);
+      return [];
     }
   },
 
