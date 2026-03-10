@@ -9,7 +9,7 @@ type NullableString = string | null | undefined;
 
 type DbFeriasRow = {
   id: string;
-  servidor_id: string;
+  servidor_cpf: string;
   ano: number;
   periodo1_inicio?: string | null;
   periodo1_fim?: string | null;
@@ -70,13 +70,6 @@ const parseDate = (value?: NullableString): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const formatIsoDate = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
 const calculateDays = (inicio?: NullableString, fim?: NullableString) => {
   const start = parseDate(inicio);
   const end = parseDate(fim);
@@ -132,7 +125,7 @@ const sortByInicio = <T extends { inicio: string }>(items: T[]) =>
 
 const mapLegacyRowToFerias = (row: DbFeriasRow): Ferias => ({
   id: safeString(row.id),
-  servidorId: safeString(row.servidor_id),
+  servidorId: normalizeCpf(row.servidor_cpf),
   ano: Number(row.ano || 0),
   periodo1Inicio: safeString(row.periodo1_inicio),
   periodo1Fim: safeString(row.periodo1_fim),
@@ -217,10 +210,9 @@ const flattenRowToPeriods = (
   row: DbFeriasRow,
   servidoresMap?: Map<string, Servidor>,
 ): FeriasUiRecord[] => {
-  const servidorId = safeString(row.servidor_id);
+  const servidorId = normalizeCpf(row.servidor_cpf);
   const servidor =
     servidoresMap?.get(servidorId) ||
-    servidoresMap?.get(normalizeCpf(servidorId)) ||
     servidoresMap?.get(safeString(servidorId));
 
   const observacao = safeString(row.observacao);
@@ -243,7 +235,7 @@ const flattenRowToPeriods = (
       observacao,
       servidorNome: servidor?.nomeCompleto || servidor?.nome || '',
       matricula: servidor?.matricula || '',
-      cpf: servidor?.cpf || '',
+      cpf: servidor?.cpf || servidorId || '',
       setor: servidor?.setor || '',
     });
   };
@@ -300,8 +292,8 @@ const fetchServidoresMap = async () => {
   const map = new Map<string, Servidor>();
 
   for (const servidor of servidores) {
-    if (safeString(servidor.id)) map.set(safeString(servidor.id), servidor);
     if (normalizeCpf(servidor.cpf)) map.set(normalizeCpf(servidor.cpf), servidor);
+    if (safeString(servidor.id)) map.set(safeString(servidor.id), servidor);
   }
 
   return map;
@@ -315,8 +307,8 @@ const fetchFeriasRows = async (filtros?: ListarFeriasParams) => {
   }
 
   if (filtros?.servidorId) {
-    const raw = safeString(filtros.servidorId);
-    query = query.eq('servidor_id', raw);
+    const raw = normalizeCpf(filtros.servidorId);
+    query = query.eq('servidor_cpf', raw);
   }
 
   const { data, error } = await query.order('ano', { ascending: false });
@@ -338,11 +330,13 @@ const fetchRowById = async (rowId: string) => {
   return data as DbFeriasRow;
 };
 
-const findRowsByServidorAno = async (servidorId: string, ano: number) => {
+const findRowsByServidorAno = async (servidorCpf: string, ano: number) => {
+  const cpf = normalizeCpf(servidorCpf);
+
   const { data, error } = await supabase
     .from(TABLE_FERIAS)
     .select('*')
-    .eq('servidor_id', servidorId)
+    .eq('servidor_cpf', cpf)
     .eq('ano', ano)
     .order('created_at', { ascending: true });
 
@@ -403,7 +397,7 @@ export const apiFerias = {
       const flattened = rows.flatMap((item) => {
         const row: DbFeriasRow = {
           id: item.id,
-          servidor_id: item.servidorId,
+          servidor_cpf: normalizeCpf(item.servidorId),
           ano: item.ano,
           periodo1_inicio: item.periodo1Inicio,
           periodo1_fim: item.periodo1Fim,
@@ -419,7 +413,7 @@ export const apiFerias = {
 
       return flattened.filter((item) => {
         if (filtros?.ano && item.ano !== filtros.ano) return false;
-        if (filtros?.servidorId && safeString(item.servidorId) !== safeString(filtros.servidorId)) return false;
+        if (filtros?.servidorId && normalizeCpf(item.servidorId) !== normalizeCpf(filtros.servidorId)) return false;
         return true;
       });
     }
@@ -444,7 +438,7 @@ export const apiFerias = {
       return [...feriasMock]
         .filter((item) => {
           if (filtros?.ano && item.ano !== filtros.ano) return false;
-          if (filtros?.servidorId && safeString(item.servidorId) !== safeString(filtros.servidorId)) return false;
+          if (filtros?.servidorId && normalizeCpf(item.servidorId) !== normalizeCpf(filtros.servidorId)) return false;
           return true;
         })
         .sort((a, b) => b.ano - a.ano);
@@ -464,7 +458,7 @@ export const apiFerias = {
 
         const dbRow: DbFeriasRow = {
           id: row.id,
-          servidor_id: row.servidorId,
+          servidor_cpf: normalizeCpf(row.servidorId),
           ano: row.ano,
           periodo1_inicio: row.periodo1Inicio,
           periodo1_fim: row.periodo1Fim,
@@ -485,7 +479,7 @@ export const apiFerias = {
 
       const period = flattenRowToPeriods({
         id: row.id,
-        servidor_id: row.servidorId,
+        servidor_cpf: normalizeCpf(row.servidorId),
         ano: row.ano,
         periodo1_inicio: row.periodo1Inicio,
         periodo1_fim: row.periodo1Fim,
@@ -522,13 +516,13 @@ export const apiFerias = {
   },
 
   async criar(payload: FeriasSavePayload): Promise<FeriasUiRecord> {
-    const servidorId = safeString(payload.servidorId || payload.cpf);
+    const servidorCpf = normalizeCpf(payload.cpf || payload.servidorId);
     const inicio = safeString(payload.inicio);
     const fim = safeString(payload.fim);
     const observacao = safeString(payload.observacao);
     const ano = Number(payload.ano || toYear(inicio));
 
-    if (!servidorId) {
+    if (!servidorCpf) {
       throw new Error('Servidor não informado para o cadastro de férias.');
     }
 
@@ -536,14 +530,14 @@ export const apiFerias = {
 
     if (API_CONFIG.useMock) {
       const existingIndex = feriasMock.findIndex(
-        (item) => safeString(item.servidorId) === servidorId && Number(item.ano) === ano,
+        (item) => normalizeCpf(item.servidorId) === servidorCpf && Number(item.ano) === ano,
       );
 
       if (existingIndex >= 0) {
         const row = feriasMock[existingIndex];
         const dbRow: DbFeriasRow = {
           id: row.id,
-          servidor_id: row.servidorId,
+          servidor_cpf: normalizeCpf(row.servidorId),
           ano: row.ano,
           periodo1_inicio: row.periodo1Inicio,
           periodo1_fim: row.periodo1Fim,
@@ -580,7 +574,7 @@ export const apiFerias = {
           id: buildPeriodoSyntheticId(row.id, nextSlot),
           rowId: row.id,
           slot: nextSlot,
-          servidorId,
+          servidorId: servidorCpf,
           ano,
           inicio,
           fim,
@@ -588,14 +582,14 @@ export const apiFerias = {
           observacao: row.observacao,
           servidorNome: safeString(payload.servidorNome),
           matricula: safeString(payload.matricula),
-          cpf: normalizeCpf(payload.cpf),
+          cpf: servidorCpf,
           setor: safeString(payload.setor),
         };
       }
 
       const novo: Ferias = {
         id: Math.random().toString(36).slice(2, 10),
-        servidorId,
+        servidorId: servidorCpf,
         ano,
         periodo1Inicio: inicio,
         periodo1Fim: fim,
@@ -612,7 +606,7 @@ export const apiFerias = {
         id: buildPeriodoSyntheticId(novo.id, 1),
         rowId: novo.id,
         slot: 1,
-        servidorId,
+        servidorId: servidorCpf,
         ano,
         inicio,
         fim,
@@ -620,12 +614,12 @@ export const apiFerias = {
         observacao,
         servidorNome: safeString(payload.servidorNome),
         matricula: safeString(payload.matricula),
-        cpf: normalizeCpf(payload.cpf),
+        cpf: servidorCpf,
         setor: safeString(payload.setor),
       };
     }
 
-    const existingRows = await findRowsByServidorAno(servidorId, ano);
+    const existingRows = await findRowsByServidorAno(servidorCpf, ano);
     validateNoOverlap(existingRows, { inicio, fim });
 
     let savedRowId = '';
@@ -671,7 +665,7 @@ export const apiFerias = {
       savedRowId = safeString(data.id);
     } else {
       const insertPayload = {
-        servidor_id: servidorId,
+        servidor_cpf: servidorCpf,
         ano,
         periodo1_inicio: inicio,
         periodo1_fim: fim,
@@ -698,7 +692,7 @@ export const apiFerias = {
 
     const syntheticId = buildPeriodoSyntheticId(savedRowId, savedSlot);
     await registrarLog('CRIAR', syntheticId, {
-      servidorId,
+      servidorCpf,
       ano,
       inicio,
       fim,
@@ -710,7 +704,7 @@ export const apiFerias = {
       ...saved,
       servidorNome: safeString(saved.servidorNome || payload.servidorNome),
       matricula: safeString(saved.matricula || payload.matricula),
-      cpf: normalizeCpf(saved.cpf || payload.cpf),
+      cpf: normalizeCpf(saved.cpf || payload.cpf || servidorCpf),
       setor: safeString(saved.setor || payload.setor),
     };
   },
@@ -744,7 +738,7 @@ export const apiFerias = {
 
       const dbRow: DbFeriasRow = {
         id: row.id,
-        servidor_id: row.servidorId,
+        servidor_cpf: normalizeCpf(row.servidorId),
         ano: row.ano,
         periodo1_inicio: row.periodo1Inicio,
         periodo1_fim: row.periodo1Fim,
@@ -776,7 +770,7 @@ export const apiFerias = {
         id,
         rowId: row.id,
         slot: parsed.slot,
-        servidorId: row.servidorId,
+        servidorId: normalizeCpf(row.servidorId),
         ano: row.ano,
         inicio,
         fim,
@@ -784,13 +778,13 @@ export const apiFerias = {
         observacao: row.observacao,
         servidorNome: safeString(payload.servidorNome),
         matricula: safeString(payload.matricula),
-        cpf: normalizeCpf(payload.cpf),
+        cpf: normalizeCpf(payload.cpf || row.servidorId),
         setor: safeString(payload.setor),
       };
     }
 
     const row = await fetchRowById(parsed.rowId);
-    const rowsSameServidorAno = await findRowsByServidorAno(safeString(row.servidor_id), Number(row.ano));
+    const rowsSameServidorAno = await findRowsByServidorAno(normalizeCpf(row.servidor_cpf), Number(row.ano));
 
     validateNoOverlap(rowsSameServidorAno, { inicio, fim, ignoreSyntheticId: id });
 
@@ -909,7 +903,7 @@ export const apiFerias = {
     await registrarLog('EXCLUIR', id, {
       rowId: parsed.rowId,
       slot: parsed.slot,
-      servidorId: row.servidor_id,
+      servidorCpf: normalizeCpf(row.servidor_cpf),
       ano: row.ano,
     });
   },
