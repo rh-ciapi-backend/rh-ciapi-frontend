@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   BriefcaseMedical,
@@ -23,11 +23,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import atestadosService from '../services/atestadosService';
-import servidoresService from '../services/servidoresService';
 import type {
   Atestado,
   AtestadoFormData,
-  Servidor,
   StatusAtestado,
   TipoAtestado,
 } from '../types';
@@ -445,6 +443,7 @@ const FeedbackBanner: React.FC<{
 };
 
 const AtestadosPage: React.FC = () => {
+  const pageTopRef = useRef<HTMLDivElement | null>(null);
   const [items, setItems] = useState<Atestado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState(false);
@@ -465,17 +464,11 @@ const AtestadosPage: React.FC = () => {
   const [detailsItem, setDetailsItem] = useState<Atestado | null>(null);
   const [deleteItem, setDeleteItem] = useState<Atestado | null>(null);
 
-  const [serverSuggestions, setServerSuggestions] = useState<Servidor[]>([]);
-  const [isServerSuggestionsLoading, setIsServerSuggestionsLoading] = useState(false);
-  const [showServerSuggestions, setShowServerSuggestions] = useState(false);
-  const [serverSuggestionMessage, setServerSuggestionMessage] = useState('');
-  const [activeServerSuggestionIndex, setActiveServerSuggestionIndex] = useState(-1);
-
-  const serverAutocompleteRef = useRef<HTMLDivElement | null>(null);
-  const serverAutocompleteRequestRef = useRef(0);
-  const suppressNextServerSearchRef = useRef(false);
-
   const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error' | 'warning' | null;
+    message: string;
+  }>({ type: null, message: '' });
+  const [formFeedback, setFormFeedback] = useState<{
     type: 'success' | 'error' | 'warning' | null;
     message: string;
   }>({ type: null, message: '' });
@@ -488,10 +481,7 @@ const AtestadosPage: React.FC = () => {
       const data = await atestadosService.listar();
       setItems(Array.isArray(data) ? data : []);
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Falha ao carregar os atestados.',
-      });
+      showGlobalFeedback('error', error instanceof Error ? error.message : 'Falha ao carregar os atestados.');
       setItems([]);
     } finally {
       setIsLoading(false);
@@ -518,77 +508,6 @@ const AtestadosPage: React.FC = () => {
       dias: calculated > 0 ? String(calculated) : '',
     }));
   }, [formData.dataInicio, formData.dataFim, formData.considerarDiasUteis]);
-
-  useEffect(() => {
-    if (!isFormOpen) {
-      setServerSuggestions([]);
-      setShowServerSuggestions(false);
-      setServerSuggestionMessage('');
-      setIsServerSuggestionsLoading(false);
-      setActiveServerSuggestionIndex(-1);
-      return;
-    }
-
-    if (suppressNextServerSearchRef.current) {
-      suppressNextServerSearchRef.current = false;
-      return;
-    }
-
-    const term = formData.servidorNome.trim();
-
-    if (term.length < 3) {
-      setServerSuggestions([]);
-      setIsServerSuggestionsLoading(false);
-      setServerSuggestionMessage(term.length > 0 ? 'Digite pelo menos 3 caracteres para buscar.' : '');
-      setShowServerSuggestions(false);
-      setActiveServerSuggestionIndex(-1);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(async () => {
-      const requestId = Date.now();
-      serverAutocompleteRequestRef.current = requestId;
-      setIsServerSuggestionsLoading(true);
-      setServerSuggestionMessage('');
-      setShowServerSuggestions(true);
-
-      try {
-        const results = await servidoresService.buscarSugestoes(term, 8);
-
-        if (serverAutocompleteRequestRef.current !== requestId) return;
-
-        setServerSuggestions(Array.isArray(results) ? results : []);
-        setActiveServerSuggestionIndex(-1);
-        setServerSuggestionMessage(results.length === 0 ? 'Nenhum servidor encontrado' : '');
-      } catch (error) {
-        if (serverAutocompleteRequestRef.current !== requestId) return;
-        setServerSuggestions([]);
-        setActiveServerSuggestionIndex(-1);
-        setServerSuggestionMessage(error instanceof Error ? error.message : 'Falha ao buscar servidores.');
-      } finally {
-        if (serverAutocompleteRequestRef.current === requestId) {
-          setIsServerSuggestionsLoading(false);
-        }
-      }
-    }, 350);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [formData.servidorNome, isFormOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!serverAutocompleteRef.current) return;
-      if (!serverAutocompleteRef.current.contains(event.target as Node)) {
-        setShowServerSuggestions(false);
-        setActiveServerSuggestionIndex(-1);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => safeText(item.setor))), [items]);
   const categoriaOptions = useMemo(
@@ -650,6 +569,13 @@ const AtestadosPage: React.FC = () => {
     };
   }, [filteredData]);
 
+  const showGlobalFeedback = (type: 'success' | 'error' | 'warning', message: string) => {
+    setFeedback({ type, message });
+    window.setTimeout(() => {
+      pageTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 30);
+  };
+
   const clearFilters = () => {
     setSearch('');
     setSelectedMonth('TODOS');
@@ -660,91 +586,11 @@ const AtestadosPage: React.FC = () => {
     setSelectedTipo('TODOS');
   };
 
-  const resetServerAutocomplete = () => {
-    setServerSuggestions([]);
-    setShowServerSuggestions(false);
-    setServerSuggestionMessage('');
-    setIsServerSuggestionsLoading(false);
-    setActiveServerSuggestionIndex(-1);
-  };
-
-  const handleSelectServerSuggestion = (server: Servidor) => {
-    suppressNextServerSearchRef.current = true;
-
-    setFormData((prev) => ({
-      ...prev,
-      servidorNome: safeText(server.nomeCompleto || server.nome),
-      cpf: formatCpf(safeText(server.cpf)),
-      matricula: safeText(server.matricula),
-      setor: safeText(server.setor),
-      categoria: safeText(server.categoria),
-    }));
-
-    setFormErrors((prev) => ({
-      ...prev,
-      servidorNome: undefined,
-      cpf: undefined,
-    }));
-
-    resetServerAutocomplete();
-  };
-
-  const handleServerNameChange = (value: string) => {
-    handleInputChange('servidorNome', value);
-    setActiveServerSuggestionIndex(-1);
-
-    if (value.trim().length >= 3) {
-      setShowServerSuggestions(true);
-      setServerSuggestionMessage('');
-    } else {
-      setShowServerSuggestions(false);
-      setServerSuggestions([]);
-      setServerSuggestionMessage(value.trim().length > 0 ? 'Digite pelo menos 3 caracteres para buscar.' : '');
-    }
-  };
-
-  const handleServerInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showServerSuggestions) return;
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      setActiveServerSuggestionIndex((prev) => {
-        const next = prev + 1;
-        return next >= serverSuggestions.length ? 0 : next;
-      });
-      return;
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setActiveServerSuggestionIndex((prev) => {
-        if (prev <= 0) return serverSuggestions.length - 1;
-        return prev - 1;
-      });
-      return;
-    }
-
-    if (event.key === 'Enter') {
-      if (activeServerSuggestionIndex >= 0 && activeServerSuggestionIndex < serverSuggestions.length) {
-        event.preventDefault();
-        handleSelectServerSuggestion(serverSuggestions[activeServerSuggestionIndex]);
-      }
-      return;
-    }
-
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      setShowServerSuggestions(false);
-      setActiveServerSuggestionIndex(-1);
-    }
-  };
-
   const openCreateModal = () => {
     setEditingId(null);
     setFormData(createEmptyAtestadoForm());
     setFormErrors({});
     setFeedback({ type: null, message: '' });
-    resetServerAutocomplete();
     setIsFormOpen(true);
   };
 
@@ -753,7 +599,6 @@ const AtestadosPage: React.FC = () => {
     setFormData(mapAtestadoToForm(item));
     setFormErrors({});
     setFeedback({ type: null, message: '' });
-    resetServerAutocomplete();
     setIsFormOpen(true);
   };
 
@@ -762,7 +607,6 @@ const AtestadosPage: React.FC = () => {
     setEditingId(null);
     setFormData(createEmptyAtestadoForm());
     setFormErrors({});
-    resetServerAutocomplete();
   };
 
   const handleInputChange = <K extends keyof AtestadoFormData>(field: K, value: AtestadoFormData[K]) => {
@@ -819,7 +663,7 @@ const AtestadosPage: React.FC = () => {
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      setFeedback({
+      setFormFeedback({
         type: 'error',
         message: 'Corrija os campos destacados antes de salvar.',
       });
@@ -829,6 +673,7 @@ const AtestadosPage: React.FC = () => {
     try {
       setLoadingAction(true);
       setFeedback({ type: null, message: '' });
+      setFormFeedback({ type: null, message: '' });
 
       const payload = {
         cpf: formatCpf(formData.cpf),
@@ -860,17 +705,26 @@ const AtestadosPage: React.FC = () => {
           : await atestadosService.adicionar(payload);
 
       await loadAtestados();
-      closeFormModal();
 
-      setFeedback({
-        type: result.warning ? 'warning' : 'success',
-        message: result.warning ? `${result.message}\n${result.warning}` : result.message || 'Operação concluída.',
-      });
+      if (result.warning) {
+        const warningMessage = `${result.message || 'Atestado salvo com sucesso.'}\n${result.warning}`;
+        setFormFeedback({
+          type: 'warning',
+          message: warningMessage,
+        });
+        showGlobalFeedback('warning', warningMessage);
+        return;
+      }
+
+      closeFormModal();
+      showGlobalFeedback('success', result.message || 'Atestado salvo com sucesso.');
     } catch (error) {
-      setFeedback({
+      const message = error instanceof Error ? error.message : 'Falha ao salvar atestado.';
+      setFormFeedback({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Falha ao salvar atestado.',
+        message,
       });
+      showGlobalFeedback('error', message);
     } finally {
       setLoadingAction(false);
     }
@@ -884,15 +738,9 @@ const AtestadosPage: React.FC = () => {
       await atestadosService.excluir(deleteItem.id);
       setDeleteItem(null);
       await loadAtestados();
-      setFeedback({
-        type: 'success',
-        message: 'Atestado excluído com sucesso.',
-      });
+      showGlobalFeedback('success', 'Atestado excluído com sucesso.');
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Falha ao excluir atestado.',
-      });
+      showGlobalFeedback('error', error instanceof Error ? error.message : 'Falha ao excluir atestado.');
     } finally {
       setLoadingAction(false);
     }
@@ -913,24 +761,18 @@ const AtestadosPage: React.FC = () => {
   const handleDownload = async (item: Atestado) => {
     try {
       if (!item.arquivoPath) {
-        setFeedback({
-          type: 'warning',
-          message: 'Este atestado não possui arquivo vinculado.',
-        });
+        showGlobalFeedback('warning', 'Este atestado não possui arquivo vinculado.');
         return;
       }
 
       await atestadosService.baixarArquivo(item.arquivoPath);
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Falha ao baixar arquivo.',
-      });
+      showGlobalFeedback('error', error instanceof Error ? error.message : 'Falha ao baixar arquivo.');
     }
   };
 
   return (
-    <div className="min-h-full space-y-5 xl:space-y-6">
+    <div ref={pageTopRef} className="min-h-full space-y-5 xl:space-y-6">
       <SectionCard className="px-5 py-5 md:px-6 md:py-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
@@ -1374,7 +1216,8 @@ const AtestadosPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={closeFormModal}
+                  onClick={loadingAction ? undefined : closeFormModal}
+                  disabled={loadingAction}
                   className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-300 transition hover:bg-white/10 hover:text-white"
                 >
                   <X size={18} />
@@ -1383,6 +1226,13 @@ const AtestadosPage: React.FC = () => {
 
               <div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
                 <div className="space-y-6">
+                  {formFeedback.type && (
+                    <FeedbackBanner
+                      type={formFeedback.type}
+                      message={formFeedback.message}
+                      onClose={() => setFormFeedback({ type: null, message: '' })}
+                    />
+                  )}
                   <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-200">
@@ -1397,84 +1247,12 @@ const AtestadosPage: React.FC = () => {
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                       <label className="xl:col-span-2">
                         <FieldLabel>Nome do Servidor *</FieldLabel>
-                        <div className="relative" ref={serverAutocompleteRef}>
-                          <input
-                            value={formData.servidorNome}
-                            onChange={(e) => handleServerNameChange(e.target.value)}
-                            onFocus={() => {
-                              if (formData.servidorNome.trim().length >= 3) {
-                                setShowServerSuggestions(true);
-                              }
-                            }}
-                            onKeyDown={handleServerInputKeyDown}
-                            className={InputBaseClass}
-                            placeholder="Digite nome, CPF ou matrícula"
-                            autoComplete="off"
-                          />
-
-                          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-                            {isServerSuggestionsLoading ? (
-                              <RefreshCw size={16} className="animate-spin text-cyan-300" />
-                            ) : (
-                              <Search size={16} className="text-zinc-500" />
-                            )}
-                          </div>
-
-                          <AnimatePresence>
-                            {showServerSuggestions && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 4 }}
-                                transition={{ duration: 0.14 }}
-                                className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]/98 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
-                              >
-                                <div className="max-h-72 overflow-y-auto py-2">
-                                  {isServerSuggestionsLoading && (
-                                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-300">
-                                      <RefreshCw size={15} className="animate-spin text-cyan-300" />
-                                      Buscando servidores...
-                                    </div>
-                                  )}
-
-                                  {!isServerSuggestionsLoading && serverSuggestions.length > 0 && (
-                                    <>
-                                      {serverSuggestions.map((server, index) => (
-                                        <button
-                                          key={`${server.id}-${server.cpf}-${server.matricula}-${index}`}
-                                          type="button"
-                                          onMouseDown={(event) => event.preventDefault()}
-                                          onClick={() => handleSelectServerSuggestion(server)}
-                                          className={`flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition ${
-                                            index === activeServerSuggestionIndex
-                                              ? 'bg-cyan-500/12'
-                                              : 'hover:bg-white/[0.06]'
-                                          }`}
-                                        >
-                                          <span className="text-sm font-semibold text-white">
-                                            {safeText(server.nomeCompleto || server.nome) || 'Servidor sem nome'}
-                                          </span>
-                                          <span className="text-xs text-zinc-400">
-                                            CPF: {formatCpf(safeText(server.cpf) || '') || '-'} • Matrícula: {safeText(server.matricula) || '-'}
-                                          </span>
-                                          <span className="text-[11px] text-zinc-500">
-                                            {safeText(server.setor) || 'Sem setor'} • {safeText(server.categoria) || 'Sem categoria'}
-                                          </span>
-                                        </button>
-                                      ))}
-                                    </>
-                                  )}
-
-                                  {!isServerSuggestionsLoading && serverSuggestions.length === 0 && serverSuggestionMessage && (
-                                    <div className="px-4 py-3 text-sm text-zinc-400">
-                                      {serverSuggestionMessage}
-                                    </div>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
+                        <input
+                          value={formData.servidorNome}
+                          onChange={(e) => handleInputChange('servidorNome', e.target.value)}
+                          className={InputBaseClass}
+                          placeholder="Digite o nome completo"
+                        />
                         {formErrors.servidorNome && <p className="mt-2 text-xs text-rose-400">{formErrors.servidorNome}</p>}
                       </label>
 
@@ -1759,7 +1537,8 @@ const AtestadosPage: React.FC = () => {
                 <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                   <button
                     type="button"
-                    onClick={closeFormModal}
+                    onClick={loadingAction ? undefined : closeFormModal}
+                    disabled={loadingAction}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-white/10"
                   >
                     <X size={16} />
