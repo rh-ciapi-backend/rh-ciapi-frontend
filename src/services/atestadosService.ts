@@ -59,6 +59,8 @@ const formatCpf = (value: string) => {
     .replace(/\.(\d{3})(\d)/, '.$1-$2');
 };
 
+const safeText = (value: unknown) => String(value ?? '').trim();
+
 const slugifyFileName = (value: string) => {
   return String(value || '')
     .normalize('NFD')
@@ -145,22 +147,8 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
-const formatSyncError = (sync: FrequenciaSyncResult, fallback: string) => {
-  if (sync.conflitos.length) {
-    return `Conflito com frequência:\n${sync.conflitos
-      .map((item) => `${item.data} - ${item.descricao}`)
-      .join('\n')}`;
-  }
-
-  if (sync.avisos.length) {
-    return sync.avisos.join('\n');
-  }
-
-  return fallback;
-};
-
-const buildSyncWarningMessage = (sync: FrequenciaSyncResult) =>
-  formatSyncError(sync, 'Não foi possível sincronizar com a frequência.');
+const buildAvisos = (...parts: Array<string | null | undefined>) =>
+  parts.map((part) => safeText(part)).filter(Boolean);
 
 const mapRowToAtestado = (row: Partial<DbAtestadoRow>): Atestado => ({
   id: String(row.id ?? ''),
@@ -190,17 +178,17 @@ const mapRowToAtestado = (row: Partial<DbAtestadoRow>): Atestado => ({
 
 const mapInputToInsert = (input: AtestadoInput, fileMeta?: Partial<AtestadoUploadResult>) => ({
   cpf: normalizeCpf(input.cpf),
-  servidor_nome: String(input.servidorNome || '').trim(),
-  matricula: String(input.matricula || '').trim(),
-  setor: String(input.setor || '').trim(),
-  categoria: String(input.categoria || '').trim(),
+  servidor_nome: safeText(input.servidorNome),
+  matricula: safeText(input.matricula),
+  setor: safeText(input.setor),
+  categoria: safeText(input.categoria),
   tipo: input.tipo,
   data_emissao: input.dataEmissao || null,
   data_inicio: input.dataInicio,
   data_fim: input.dataFim,
   dias: Number(input.dias || 0),
-  cid: String(input.cid || '').trim(),
-  observacao: String(input.observacao || '').trim(),
+  cid: safeText(input.cid),
+  observacao: safeText(input.observacao),
   status: input.status,
   arquivo_nome: fileMeta?.arquivoNome ?? input.arquivoAtualNome ?? '',
   arquivo_url: fileMeta?.arquivoUrl ?? input.arquivoAtualUrl ?? '',
@@ -213,17 +201,17 @@ const mapInputToInsert = (input: AtestadoInput, fileMeta?: Partial<AtestadoUploa
 
 const mapAtestadoToInsert = (item: Atestado) => ({
   cpf: normalizeCpf(item.cpf),
-  servidor_nome: String(item.servidorNome || '').trim(),
-  matricula: String(item.matricula || '').trim(),
-  setor: String(item.setor || '').trim(),
-  categoria: String(item.categoria || '').trim(),
+  servidor_nome: safeText(item.servidorNome),
+  matricula: safeText(item.matricula),
+  setor: safeText(item.setor),
+  categoria: safeText(item.categoria),
   tipo: item.tipo,
   data_emissao: item.dataEmissao || null,
   data_inicio: item.dataInicio,
   data_fim: item.dataFim,
   dias: Number(item.dias || 0),
-  cid: String(item.cid || '').trim(),
-  observacao: String(item.observacao || '').trim(),
+  cid: safeText(item.cid),
+  observacao: safeText(item.observacao),
   status: item.status,
   arquivo_nome: item.arquivoNome || '',
   arquivo_url: item.arquivoUrl || '',
@@ -233,6 +221,43 @@ const mapAtestadoToInsert = (item: Atestado) => ({
   lancar_na_frequencia: Boolean(item.lancarNaFrequencia),
   considerar_dias_uteis: Boolean(item.considerarDiasUteis),
 });
+
+const parseMaybeArray = (value: unknown) => (Array.isArray(value) ? value : []);
+
+const isMissingTableError = (error: unknown) => {
+  const message = getErrorMessage(error, '').toLowerCase();
+  return (
+    message.includes('could not find the table') ||
+    message.includes('relation') ||
+    message.includes('does not exist') ||
+    message.includes('schema cache')
+  );
+};
+
+const formatConflictMessage = (conflicts: FrequenciaConflict[]) => {
+  if (!conflicts.length) return 'Não foi possível sincronizar com a frequência.';
+
+  const grouped = conflicts
+    .map((item) => `${item.data} - ${item.descricao}`)
+    .join('\n');
+
+  return `Conflitos encontrados ao sincronizar com a frequência:\n${grouped}`;
+};
+
+const buildSyncWarningMessage = (sync: FrequenciaSyncResult) => {
+  const avisos = Array.isArray(sync.avisos) ? sync.avisos.filter(Boolean) : [];
+  const conflitos = Array.isArray(sync.conflitos) ? sync.conflitos : [];
+
+  if (conflitos.length) {
+    return formatConflictMessage(conflitos);
+  }
+
+  if (avisos.length) {
+    return avisos.join('\n');
+  }
+
+  return 'Não foi possível sincronizar com a frequência.';
+};
 
 const queryFrequencyConflicts = async (
   cpf: string,
@@ -253,7 +278,7 @@ const queryFrequencyConflicts = async (
         .lte('data_inicio', date)
         .gte('data_fim', date);
 
-      (otherAtestados || []).forEach((row: { id?: string; servidor_nome?: string | null }) => {
+      parseMaybeArray(otherAtestados).forEach((row: { id?: string; servidor_nome?: string | null }) => {
         if (!atestadoId || row.id !== atestadoId) {
           conflicts.push({
             data: date,
@@ -270,19 +295,33 @@ const queryFrequencyConflicts = async (
       try {
         const { data, error } = await supabase.from(table).select('*').eq('cpf', cpfDigits).eq('data', date);
 
-        if (!error && Array.isArray(data) && data.length) {
-          data.forEach((item: { tipo?: string | null }) => {
-            const tipo = String(item?.tipo ?? '').toUpperCase();
-            if (tipo && tipo !== 'ATESTADO') {
-              conflicts.push({
-                data: date,
-                origem: table === 'faltas' ? 'FALTAS' : 'FREQUENCIA',
-                descricao: `Já existe ocorrência "${item?.tipo ?? ''}" nesta data.`,
-              });
-            }
-          });
-          break;
+        if (error) {
+          if (!isMissingTableError(error)) {
+            conflicts.push({
+              data: date,
+              origem: table === 'faltas' ? 'FALTAS' : 'FREQUENCIA',
+              descricao: `Erro ao consultar a tabela ${table}.`,
+            });
+          }
+          continue;
         }
+
+        const rows = parseMaybeArray(data);
+        if (!rows.length) continue;
+
+        rows.forEach((item: Record<string, unknown>) => {
+          const tipo = safeText(item.tipo).toUpperCase();
+          const itemAtestadoId = safeText(item.atestado_id);
+          if (itemAtestadoId && atestadoId && itemAtestadoId === atestadoId) return;
+          if (tipo && tipo !== 'ATESTADO') {
+            conflicts.push({
+              data: date,
+              origem: table === 'faltas' ? 'FALTAS' : 'FREQUENCIA',
+              descricao: `Já existe ocorrência "${safeText(item.tipo)}" nesta data.`,
+            });
+          }
+        });
+        break;
       } catch {
         continue;
       }
@@ -297,7 +336,7 @@ const queryFrequencyConflicts = async (
           .lte('data_inicio', date)
           .gte('data_fim', date);
 
-        if (!error && Array.isArray(data) && data.length) {
+        if (!error && parseMaybeArray(data).length) {
           conflicts.push({
             data: date,
             origem: 'FERIAS',
@@ -326,22 +365,30 @@ const syncToFrequencia = async (atestado: Atestado): Promise<FrequenciaSyncResul
   }
 
   const conflitos = await queryFrequencyConflicts(atestado.cpf, dates, atestado.id);
-
   if (conflitos.length) {
     return {
       ok: false,
       conflitos,
-      avisos: ['Conflitos encontrados ao lançar na frequência.'],
+      avisos: ['O atestado foi salvo, mas há conflitos no período informado para a frequência.'],
     };
   }
 
   const ocorrenciasPayload = dates.map((date) => ({
     atestado_id: atestado.id,
     cpf: normalizeCpf(atestado.cpf),
+    nome_servidor: safeText(atestado.servidorNome),
+    servidor_nome: safeText(atestado.servidorNome),
     data: date,
+    data_inicio: atestado.dataInicio,
+    data_fim: atestado.dataFim,
+    dias: Number(atestado.dias || 0),
     tipo: 'ATESTADO',
-    descricao: atestado.observacao || `Atestado ${atestado.tipo}`,
+    descricao: safeText(atestado.observacao) || `Atestado ${atestado.tipo}`,
+    observacao: safeText(atestado.observacao) || `Atestado ${atestado.tipo}`,
     origem: 'ATESTADO',
+    categoria: safeText(atestado.categoria),
+    setor: safeText(atestado.setor),
+    matricula: safeText(atestado.matricula),
     considerar_dias_uteis: atestado.considerarDiasUteis,
   }));
 
@@ -356,16 +403,31 @@ const syncToFrequencia = async (atestado: Atestado): Promise<FrequenciaSyncResul
         if (!error) {
           return { ok: true, conflitos: [], avisos: [] };
         }
+
+        if (!isMissingTableError(error)) {
+          return {
+            ok: false,
+            conflitos: [],
+            avisos: [`Erro ao gravar na tabela ${table}: ${getErrorMessage(error, 'falha desconhecida')}`],
+          };
+        }
       }
 
       if (table === 'faltas') {
         const fallbackPayload = dates.map((date) => ({
           atestado_id: atestado.id,
           cpf: normalizeCpf(atestado.cpf),
+          nome_servidor: safeText(atestado.servidorNome),
+          servidor_nome: safeText(atestado.servidorNome),
           data: date,
           tipo: 'ATESTADO',
-          observacao: atestado.observacao || `Atestado ${atestado.tipo}`,
+          observacao: safeText(atestado.observacao) || `Atestado ${atestado.tipo}`,
+          descricao: safeText(atestado.observacao) || `Atestado ${atestado.tipo}`,
           turno: 'INTEGRAL',
+          setor: safeText(atestado.setor),
+          categoria: safeText(atestado.categoria),
+          matricula: safeText(atestado.matricula),
+          dias: Number(atestado.dias || 0),
         }));
 
         const { error } = await supabase.from(table).upsert(fallbackPayload, {
@@ -380,37 +442,74 @@ const syncToFrequencia = async (atestado: Atestado): Promise<FrequenciaSyncResul
             avisos: ['Lançamento realizado usando a tabela fallback de frequência.'],
           };
         }
+
+        if (!isMissingTableError(error)) {
+          return {
+            ok: false,
+            conflitos: [],
+            avisos: [`Erro ao gravar na tabela ${table}: ${getErrorMessage(error, 'falha desconhecida')}`],
+          };
+        }
       }
-    } catch {
-      continue;
+    } catch (error) {
+      if (!isMissingTableError(error)) {
+        return {
+          ok: false,
+          conflitos: [],
+          avisos: [getErrorMessage(error, `Erro ao sincronizar com ${table}.`)],
+        };
+      }
     }
   }
 
   return {
     ok: false,
     conflitos: [],
-    avisos: ['Não foi possível sincronizar com a frequência.'],
+    avisos: ['Nenhuma tabela de frequência disponível para sincronização.'],
   };
 };
 
-const removeFromFrequencia = async (atestadoId: string) => {
+const removeFromFrequencia = async (atestadoId: string): Promise<{ ok: boolean; warning?: string }> => {
+  const warnings: string[] = [];
+  let success = false;
+
   for (const table of FREQUENCIA_TABLE_CANDIDATES) {
     try {
       const { error } = await supabase.from(table).delete().eq('atestado_id', atestadoId);
-      if (!error) return true;
+      if (!error) {
+        success = true;
+        continue;
+      }
+
+      if (!isMissingTableError(error)) {
+        warnings.push(`Falha ao limpar a integração na tabela ${table}.`);
+      }
     } catch {
-      continue;
+      warnings.push(`Falha ao limpar a integração na tabela ${table}.`);
     }
   }
-  return false;
+
+  if (success) {
+    return { ok: true, warning: warnings.join('\n') || undefined };
+  }
+
+  if (warnings.length) {
+    return { ok: false, warning: warnings.join('\n') };
+  }
+
+  return {
+    ok: false,
+    warning: 'Nenhuma tabela de frequência disponível para remover a integração.',
+  };
 };
 
-const restorePreviousState = async (id: string, previous: Atestado) => {
-  await supabase.from(TABLE_ATESTADOS).update(mapAtestadoToInsert(previous)).eq('id', id);
-  await removeFromFrequencia(id);
-  if (previous.lancarNaFrequencia) {
-    await syncToFrequencia(previous);
-  }
+const maybeAttachWarning = (
+  base: AtestadoOperationResult,
+  warning?: string,
+): AtestadoOperationResult => {
+  const cleanWarning = safeText(warning);
+  if (!cleanWarning) return base;
+  return { ...base, warning: cleanWarning };
 };
 
 export const atestadosService = {
@@ -425,7 +524,7 @@ export const atestadosService = {
       throw new Error(getErrorMessage(error, 'Falha ao listar atestados.'));
     }
 
-    return (data || []).map(mapRowToAtestado);
+    return parseMaybeArray(data).map(mapRowToAtestado);
   },
 
   async obterPorId(id: string): Promise<Atestado | null> {
@@ -531,38 +630,30 @@ export const atestadosService = {
         if (uploadedPath) {
           try {
             await this.removerArquivo(uploadedPath);
-          } catch {}
+          } catch {
+            // não mascara o erro principal
+          }
         }
         throw new Error(getErrorMessage(error, 'Falha ao salvar atestado.'));
       }
 
       const atestado = mapRowToAtestado(data);
-
-      if (!atestado.lancarNaFrequencia) {
-        return {
-          ok: true,
-          data: atestado,
-          message: 'Atestado salvo com sucesso.',
-        };
-      }
-
-      const sync = await syncToFrequencia(atestado);
-
-      if (!sync.ok) {
-        return {
-          ok: true,
-          data: atestado,
-          message: 'Atestado salvo com sucesso.',
-          warning: buildSyncWarningMessage(sync),
-        };
-      }
-
-      return {
+      const baseResult: AtestadoOperationResult = {
         ok: true,
         data: atestado,
         message: 'Atestado salvo com sucesso.',
-        warning: sync.avisos[0],
       };
+
+      if (!atestado.lancarNaFrequencia) {
+        return baseResult;
+      }
+
+      const sync = await syncToFrequencia(atestado);
+      if (!sync.ok) {
+        return maybeAttachWarning(baseResult, buildSyncWarningMessage(sync));
+      }
+
+      return maybeAttachWarning(baseResult, buildAvisos(...sync.avisos).join('\n'));
     } catch (error) {
       throw new Error(getErrorMessage(error, 'Falha ao adicionar atestado.'));
     }
@@ -598,45 +689,45 @@ export const atestadosService = {
         if (uploadedPath) {
           try {
             await this.removerArquivo(uploadedPath);
-          } catch {}
+          } catch {
+            // não mascara o erro principal
+          }
         }
         throw new Error(getErrorMessage(error, 'Falha ao atualizar atestado.'));
       }
 
       const atualizado = mapRowToAtestado(data);
+      const cleanupResult = await removeFromFrequencia(id);
+      const warnings: string[] = [];
 
-      await removeFromFrequencia(id);
+      if (cleanupResult.warning) {
+        warnings.push(cleanupResult.warning);
+      }
 
       if (atualizado.lancarNaFrequencia) {
         const sync = await syncToFrequencia(atualizado);
-
         if (!sync.ok) {
-          if (newUpload && oldFilePath && oldFilePath !== newUpload.arquivoPath) {
-            try {
-              await this.removerArquivo(oldFilePath);
-            } catch {}
-          }
-
-          return {
-            ok: true,
-            data: atualizado,
-            message: 'Atestado atualizado com sucesso.',
-            warning: buildSyncWarningMessage(sync),
-          };
+          warnings.push(buildSyncWarningMessage(sync));
+        } else if (sync.avisos.length) {
+          warnings.push(...sync.avisos);
         }
       }
 
       if (newUpload && oldFilePath && oldFilePath !== newUpload.arquivoPath) {
         try {
           await this.removerArquivo(oldFilePath);
-        } catch {}
+        } catch {
+          warnings.push('O atestado foi atualizado, mas o arquivo anterior não pôde ser removido do Storage.');
+        }
       }
 
-      return {
+      const baseResult: AtestadoOperationResult = {
         ok: true,
         data: atualizado,
         message: 'Atestado atualizado com sucesso.',
       };
+
+      return maybeAttachWarning(baseResult, buildAvisos(...warnings).join('\n'));
     } catch (error) {
       throw new Error(getErrorMessage(error, 'Falha ao editar atestado.'));
     }
@@ -661,9 +752,35 @@ export const atestadosService = {
       try {
         await this.removerArquivo(atual.arquivoPath);
       } catch {
-        // não quebra a exclusão do registro se a limpeza do storage falhar
+        // não quebra a exclusão principal
       }
     }
+  },
+
+  async resincronizarFrequencia(id: string): Promise<AtestadoOperationResult> {
+    const atual = await this.obterPorId(id);
+
+    if (!atual) {
+      throw new Error('Atestado não encontrado para sincronização.');
+    }
+
+    const cleanup = await removeFromFrequencia(id);
+    const sync = atual.lancarNaFrequencia
+      ? await syncToFrequencia(atual)
+      : { ok: true, conflitos: [], avisos: [] };
+
+    const warnings = buildAvisos(cleanup.warning, sync.ok ? sync.avisos.join('\n') : buildSyncWarningMessage(sync));
+
+    return maybeAttachWarning(
+      {
+        ok: true,
+        data: atual,
+        message: sync.ok
+          ? 'Sincronização com frequência concluída.'
+          : 'Atestado localizado, mas houve falha na sincronização com frequência.',
+      },
+      warnings.join('\n'),
+    );
   },
 };
 
