@@ -23,9 +23,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import atestadosService from '../services/atestadosService';
+import servidoresService from '../services/servidoresService';
 import type {
   Atestado,
   AtestadoFormData,
+  Servidor,
   StatusAtestado,
   TipoAtestado,
 } from '../types';
@@ -444,9 +446,13 @@ const FeedbackBanner: React.FC<{
 
 const AtestadosPage: React.FC = () => {
   const pageTopRef = useRef<HTMLDivElement | null>(null);
+  const serverAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const [items, setItems] = useState<Atestado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState(false);
+  const [isSearchingServidor, setIsSearchingServidor] = useState(false);
+  const [serverSuggestions, setServerSuggestions] = useState<Servidor[]>([]);
+  const [showServerSuggestions, setShowServerSuggestions] = useState(false);
 
   const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
@@ -474,6 +480,63 @@ const AtestadosPage: React.FC = () => {
   }>({ type: null, message: '' });
 
   const isEditing = Boolean(editingId);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!serverAutocompleteRef.current) return;
+      if (!serverAutocompleteRef.current.contains(event.target as Node)) {
+        setShowServerSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const term = formData.servidorNome.trim();
+
+    if (!isFormOpen || term.length < 3) {
+      setServerSuggestions([]);
+      setShowServerSuggestions(false);
+      setIsSearchingServidor(false);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setIsSearchingServidor(true);
+        const suggestions = await servidoresService.buscarSugestoes(term, 8);
+        setServerSuggestions(Array.isArray(suggestions) ? suggestions : []);
+        setShowServerSuggestions(true);
+      } catch {
+        setServerSuggestions([]);
+        setShowServerSuggestions(false);
+      } finally {
+        setIsSearchingServidor(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [formData.servidorNome, isFormOpen, isEditing]);
+
+  const applyServidorSuggestion = (servidor: Servidor) => {
+    setFormData((prev) => ({
+      ...prev,
+      servidorNome: servidor.nomeCompleto || servidor.nome || prev.servidorNome,
+      cpf: servidor.cpf || prev.cpf,
+      matricula: servidor.matricula || prev.matricula,
+      setor: servidor.setor || prev.setor,
+      categoria: servidor.categoria || prev.categoria,
+    }));
+    setFormErrors((prev) => ({
+      ...prev,
+      servidorNome: undefined,
+      cpf: undefined,
+    }));
+    setServerSuggestions([]);
+    setShowServerSuggestions(false);
+  };
 
   const loadAtestados = async () => {
     try {
@@ -590,7 +653,9 @@ const AtestadosPage: React.FC = () => {
     setEditingId(null);
     setFormData(createEmptyAtestadoForm());
     setFormErrors({});
-    setFeedback({ type: null, message: '' });
+    setFormFeedback({ type: null, message: '' });
+    setServerSuggestions([]);
+    setShowServerSuggestions(false);
     setIsFormOpen(true);
   };
 
@@ -598,7 +663,9 @@ const AtestadosPage: React.FC = () => {
     setEditingId(item.id);
     setFormData(mapAtestadoToForm(item));
     setFormErrors({});
-    setFeedback({ type: null, message: '' });
+    setFormFeedback({ type: null, message: '' });
+    setServerSuggestions([]);
+    setShowServerSuggestions(false);
     setIsFormOpen(true);
   };
 
@@ -607,6 +674,9 @@ const AtestadosPage: React.FC = () => {
     setEditingId(null);
     setFormData(createEmptyAtestadoForm());
     setFormErrors({});
+    setFormFeedback({ type: null, message: '' });
+    setServerSuggestions([]);
+    setShowServerSuggestions(false);
   };
 
   const handleInputChange = <K extends keyof AtestadoFormData>(field: K, value: AtestadoFormData[K]) => {
@@ -707,17 +777,15 @@ const AtestadosPage: React.FC = () => {
       await loadAtestados();
 
       if (result.warning) {
-        const warningMessage = `${result.message || 'Atestado salvo com sucesso.'}\n${result.warning}`;
-        setFormFeedback({
-          type: 'warning',
-          message: warningMessage,
-        });
+        const warningMessage = `${result.message || 'Atestado salvo com sucesso.'}
+${result.warning}`;
         showGlobalFeedback('warning', warningMessage);
+        closeFormModal();
         return;
       }
 
-      closeFormModal();
       showGlobalFeedback('success', result.message || 'Atestado salvo com sucesso.');
+      closeFormModal();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao salvar atestado.';
       setFormFeedback({
@@ -1247,12 +1315,53 @@ const AtestadosPage: React.FC = () => {
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                       <label className="xl:col-span-2">
                         <FieldLabel>Nome do Servidor *</FieldLabel>
-                        <input
-                          value={formData.servidorNome}
-                          onChange={(e) => handleInputChange('servidorNome', e.target.value)}
-                          className={InputBaseClass}
-                          placeholder="Digite o nome completo"
-                        />
+                        <div ref={serverAutocompleteRef} className="relative">
+                          <input
+                            value={formData.servidorNome}
+                            onChange={(e) => {
+                              handleInputChange('servidorNome', e.target.value);
+                              setShowServerSuggestions(e.target.value.trim().length >= 3);
+                            }}
+                            onFocus={() => {
+                              if (formData.servidorNome.trim().length >= 3 && serverSuggestions.length) {
+                                setShowServerSuggestions(true);
+                              }
+                            }}
+                            className={InputBaseClass}
+                            placeholder="Digite pelo menos 3 letras do nome"
+                            autoComplete="off"
+                          />
+
+                          {showServerSuggestions && (
+                            <div className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-white/10 bg-[#0f172a] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+                              {isSearchingServidor ? (
+                                <div className="px-3 py-3 text-sm text-zinc-400">Buscando servidores...</div>
+                              ) : serverSuggestions.length > 0 ? (
+                                serverSuggestions.map((servidor) => (
+                                  <button
+                                    key={[servidor.id, servidor.cpf, servidor.matricula].join('-')}
+                                    type="button"
+                                    onClick={() => applyServidorSuggestion(servidor)}
+                                    className="flex w-full flex-col rounded-2xl px-3 py-3 text-left transition hover:bg-white/[0.06]"
+                                  >
+                                    <span className="text-sm font-semibold text-white">
+                                      {servidor.nomeCompleto || servidor.nome || '-'}
+                                    </span>
+                                    <span className="mt-1 text-xs text-zinc-400">
+                                      {servidor.cpf || '-'} • {servidor.matricula || '-'}
+                                    </span>
+                                    <span className="mt-1 text-[11px] text-zinc-500">
+                                      {servidor.setor || '-'} • {servidor.categoria || '-'}
+                                    </span>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-3 text-sm text-zinc-400">Nenhum servidor encontrado.</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className="mt-2 text-[11px] text-zinc-500">Ao digitar 3 ou mais caracteres, o sistema sugere servidores e preenche CPF, matrícula, setor e categoria.</p>
                         {formErrors.servidorNome && <p className="mt-2 text-xs text-rose-400">{formErrors.servidorNome}</p>}
                       </label>
 
