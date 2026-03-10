@@ -8,7 +8,7 @@ import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { DashboardPage } from './pages/DashboardPage';
 import { ServidoresPage } from './pages/ServidoresPage';
-import { FeriasPage } from './pages/FeriasPage';
+import FeriasPage from './pages/FeriasPage';
 import { FrequenciaPage } from './pages/FrequenciaPage';
 import { MapasPage } from './pages/MapasPage';
 import { AdminPage } from './pages/AdminPage';
