@@ -11,29 +11,36 @@ export type ExportStatus = 'TODOS' | 'ATIVO' | 'INATIVO';
 
 export type ExportTipoExtracao =
   | 'TODOS_SERVIDORES'
-  | 'COM_FERIAS_CADASTRADAS'
-  | 'COM_FERIAS_NO_MES'
-  | 'PLANEJAMENTO_ANUAL_COMPLETO'
+  | 'COM_FERIAS'
+  | 'NO_MES'
+  | 'PLANEJAMENTO_ANUAL'
   | 'APENAS_1_PERIODO'
   | 'APENAS_2_PERIODO'
   | 'APENAS_3_PERIODO';
 
 export type ExportOrdenacao =
-  | 'NOME_ASC'
+  | 'NOME'
   | 'MATRICULA'
   | 'CATEGORIA'
   | 'SETOR';
 
 export type ExportFormato = 'DOCX' | 'PDF' | 'CSV';
 
-export interface FeriasExportFilters {
+export interface ExportFeriasFilters {
   ano: number;
-  categoria: ExportCategoria;
-  setor: string;
-  status: ExportStatus;
-  mes: number; // 0 = todos
-  tipoExtracao: ExportTipoExtracao;
-  ordenacao: ExportOrdenacao;
+  categoria?: ExportCategoria | 'TODOS';
+  setor?: string | 'TODOS';
+  status?: ExportStatus;
+  mes?: number | 'TODOS';
+  tipoExtracao:
+    | 'TODOS_SERVIDORES'
+    | 'COM_FERIAS'
+    | 'NO_MES'
+    | 'PLANEJAMENTO_ANUAL'
+    | 'APENAS_1_PERIODO'
+    | 'APENAS_2_PERIODO'
+    | 'APENAS_3_PERIODO';
+  ordenacao?: ExportOrdenacao;
   formato: ExportFormato;
 }
 
@@ -85,8 +92,15 @@ interface ConsolidatedRow {
   periodo3: FeriasExportPeriodo | null;
 }
 
-interface ExportPreparedData {
+interface ExportSection {
+  categoria: string;
+  subtitle: string;
+  setorDocumento: string;
   rows: ConsolidatedRow[];
+}
+
+interface ExportPreparedData {
+  sections: ExportSection[];
   totalLinhas: number;
   totalComFerias: number;
   totalSemFerias: number;
@@ -104,16 +118,16 @@ const CATEGORIAS_ORDEM: ExportCategoria[] = [
 
 const TIPOS_EXTRACAO_LABEL: Record<ExportTipoExtracao, string> = {
   TODOS_SERVIDORES: 'Todos os servidores',
-  COM_FERIAS_CADASTRADAS: 'Somente servidores com férias cadastradas',
-  COM_FERIAS_NO_MES: 'Somente servidores com férias no mês selecionado',
-  PLANEJAMENTO_ANUAL_COMPLETO: 'Planejamento anual completo',
+  COM_FERIAS: 'Somente servidores com férias cadastradas',
+  NO_MES: 'Somente servidores com férias no mês selecionado',
+  PLANEJAMENTO_ANUAL: 'Planejamento anual completo',
   APENAS_1_PERIODO: 'Apenas 1º período',
   APENAS_2_PERIODO: 'Apenas 2º período',
   APENAS_3_PERIODO: 'Apenas 3º período',
 };
 
 const ORDENACAO_LABEL: Record<ExportOrdenacao, string> = {
-  NOME_ASC: 'Nome A-Z',
+  NOME: 'Nome A-Z',
   MATRICULA: 'Matrícula',
   CATEGORIA: 'Categoria',
   SETOR: 'Setor',
@@ -163,6 +177,20 @@ const escapeHtml = (value: unknown) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+const normalizeCategoria = (value: unknown) => safe(value).toUpperCase();
+const normalizeStatus = (value: unknown) => safe(value).toUpperCase() || 'ATIVO';
+
+const normalizeSetorFiltro = (setor?: string | 'TODOS') => {
+  const s = safe(setor);
+  return !s || s === 'TODOS' ? '' : s;
+};
+
+const normalizeMesFiltro = (mes?: number | 'TODOS') => {
+  if (mes === 'TODOS' || mes === undefined || mes === null) return 0;
+  const n = Number(mes);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const overlapsMonth = (inicio?: string | null, fim?: string | null, ano?: number, mes?: number) => {
   if (!ano) return false;
 
@@ -207,8 +235,8 @@ const normalizeServidorRow = (servidor: FeriasExportServidorInput, ano: number):
   matricula: safe(servidor.matricula),
   cpf: digits(servidor.cpf),
   setor: safe(servidor.setor),
-  categoria: safe(servidor.categoria).toUpperCase(),
-  status: safe(servidor.status).toUpperCase() || 'ATIVO',
+  categoria: normalizeCategoria(servidor.categoria),
+  status: normalizeStatus(servidor.status),
   exercicio: String(ano),
   assinatura: '',
   periodo1: null,
@@ -221,7 +249,59 @@ const cloneRow = (row: ConsolidatedRow): ConsolidatedRow => ({
   periodo1: row.periodo1 ? { ...row.periodo1 } : null,
   periodo2: row.periodo2 ? { ...row.periodo2 } : null,
   periodo3: row.periodo3 ? { ...row.periodo3 } : null,
+  assinatura: '',
 });
+
+const hasAnyPeriod = (row: ConsolidatedRow) =>
+  !!(
+    row.periodo1?.inicio ||
+    row.periodo1?.fim ||
+    row.periodo2?.inicio ||
+    row.periodo2?.fim ||
+    row.periodo3?.inicio ||
+    row.periodo3?.fim
+  );
+
+const hasPeriodInMonth = (row: ConsolidatedRow, filters: Required<ExportFeriasFilters>) =>
+  overlapsMonth(row.periodo1?.inicio, row.periodo1?.fim, filters.ano, normalizeMesFiltro(filters.mes)) ||
+  overlapsMonth(row.periodo2?.inicio, row.periodo2?.fim, filters.ano, normalizeMesFiltro(filters.mes)) ||
+  overlapsMonth(row.periodo3?.inicio, row.periodo3?.fim, filters.ano, normalizeMesFiltro(filters.mes));
+
+const applyExtractionView = (
+  row: ConsolidatedRow,
+  filters: Required<ExportFeriasFilters>,
+): ConsolidatedRow => {
+  const next = cloneRow(row);
+
+  if (filters.tipoExtracao === 'APENAS_1_PERIODO') {
+    next.periodo2 = null;
+    next.periodo3 = null;
+  }
+
+  if (filters.tipoExtracao === 'APENAS_2_PERIODO') {
+    next.periodo1 = null;
+    next.periodo3 = null;
+  }
+
+  if (filters.tipoExtracao === 'APENAS_3_PERIODO') {
+    next.periodo1 = null;
+    next.periodo2 = null;
+  }
+
+  next.assinatura = '';
+  return next;
+};
+
+const shouldIncludeByType = (row: ConsolidatedRow, filters: Required<ExportFeriasFilters>) => {
+  if (filters.tipoExtracao === 'TODOS_SERVIDORES') return true;
+  if (filters.tipoExtracao === 'COM_FERIAS') return hasAnyPeriod(row);
+  if (filters.tipoExtracao === 'NO_MES') return hasPeriodInMonth(row, filters);
+  if (filters.tipoExtracao === 'PLANEJAMENTO_ANUAL') return hasAnyPeriod(row);
+  if (filters.tipoExtracao === 'APENAS_1_PERIODO') return !!(row.periodo1?.inicio && row.periodo1?.fim);
+  if (filters.tipoExtracao === 'APENAS_2_PERIODO') return !!(row.periodo2?.inicio && row.periodo2?.fim);
+  if (filters.tipoExtracao === 'APENAS_3_PERIODO') return !!(row.periodo3?.inicio && row.periodo3?.fim);
+  return true;
+};
 
 const sortRows = (rows: ConsolidatedRow[], ordenacao: ExportOrdenacao) => {
   const list = [...rows];
@@ -249,65 +329,41 @@ const sortRows = (rows: ConsolidatedRow[], ordenacao: ExportOrdenacao) => {
   return list;
 };
 
-const matchesBaseFilters = (row: ConsolidatedRow, filters: FeriasExportFilters) => {
-  if (filters.categoria !== 'TODOS' && row.categoria !== filters.categoria) return false;
-  if (filters.setor && row.setor !== filters.setor) return false;
-  if (filters.status !== 'TODOS' && row.status !== filters.status) return false;
-  return true;
+const subtitleForCategoria = (categoria: string, filters: Required<ExportFeriasFilters>) => {
+  if (safe(filters.categoria) && filters.categoria !== 'TODOS') {
+    return categoria ? `SERVIDORES ${categoria}` : 'SERVIDORES';
+  }
+  return categoria ? `SERVIDORES ${categoria}` : 'SERVIDORES';
 };
 
-const hasAnyPeriod = (row: ConsolidatedRow) =>
-  !!(
-    row.periodo1?.inicio ||
-    row.periodo1?.fim ||
-    row.periodo2?.inicio ||
-    row.periodo2?.fim ||
-    row.periodo3?.inicio ||
-    row.periodo3?.fim
-  );
+const setorForDocumento = (categoria: string, filters: Required<ExportFeriasFilters>) => {
+  const setor = normalizeSetorFiltro(filters.setor);
+  if (setor) return setor;
 
-const hasPeriodInMonth = (row: ConsolidatedRow, filters: FeriasExportFilters) =>
-  overlapsMonth(row.periodo1?.inicio, row.periodo1?.fim, filters.ano, filters.mes) ||
-  overlapsMonth(row.periodo2?.inicio, row.periodo2?.fim, filters.ano, filters.mes) ||
-  overlapsMonth(row.periodo3?.inicio, row.periodo3?.fim, filters.ano, filters.mes);
-
-const applyExtractionView = (row: ConsolidatedRow, filters: FeriasExportFilters): ConsolidatedRow => {
-  const next = cloneRow(row);
-
-  if (filters.tipoExtracao === 'APENAS_1_PERIODO') {
-    next.periodo2 = null;
-    next.periodo3 = null;
+  if (filters.categoria === 'TODOS') {
+    return categoria || 'TODOS OS SETORES';
   }
 
-  if (filters.tipoExtracao === 'APENAS_2_PERIODO') {
-    next.periodo1 = null;
-    next.periodo3 = null;
-  }
-
-  if (filters.tipoExtracao === 'APENAS_3_PERIODO') {
-    next.periodo1 = null;
-    next.periodo2 = null;
-  }
-
-  return next;
+  return 'TODOS OS SETORES';
 };
 
-const shouldIncludeByType = (row: ConsolidatedRow, filters: FeriasExportFilters) => {
-  if (filters.tipoExtracao === 'TODOS_SERVIDORES') return true;
-  if (filters.tipoExtracao === 'COM_FERIAS_CADASTRADAS') return hasAnyPeriod(row);
-  if (filters.tipoExtracao === 'COM_FERIAS_NO_MES') return hasPeriodInMonth(row, filters);
-  if (filters.tipoExtracao === 'PLANEJAMENTO_ANUAL_COMPLETO') return hasAnyPeriod(row);
-  if (filters.tipoExtracao === 'APENAS_1_PERIODO') return !!(row.periodo1?.inicio && row.periodo1?.fim);
-  if (filters.tipoExtracao === 'APENAS_2_PERIODO') return !!(row.periodo2?.inicio && row.periodo2?.fim);
-  if (filters.tipoExtracao === 'APENAS_3_PERIODO') return !!(row.periodo3?.inicio && row.periodo3?.fim);
-  return true;
-};
+const completeFilters = (filters: ExportFeriasFilters): Required<ExportFeriasFilters> => ({
+  ano: Number(filters.ano) || new Date().getFullYear(),
+  categoria: (filters.categoria || 'TODOS') as Required<ExportFeriasFilters>['categoria'],
+  setor: (filters.setor || 'TODOS') as Required<ExportFeriasFilters>['setor'],
+  status: (filters.status || 'ATIVO') as Required<ExportFeriasFilters>['status'],
+  mes: (filters.mes ?? 0) as Required<ExportFeriasFilters>['mes'],
+  tipoExtracao: filters.tipoExtracao,
+  ordenacao: (filters.ordenacao || 'NOME') as Required<ExportFeriasFilters>['ordenacao'],
+  formato: filters.formato,
+});
 
 export const buildFeriasExportData = (
-  filters: FeriasExportFilters,
+  rawFilters: ExportFeriasFilters,
   feriasRows: FeriasExportRowInput[],
   servidores: FeriasExportServidorInput[],
 ): ExportPreparedData => {
+  const filters = completeFilters(rawFilters);
   const rowsMap = new Map<string, ConsolidatedRow>();
 
   for (const servidor of servidores) {
@@ -331,8 +387,8 @@ export const buildFeriasExportData = (
         matricula: safe(item.matricula),
         cpf: digits(item.cpf || item.servidorId),
         setor: safe(item.setor),
-        categoria: safe(item.categoria).toUpperCase(),
-        status: safe(item.statusServidor).toUpperCase() || 'ATIVO',
+        categoria: normalizeCategoria(item.categoria),
+        status: normalizeStatus(item.statusServidor),
         exercicio: String(filters.ano),
         assinatura: '',
         periodo1: null,
@@ -357,34 +413,92 @@ export const buildFeriasExportData = (
     if (!current.matricula) current.matricula = safe(item.matricula);
     if (!current.cpf) current.cpf = digits(item.cpf || item.servidorId);
     if (!current.setor) current.setor = safe(item.setor);
-    if (!current.categoria) current.categoria = safe(item.categoria).toUpperCase();
-    if (!current.status) current.status = safe(item.statusServidor).toUpperCase() || 'ATIVO';
+    if (!current.categoria) current.categoria = normalizeCategoria(item.categoria);
+    if (!current.status) current.status = normalizeStatus(item.statusServidor);
 
+    current.assinatura = '';
     rowsMap.set(key, current);
   }
 
-  const filtered = Array.from(rowsMap.values())
-    .filter((row) => matchesBaseFilters(row, filters))
+  const categoriaFiltro = filters.categoria;
+  const setorFiltro = normalizeSetorFiltro(filters.setor);
+  const statusFiltro = filters.status;
+  const ordenacao = filters.ordenacao;
+
+  const baseRows = Array.from(rowsMap.values())
+    .filter((row) => {
+      if (categoriaFiltro !== 'TODOS' && row.categoria !== categoriaFiltro) return false;
+      if (setorFiltro && row.setor !== setorFiltro) return false;
+      if (statusFiltro !== 'TODOS' && row.status !== statusFiltro) return false;
+      return true;
+    })
     .filter((row) => shouldIncludeByType(row, filters))
     .map((row) => applyExtractionView(row, filters));
 
-  const sorted = sortRows(filtered, filters.ordenacao);
+  const totalComFerias = baseRows.filter((row) => hasAnyPeriod(row)).length;
+  const totalSemFerias = baseRows.filter((row) => !hasAnyPeriod(row)).length;
+
+  const sections: ExportSection[] = [];
+
+  if (categoriaFiltro === 'TODOS') {
+    for (const categoria of CATEGORIAS_ORDEM) {
+      if (categoria === 'TODOS') continue;
+
+      const rowsCategoria = baseRows.filter((row) => row.categoria === categoria);
+      if (!rowsCategoria.length) continue;
+
+      sections.push({
+        categoria,
+        subtitle: subtitleForCategoria(categoria, filters),
+        setorDocumento: setorForDocumento(categoria, filters),
+        rows: sortRows(rowsCategoria, ordenacao),
+      });
+    }
+
+    const extras = Array.from(
+      new Set(
+        baseRows
+          .map((row) => row.categoria)
+          .filter((categoria) => categoria && !CATEGORIAS_ORDEM.includes(categoria as ExportCategoria)),
+      ),
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    for (const categoria of extras) {
+      const rowsCategoria = baseRows.filter((row) => row.categoria === categoria);
+      if (!rowsCategoria.length) continue;
+
+      sections.push({
+        categoria,
+        subtitle: subtitleForCategoria(categoria, filters),
+        setorDocumento: setorForDocumento(categoria, filters),
+        rows: sortRows(rowsCategoria, ordenacao),
+      });
+    }
+  } else {
+    const categoria = categoriaFiltro || 'SERVIDORES';
+    sections.push({
+      categoria,
+      subtitle: subtitleForCategoria(categoria, filters),
+      setorDocumento: setorForDocumento(categoria, filters),
+      rows: sortRows(baseRows, ordenacao),
+    });
+  }
 
   return {
-    rows: sorted,
-    totalLinhas: sorted.length,
-    totalComFerias: sorted.filter((row) => hasAnyPeriod(row)).length,
-    totalSemFerias: sorted.filter((row) => !hasAnyPeriod(row)).length,
+    sections,
+    totalLinhas: baseRows.length,
+    totalComFerias,
+    totalSemFerias,
   };
 };
 
-const getFilenameBase = (filters: FeriasExportFilters) => {
+const getFilenameBase = (filters: Required<ExportFeriasFilters>) => {
   const categoria =
     filters.categoria === 'TODOS'
       ? 'todas_categorias'
-      : filters.categoria.toLowerCase().replace(/\s+/g, '_');
+      : safe(filters.categoria).toLowerCase().replace(/\s+/g, '_');
 
-  const setor = (filters.setor || 'todos_setores')
+  const setor = (normalizeSetorFiltro(filters.setor) || 'todos_setores')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
@@ -393,13 +507,20 @@ const getFilenameBase = (filters: FeriasExportFilters) => {
 
   const tipo = filters.tipoExtracao.toLowerCase();
   const formato = filters.formato.toLowerCase();
-  const mes = filters.mes === 0 ? 'todos_os_meses' : safe(MESES[filters.mes]).toLowerCase().replace(/\s+/g, '_');
+  const mes = normalizeMesFiltro(filters.mes) === 0
+    ? 'todos_os_meses'
+    : safe(MESES[normalizeMesFiltro(filters.mes)]).toLowerCase().replace(/\s+/g, '_');
 
   return `ferias_${filters.ano}_${categoria}_${setor}_${tipo}_${mes}.${formato === 'docx' ? 'doc' : formato}`;
 };
 
-const buildHtmlDocument = (filters: FeriasExportFilters, prepared: ExportPreparedData) => {
-  const rowsHtml = prepared.rows
+const buildSectionHtml = (
+  section: ExportSection,
+  filters: Required<ExportFeriasFilters>,
+  prepared: ExportPreparedData,
+  sectionIndex: number,
+) => {
+  const rowsHtml = section.rows
     .map((row, index) => {
       return `
         <tr>
@@ -420,6 +541,66 @@ const buildHtmlDocument = (filters: FeriasExportFilters, prepared: ExportPrepare
     .join('');
 
   return `
+    <section class="sheet ${sectionIndex < prepared.sections.length - 1 ? 'page-break' : ''}">
+      <div class="header">
+        <div class="gov">GOVERNO DO ESTADO DE RORAIMA</div>
+        <div class="org">SECRETARIA DE ESTADO DO TRABALHO E BEM-ESTAR SOCIAL</div>
+        <div class="org">CENTRO INTEGRADO DE ATENÇÃO À PESSOA IDOSA - CIAPI</div>
+        <div class="title">PROGRAMAÇÃO ANUAL DE FÉRIAS - EXERCÍCIO/${escapeHtml(filters.ano)}</div>
+        <div class="subtitle">${escapeHtml(section.subtitle)}</div>
+      </div>
+
+      <div class="meta">
+        <div><strong>GRUPO/CATEGORIA:</strong> ${escapeHtml(section.categoria || 'SERVIDORES')}</div>
+        <div><strong>SETOR:</strong> ${escapeHtml(section.setorDocumento)}</div>
+      </div>
+
+      <div class="summary">
+        <strong>Tipo:</strong> ${escapeHtml(TIPOS_EXTRACAO_LABEL[filters.tipoExtracao])} &nbsp;&nbsp;
+        <strong>Status:</strong> ${escapeHtml(filters.status)} &nbsp;&nbsp;
+        <strong>Mês:</strong> ${escapeHtml(MESES[normalizeMesFiltro(filters.mes)] || 'Todos os meses')} &nbsp;&nbsp;
+        <strong>Ordenação:</strong> ${escapeHtml(ORDENACAO_LABEL[filters.ordenacao])}<br />
+        <strong>Linhas desta seção:</strong> ${section.rows.length} &nbsp;&nbsp;
+        <strong>Total do arquivo:</strong> ${prepared.totalLinhas}
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2" class="ncol">Nº</th>
+            <th rowspan="2">NOME DO SERVIDOR</th>
+            <th rowspan="2">MATRÍCULA</th>
+            <th rowspan="2">EXERCÍCIO</th>
+            <th colspan="2">1º PERÍODO</th>
+            <th colspan="2">2º PERÍODO</th>
+            <th colspan="2">3º PERÍODO</th>
+            <th rowspan="2" class="acol">ASSINATURA</th>
+          </tr>
+          <tr>
+            <th>INÍCIO</th>
+            <th>TÉRMINO</th>
+            <th>INÍCIO</th>
+            <th>TÉRMINO</th>
+            <th>INÍCIO</th>
+            <th>TÉRMINO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </section>
+  `;
+};
+
+const buildHtmlDocument = (rawFilters: ExportFeriasFilters, prepared: ExportPreparedData) => {
+  const filters = completeFilters(rawFilters);
+
+  const sectionsHtml = prepared.sections
+    .map((section, index) => buildSectionHtml(section, filters, prepared, index))
+    .join('');
+
+  return `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -437,10 +618,15 @@ const buildHtmlDocument = (filters: FeriasExportFilters, prepared: ExportPrepare
     margin: 0;
     padding: 0;
     font-size: 10pt;
+    background: #fff;
   }
 
   .sheet {
     width: 100%;
+  }
+
+  .page-break {
+    page-break-after: always;
   }
 
   .header {
@@ -453,6 +639,13 @@ const buildHtmlDocument = (filters: FeriasExportFilters, prepared: ExportPrepare
   .title {
     margin-top: 8px;
     font-size: 12pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    margin-top: 4px;
+    font-size: 10pt;
     font-weight: 700;
     text-transform: uppercase;
   }
@@ -483,10 +676,6 @@ const buildHtmlDocument = (filters: FeriasExportFilters, prepared: ExportPrepare
     display: table-header-group;
   }
 
-  tfoot {
-    display: table-footer-group;
-  }
-
   tr {
     page-break-inside: avoid;
   }
@@ -512,55 +701,7 @@ const buildHtmlDocument = (filters: FeriasExportFilters, prepared: ExportPrepare
 </style>
 </head>
 <body>
-  <section class="sheet">
-    <div class="header">
-      <div class="gov">GOVERNO DO ESTADO DE RORAIMA</div>
-      <div class="org">SECRETARIA DE ESTADO DO TRABALHO E BEM-ESTAR SOCIAL</div>
-      <div class="org">CENTRO INTEGRADO DE ATENÇÃO À PESSOA IDOSA - CIAPI</div>
-      <div class="title">PROGRAMAÇÃO ANUAL DE FÉRIAS - EXERCÍCIO/${escapeHtml(filters.ano)}</div>
-    </div>
-
-    <div class="meta">
-      <div><strong>GRUPO/CATEGORIA:</strong> ${escapeHtml(filters.categoria === 'TODOS' ? 'TODOS' : filters.categoria)}</div>
-      <div><strong>SETOR:</strong> ${escapeHtml(filters.setor || 'TODOS')}</div>
-    </div>
-
-    <div class="summary">
-      <strong>Tipo:</strong> ${escapeHtml(TIPOS_EXTRACAO_LABEL[filters.tipoExtracao])} &nbsp;&nbsp;
-      <strong>Status:</strong> ${escapeHtml(filters.status)} &nbsp;&nbsp;
-      <strong>Mês:</strong> ${escapeHtml(MESES[filters.mes] || 'Todos os meses')} &nbsp;&nbsp;
-      <strong>Ordenação:</strong> ${escapeHtml(ORDENACAO_LABEL[filters.ordenacao])}<br/>
-      <strong>Total de linhas:</strong> ${prepared.totalLinhas} &nbsp;&nbsp;
-      <strong>Com férias:</strong> ${prepared.totalComFerias} &nbsp;&nbsp;
-      <strong>Sem férias:</strong> ${prepared.totalSemFerias}
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th rowspan="2" class="ncol">Nº</th>
-          <th rowspan="2">NOME DO SERVIDOR</th>
-          <th rowspan="2">MATRÍCULA</th>
-          <th rowspan="2">EXERCÍCIO</th>
-          <th colspan="2">1º PERÍODO</th>
-          <th colspan="2">2º PERÍODO</th>
-          <th colspan="2">3º PERÍODO</th>
-          <th rowspan="2" class="acol">ASSINATURA</th>
-        </tr>
-        <tr>
-          <th>INÍCIO</th>
-          <th>TÉRMINO</th>
-          <th>INÍCIO</th>
-          <th>TÉRMINO</th>
-          <th>INÍCIO</th>
-          <th>TÉRMINO</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-  </section>
+  ${sectionsHtml}
 </body>
 </html>
 `;
@@ -586,10 +727,11 @@ const csvEscape = (value: unknown) => {
 };
 
 export const exportFeriasFile = (
-  filters: FeriasExportFilters,
+  rawFilters: ExportFeriasFilters,
   feriasRows: FeriasExportRowInput[],
   servidores: FeriasExportServidorInput[],
 ) => {
+  const filters = completeFilters(rawFilters);
   const prepared = buildFeriasExportData(filters, feriasRows, servidores);
 
   if (!prepared.totalLinhas) {
@@ -600,11 +742,11 @@ export const exportFeriasFile = (
 
   if (filters.formato === 'CSV') {
     const header = [
+      'CATEGORIA',
+      'SETOR_DOCUMENTO',
       'NOME DO SERVIDOR',
       'MATRÍCULA',
       'EXERCÍCIO',
-      'CATEGORIA',
-      'SETOR',
       'STATUS',
       '1º INÍCIO',
       '1º TÉRMINO',
@@ -617,24 +759,26 @@ export const exportFeriasFile = (
 
     const lines = [
       header.join(';'),
-      ...prepared.rows.map((row) =>
-        [
-          row.nome,
-          row.matricula,
-          row.exercicio,
-          row.categoria,
-          row.setor,
-          row.status,
-          formatDatePtBr(row.periodo1?.inicio),
-          formatDatePtBr(row.periodo1?.fim),
-          formatDatePtBr(row.periodo2?.inicio),
-          formatDatePtBr(row.periodo2?.fim),
-          formatDatePtBr(row.periodo3?.inicio),
-          formatDatePtBr(row.periodo3?.fim),
-          row.assinatura,
-        ]
-          .map(csvEscape)
-          .join(';'),
+      ...prepared.sections.flatMap((section) =>
+        section.rows.map((row) =>
+          [
+            section.categoria,
+            section.setorDocumento,
+            row.nome,
+            row.matricula,
+            row.exercicio,
+            row.status,
+            formatDatePtBr(row.periodo1?.inicio),
+            formatDatePtBr(row.periodo1?.fim),
+            formatDatePtBr(row.periodo2?.inicio),
+            formatDatePtBr(row.periodo2?.fim),
+            formatDatePtBr(row.periodo3?.inicio),
+            formatDatePtBr(row.periodo3?.fim),
+            '',
+          ]
+            .map(csvEscape)
+            .join(';'),
+        ),
       ),
     ].join('\n');
 
@@ -645,7 +789,7 @@ export const exportFeriasFile = (
   const html = buildHtmlDocument(filters, prepared);
 
   if (filters.formato === 'PDF') {
-    const win = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
+    const win = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900');
     if (!win) {
       throw new Error('Não foi possível abrir a janela de impressão para gerar o PDF.');
     }
@@ -657,7 +801,7 @@ export const exportFeriasFile = (
 
     setTimeout(() => {
       win.print();
-    }, 300);
+    }, 350);
 
     return prepared;
   }
@@ -670,14 +814,14 @@ export const exportFeriasFile = (
   return prepared;
 };
 
-export const getDefaultFeriasExportFilters = (ano?: number): FeriasExportFilters => ({
+export const getDefaultFeriasExportFilters = (ano?: number): ExportFeriasFilters => ({
   ano: Number(ano) || new Date().getFullYear(),
   categoria: 'TODOS',
-  setor: '',
+  setor: 'TODOS',
   status: 'ATIVO',
-  mes: 0,
-  tipoExtracao: 'COM_FERIAS_CADASTRADAS',
-  ordenacao: 'NOME_ASC',
+  mes: 'TODOS',
+  tipoExtracao: 'COM_FERIAS',
+  ordenacao: 'NOME',
   formato: 'DOCX',
 });
 
