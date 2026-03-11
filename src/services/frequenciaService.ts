@@ -6,7 +6,8 @@ import { ListarFrequenciaParams } from './apiTypes';
 import { logsService } from './logsService';
 
 type RegistrarOcorrenciaInput = {
-  servidorId: string;
+  servidorId?: string;
+  servidorCpf?: string;
   data: string;
   tipo: string;
   turno?: string;
@@ -20,11 +21,33 @@ type ExportarFrequenciaInput = {
   incluirPonto?: boolean;
 };
 
+type ApiListResponse<T> =
+  | T[]
+  | {
+      ok?: boolean;
+      data?: T[];
+      error?: string;
+      message?: string;
+    };
+
+type ApiItemResponse<T> =
+  | T
+  | {
+      ok?: boolean;
+      data?: T;
+      error?: string;
+      message?: string;
+    };
+
 let frequenciaMock = Array.isArray(MOCK_FREQUENCIA) ? [...MOCK_FREQUENCIA] : [];
 
 const normalizeString = (value: unknown): string => {
   if (value === null || value === undefined) return '';
   return String(value).trim();
+};
+
+const onlyDigits = (value: unknown): string => {
+  return String(value || '').replace(/\D/g, '');
 };
 
 const normalizeDate = (value: unknown): string => {
@@ -43,29 +66,65 @@ const normalizeDate = (value: unknown): string => {
   return `${year}-${month}-${day}`;
 };
 
-const mapFromDB = (data: any): OcorrenciaFrequencia => ({
-  id: data?.id,
-  servidorId: data?.servidor_id ?? data?.servidorId ?? data?.servidor ?? '',
-  data: normalizeDate(data?.data),
-  tipo: normalizeString(data?.tipo ?? data?.ocorrencia),
-  turno: normalizeString(data?.turno || 'INTEGRAL'),
-  descricao: normalizeString(data?.descricao ?? data?.observacao),
-});
-
-const mapToDB = (data: Partial<OcorrenciaFrequencia> | RegistrarOcorrenciaInput) => ({
-  servidor_id: normalizeString((data as any)?.servidorId),
-  data: normalizeDate((data as any)?.data),
-  tipo: normalizeString((data as any)?.tipo).toUpperCase(),
-  turno: normalizeString((data as any)?.turno || 'INTEGRAL').toUpperCase(),
-  descricao: normalizeString((data as any)?.descricao),
-});
-
 const buildMonthRange = (ano: number, mes: number) => {
   const month = String(mes).padStart(2, '0');
   const startDate = `${ano}-${month}-01`;
   const lastDay = new Date(ano, mes, 0).getDate();
   const endDate = `${ano}-${month}-${String(lastDay).padStart(2, '0')}`;
   return { startDate, endDate };
+};
+
+const mapFromDB = (data: any): OcorrenciaFrequencia => ({
+  id: data?.id,
+  servidorId:
+    data?.servidor_id ??
+    data?.servidorId ??
+    data?.servidor ??
+    '',
+  data: normalizeDate(data?.data),
+  tipo: normalizeString(data?.tipo ?? data?.ocorrencia).toUpperCase(),
+  turno: normalizeString(data?.turno || 'INTEGRAL').toUpperCase(),
+  descricao: normalizeString(data?.descricao ?? data?.observacao),
+});
+
+const mapToDB = (data: Partial<OcorrenciaFrequencia> | RegistrarOcorrenciaInput) => {
+  const servidorId = normalizeString((data as any)?.servidorId);
+  const servidorCpf = onlyDigits((data as any)?.servidorCpf);
+
+  const payload: Record<string, any> = {
+    data: normalizeDate((data as any)?.data),
+    tipo: normalizeString((data as any)?.tipo).toUpperCase(),
+    turno: normalizeString((data as any)?.turno || 'INTEGRAL').toUpperCase(),
+    descricao: normalizeString((data as any)?.descricao),
+  };
+
+  if (servidorId) payload.servidor_id = servidorId;
+  if (servidorCpf) payload.servidor_cpf = servidorCpf;
+
+  return payload;
+};
+
+const unwrapListResponse = <T>(response: ApiListResponse<T>): T[] => {
+  if (Array.isArray(response)) return response;
+  if (response && Array.isArray(response.data)) return response.data;
+  return [];
+};
+
+const unwrapItemResponse = <T>(response: ApiItemResponse<T>): T => {
+  if (response && typeof response === 'object' && 'data' in response && response.data) {
+    return response.data;
+  }
+  return response as T;
+};
+
+const getApiBaseUrl = (): string => {
+  return (
+    (API_CONFIG as any)?.baseUrl ||
+    (API_CONFIG as any)?.apiBaseUrl ||
+    (API_CONFIG as any)?.backendURL ||
+    (API_CONFIG as any)?.backendUrl ||
+    ''
+  );
 };
 
 const downloadBlob = (blob: Blob, fileName: string) => {
@@ -121,13 +180,7 @@ const tentarExportarViaApi = async (
     incluirPonto: !!params.incluirPonto,
   };
 
-  const apiBase =
-    (API_CONFIG as any)?.baseUrl ||
-    (API_CONFIG as any)?.apiBaseUrl ||
-    (API_CONFIG as any)?.backendURL ||
-    (API_CONFIG as any)?.backendUrl ||
-    '';
-
+  const apiBase = getApiBaseUrl();
   const url = `${String(apiBase || '').replace(/\/$/, '')}${endpoint}`;
 
   const response = await fetch(url, {
@@ -150,6 +203,7 @@ const tentarExportarViaApi = async (
   }
 
   const contentType = response.headers.get('content-type') || '';
+
   if (contentType.includes('application/json')) {
     const json = await response.json();
 
@@ -186,20 +240,25 @@ export const apiFrequencia = {
         result = result.filter((f) => normalizeDate(f.data).startsWith(prefix));
       }
 
-      return result.sort((a, b) => normalizeDate(a.data).localeCompare(normalizeDate(b.data)));
+      return result
+        .map(mapFromDB)
+        .sort((a, b) => normalizeDate(a.data).localeCompare(normalizeDate(b.data)));
     }
 
     try {
       const queryParams = new URLSearchParams();
 
       if (filtros?.servidorId) queryParams.append('servidorId', filtros.servidorId);
+      if ((filtros as any)?.servidorCpf) queryParams.append('servidorCpf', onlyDigits((filtros as any).servidorCpf));
       if (filtros?.ano) queryParams.append('ano', String(filtros.ano));
       if (filtros?.mes) queryParams.append('mes', String(filtros.mes));
 
       const queryString = queryParams.toString();
-      const data = await fetchJson<any[]>(`/api/frequencia${queryString ? `?${queryString}` : ''}`);
+      const response = await fetchJson<ApiListResponse<any>>(
+        `/api/frequencia${queryString ? `?${queryString}` : ''}`
+      );
 
-      return (Array.isArray(data) ? data : []).map(mapFromDB);
+      return unwrapListResponse(response).map(mapFromDB);
     } catch (error) {
       console.warn('[frequenciaService] Falha ao buscar da API, tentando Supabase diretamente...', error);
 
@@ -207,6 +266,10 @@ export const apiFrequencia = {
 
       if (filtros?.servidorId) {
         query = query.eq('servidor_id', filtros.servidorId);
+      }
+
+      if ((filtros as any)?.servidorCpf) {
+        query = query.eq('servidor_cpf', onlyDigits((filtros as any).servidorCpf));
       }
 
       if (filtros?.ano && filtros?.mes) {
@@ -234,14 +297,19 @@ export const apiFrequencia = {
     if (API_CONFIG.useMock) {
       const item = frequenciaMock.find((f) => f.id === id);
       if (!item) throw new Error('Ocorrência não encontrada');
-      return item;
+      return mapFromDB(item);
     }
 
     try {
-      const data = await fetchJson<any>(`/api/frequencia/${id}`);
-      return mapFromDB(data);
+      const response = await fetchJson<ApiItemResponse<any>>(`/api/frequencia/${id}`);
+      return mapFromDB(unwrapItemResponse(response));
     } catch {
-      const { data, error } = await supabase.from('frequencia').select('*').eq('id', id).single();
+      const { data, error } = await supabase
+        .from('frequencia')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       if (error) throw error;
       return mapFromDB(data);
     }
@@ -250,7 +318,7 @@ export const apiFrequencia = {
   adicionar: async (dados: Omit<OcorrenciaFrequencia, 'id'>): Promise<OcorrenciaFrequencia> => {
     const payload = mapToDB(dados);
 
-    if (!payload.servidor_id) {
+    if (!payload.servidor_id && !payload.servidor_cpf) {
       throw new Error('Servidor é obrigatório.');
     }
 
@@ -265,7 +333,7 @@ export const apiFrequencia = {
     if (API_CONFIG.useMock) {
       const novo: OcorrenciaFrequencia = {
         id: Math.random().toString(36).substring(2, 11),
-        servidorId: payload.servidor_id,
+        servidorId: payload.servidor_id || '',
         data: payload.data,
         tipo: payload.tipo,
         turno: payload.turno,
@@ -277,7 +345,7 @@ export const apiFrequencia = {
     }
 
     try {
-      const created = await fetchJson<any>('/api/frequencia', {
+      const response = await fetchJson<ApiItemResponse<any>>('/api/frequencia', {
         method: 'POST',
         body: JSON.stringify(payload),
         headers: {
@@ -285,7 +353,7 @@ export const apiFrequencia = {
         },
       });
 
-      const normalized = mapFromDB(created);
+      const normalized = mapFromDB(unwrapItemResponse(response));
       await registrarLog('CRIAR', normalized.id, dados as any);
       return normalized;
     } catch (error) {
@@ -307,12 +375,12 @@ export const apiFrequencia = {
 
   registrarOcorrencia: async (dados: RegistrarOcorrenciaInput): Promise<OcorrenciaFrequencia> => {
     return apiFrequencia.adicionar({
-      servidorId: dados.servidorId,
+      servidorId: dados.servidorId || '',
       data: dados.data,
       tipo: dados.tipo,
       turno: dados.turno || 'INTEGRAL',
       descricao: dados.descricao || '',
-    });
+    } as Omit<OcorrenciaFrequencia, 'id'>);
   },
 
   editar: async (id: string, dados: Partial<OcorrenciaFrequencia>): Promise<OcorrenciaFrequencia> => {
@@ -332,11 +400,11 @@ export const apiFrequencia = {
         data: dados.data ? normalizeDate(dados.data) : frequenciaMock[index].data,
       };
 
-      return frequenciaMock[index];
+      return mapFromDB(frequenciaMock[index]);
     }
 
     try {
-      const updated = await fetchJson<any>(`/api/frequencia/${id}`, {
+      const response = await fetchJson<ApiItemResponse<any>>(`/api/frequencia/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
         headers: {
@@ -344,7 +412,7 @@ export const apiFrequencia = {
         },
       });
 
-      const normalized = mapFromDB(updated);
+      const normalized = mapFromDB(unwrapItemResponse(response));
       await registrarLog('EDITAR', id, dados as any);
       return normalized;
     } catch (error) {
@@ -384,7 +452,11 @@ export const apiFrequencia = {
     } catch (error) {
       console.warn('[frequenciaService] Falha ao excluir via API, tentando Supabase...', error);
 
-      const { error: sbError } = await supabase.from('frequencia').delete().eq('id', id);
+      const { error: sbError } = await supabase
+        .from('frequencia')
+        .delete()
+        .eq('id', id);
+
       if (sbError) throw sbError;
 
       await registrarLog('EXCLUIR', id, {});
