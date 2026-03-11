@@ -8,6 +8,7 @@ import {
   Save,
   Download,
   FileText,
+  Filter,
 } from 'lucide-react';
 import { FeriasStatsCards } from '../components/ferias/FeriasStatsCards';
 import { FeriasFilters, FeriasFiltroState } from '../components/ferias/FeriasFilters';
@@ -16,11 +17,16 @@ import { FeriasList, FeriasListItem } from '../components/ferias/FeriasList';
 import * as feriasServiceModule from '../services/feriasService';
 import * as servidoresServiceModule from '../services/servidoresService';
 import {
-  downloadFeriasDoc,
-  previewFeriasExport,
+  buildFeriasExportData,
+  exportFeriasFile,
+  getDefaultFeriasExportFilters,
+  feriasExportLabels,
   FeriasExportFilters,
   ExportCategoria,
+  ExportFormato,
+  ExportOrdenacao,
   ExportStatus,
+  ExportTipoExtracao,
 } from '../services/feriasExportService';
 
 type FeriasStatus = 'PROGRAMADAS' | 'EM_ANDAMENTO' | 'FINALIZADAS';
@@ -37,6 +43,8 @@ interface ServidorOption {
 
 interface FeriasRecord {
   id: string;
+  rowId?: string;
+  slot?: number;
   servidorId?: string;
   servidorNome: string;
   matricula?: string;
@@ -49,6 +57,7 @@ interface FeriasRecord {
   dias: number;
   status: FeriasStatus;
   observacao?: string;
+  ano?: number;
 }
 
 interface FormState {
@@ -70,34 +79,6 @@ const today = new Date();
 const defaultYear = today.getFullYear();
 const defaultMonth = today.getMonth() + 1;
 
-const CATEGORIAS_EXPORTACAO: ExportCategoria[] = [
-  'TODOS',
-  'EFETIVO SESAU',
-  'SELETIVO SESAU',
-  'EFETIVO SETRABES',
-  'SELETIVO SETRABES',
-  'FEDERAIS SETRABES',
-  'COMISSIONADOS',
-];
-
-const STATUS_EXPORTACAO: ExportStatus[] = ['TODOS', 'ATIVO', 'INATIVO'];
-
-const MESES = [
-  { value: 0, label: 'Todos os meses' },
-  { value: 1, label: 'Janeiro' },
-  { value: 2, label: 'Fevereiro' },
-  { value: 3, label: 'Março' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Maio' },
-  { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Setembro' },
-  { value: 10, label: 'Outubro' },
-  { value: 11, label: 'Novembro' },
-  { value: 12, label: 'Dezembro' },
-];
-
 const initialFilters: FeriasFiltroState = {
   busca: '',
   ano: defaultYear,
@@ -116,14 +97,6 @@ const emptyForm: FormState = {
   fim: '',
   observacao: '',
 };
-
-const initialExportFilters = (): FeriasExportFilters => ({
-  ano: defaultYear,
-  categoria: 'TODOS',
-  setor: '',
-  status: 'TODOS',
-  mes: 0,
-});
 
 function normalizeString(value: unknown) {
   return String(value ?? '').trim();
@@ -185,18 +158,21 @@ function normalizeFerias(item: any): FeriasRecord {
 
   return {
     id: normalizeString(item?.id || item?.uuid || `${item?.cpf || item?.servidor_id || 'ferias'}-${inicio}-${fim}`),
+    rowId: normalizeString(item?.rowId || item?.row_id || item?.ferias_id),
+    slot: Number(item?.slot || item?.periodo || 0),
     servidorId: normalizeString(item?.servidorId || item?.servidor_id || item?.servidor || item?.cpf),
     servidorNome: normalizeString(item?.servidorNome || item?.nomeServidor || item?.servidor_nome || item?.nome || item?.nome_completo),
     matricula: normalizeString(item?.matricula),
     cpf: normalizeString(item?.cpf),
     setor: normalizeString(item?.setor || item?.lotacao || item?.lotacao_interna),
     categoria: normalizeString(item?.categoria || item?.categoria_canonica).toUpperCase(),
-    statusServidor: normalizeString(item?.statusServidor || item?.status || item?.status_servidor).toUpperCase(),
+    statusServidor: normalizeString(item?.statusServidor || item?.status || item?.status_servidor).toUpperCase() || 'ATIVO',
     inicio,
     fim,
     dias: Number.isFinite(dias) ? dias : 0,
     status: computeStatus(inicio, fim),
     observacao: normalizeString(item?.observacao || item?.obs || item?.descricao),
+    ano: Number(item?.ano || parseDate(inicio)?.getFullYear() || defaultYear),
   };
 }
 
@@ -205,10 +181,12 @@ function applyFilters(registros: FeriasRecord[], filtros: FeriasFiltroState) {
 
   return registros.filter((item) => {
     const inicio = parseDate(item.inicio);
-    const matchesTerm = !term || [item.servidorNome, item.matricula, item.cpf, item.observacao, item.setor]
-      .join(' ')
-      .toLowerCase()
-      .includes(term);
+    const matchesTerm =
+      !term ||
+      [item.servidorNome, item.matricula, item.cpf, item.observacao, item.setor]
+        .join(' ')
+        .toLowerCase()
+        .includes(term);
 
     const matchesYear = !inicio || inicio.getFullYear() === filtros.ano;
     const matchesMonth = filtros.mes === 0 || (!inicio ? false : inicio.getMonth() + 1 === filtros.mes);
@@ -233,7 +211,8 @@ function buildStats(registros: FeriasRecord[], filtros: FeriasFiltroState) {
   }).length;
 
   const saldoProgramadoAno = registros.filter((item) => parseDate(item.inicio)?.getFullYear() === filtros.ano).length;
-  const coberturaPlanejada = saldoProgramadoAno === 0 ? 0 : Math.min(100, (saldoProgramadoAno / Math.max(1, registros.length)) * 100);
+  const coberturaPlanejada =
+    saldoProgramadoAno === 0 ? 0 : Math.min(100, (saldoProgramadoAno / Math.max(1, registros.length)) * 100);
 
   return {
     totalRegistros: registros.length,
@@ -315,8 +294,10 @@ export default function FeriasPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [exportFilters, setExportFilters] = useState<FeriasExportFilters>(initialExportFilters);
   const [dayPreview, setDayPreview] = useState<{ date: string; records: FeriasCalendarItem[] } | null>(null);
+  const [exportFilters, setExportFilters] = useState<FeriasExportFilters>(
+    getDefaultFeriasExportFilters(initialFilters.ano),
+  );
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
@@ -324,13 +305,13 @@ export default function FeriasPage() {
 
     try {
       const [feriasResponse, servidoresResponse] = await Promise.all([
-        feriasService.listar?.({ ano: filtros.ano })
-          ?? feriasService.list?.({ ano: filtros.ano })
-          ?? feriasService.getAll?.({ ano: filtros.ano })
-          ?? Promise.resolve([]),
-        servidoresService.listar?.({ limite: 1000 })
-          ?? servidoresService.list?.({ limite: 1000 })
-          ?? Promise.resolve([]),
+        feriasService.listar?.({ ano: filtros.ano }) ??
+          feriasService.list?.({ ano: filtros.ano }) ??
+          feriasService.getAll?.({ ano: filtros.ano }) ??
+          Promise.resolve([]),
+        servidoresService.listar?.({ limit: 1000, limite: 1000 }) ??
+          servidoresService.list?.({ limit: 1000, limite: 1000 }) ??
+          Promise.resolve([]),
       ]);
 
       const servidoresNormalizados = safeArray(servidoresResponse)
@@ -351,7 +332,7 @@ export default function FeriasPage() {
             ...item,
             setor: item.setor || match?.setor || '',
             categoria: item.categoria || match?.categoria || '',
-            statusServidor: item.statusServidor || match?.status || '',
+            statusServidor: item.statusServidor || match?.status || 'ATIVO',
             matricula: item.matricula || match?.matricula || '',
             cpf: item.cpf || match?.cpf || '',
           };
@@ -379,17 +360,15 @@ export default function FeriasPage() {
   }, [success]);
 
   const setores = useMemo(() => {
-    return Array.from(new Set(registros.map((item) => item.setor).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(registros.map((item) => item.setor).filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b),
+    );
   }, [registros]);
 
   const setoresExportacao = useMemo(() => {
-    return Array.from(
-      new Set(
-        servidores
-          .map((item) => item.setor)
-          .filter((item): item is string => !!item),
-      ),
-    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return Array.from(new Set(servidores.map((item) => item.setor).filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    );
   }, [servidores]);
 
   const registrosFiltrados = useMemo(() => applyFilters(registros, filtros), [registros, filtros]);
@@ -399,13 +378,13 @@ export default function FeriasPage() {
 
   const exportPreview = useMemo(() => {
     try {
-      return previewFeriasExport(exportFilters, registros, servidores);
+      return buildFeriasExportData(exportFilters, registros, servidores);
     } catch {
       return {
+        rows: [],
         totalLinhas: 0,
-        totalSecoes: 0,
-        sections: [],
-        filtersLabel: '',
+        totalComFerias: 0,
+        totalSemFerias: 0,
       };
     }
   }, [exportFilters, registros, servidores]);
@@ -423,46 +402,58 @@ export default function FeriasPage() {
 
   const openExportModal = useCallback(() => {
     setExportFilters({
-      ano: filtros.ano,
-      categoria: 'TODOS',
-      setor: filtros.setor || '',
-      status: 'TODOS',
+      ...getDefaultFeriasExportFilters(filtros.ano),
+      ano: filtros.ano || new Date().getFullYear(),
       mes: filtros.mes || 0,
+      setor: filtros.setor || '',
     });
     setExportModalOpen(true);
   }, [filtros.ano, filtros.mes, filtros.setor]);
 
-  const openEditModal = useCallback((item: FeriasListItem) => {
-    const registro = registros.find((entry) => entry.id === item.id);
-    if (!registro) return;
+  const openEditModal = useCallback(
+    (item: FeriasListItem) => {
+      const registro = registros.find((entry) => entry.id === item.id);
+      if (!registro) return;
 
-    setForm({
-      id: registro.id,
-      servidorId: registro.servidorId || '',
-      servidorNome: registro.servidorNome,
-      matricula: registro.matricula || '',
-      cpf: registro.cpf || '',
-      setor: registro.setor || '',
-      inicio: registro.inicio,
-      fim: registro.fim,
-      observacao: registro.observacao || '',
-    });
-    setModalOpen(true);
-  }, [registros]);
+      setForm({
+        id: registro.id,
+        servidorId: registro.servidorId || '',
+        servidorNome: registro.servidorNome,
+        matricula: registro.matricula || '',
+        cpf: registro.cpf || '',
+        setor: registro.setor || '',
+        inicio: registro.inicio,
+        fim: registro.fim,
+        observacao: registro.observacao || '',
+      });
+      setModalOpen(true);
+    },
+    [registros],
+  );
 
-  const selectServidor = useCallback((servidorId: string) => {
-    const servidor = servidores.find((item) => item.id === servidorId || item.cpf === servidorId);
-    if (!servidor) return;
+  const selectServidor = useCallback(
+    (servidorId: string) => {
+      const servidor = servidores.find((item) => item.id === servidorId || item.cpf === servidorId);
+      if (!servidor) return;
 
-    setForm((prev) => ({
-      ...prev,
-      servidorId: servidor.id,
-      servidorNome: servidor.nome,
-      matricula: servidor.matricula || '',
-      cpf: servidor.cpf || '',
-      setor: servidor.setor || '',
-    }));
-  }, [servidores]);
+      setForm((prev) => ({
+        ...prev,
+        servidorId: servidor.id,
+        servidorNome: servidor.nome,
+        matricula: servidor.matricula || '',
+        cpf: servidor.cpf || '',
+        setor: servidor.setor || '',
+      }));
+    },
+    [servidores],
+  );
+
+  const updateExportFilter = useCallback(
+    <K extends keyof FeriasExportFilters>(field: K, value: FeriasExportFilters[K]) => {
+      setExportFilters((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
   const handleSave = useCallback(async () => {
     if (!form.servidorNome || !form.inicio || !form.fim) {
@@ -489,18 +480,19 @@ export default function FeriasPage() {
       fim: form.fim,
       dias: calculateDays(form.inicio, form.fim),
       observacao: form.observacao,
+      ano: filtros.ano,
     };
 
     try {
       if (form.id) {
-        await (feriasService.editar?.(form.id, payload)
-          ?? feriasService.atualizar?.(form.id, payload)
-          ?? feriasService.update?.(form.id, payload));
+        await (feriasService.editar?.(form.id, payload) ??
+          feriasService.atualizar?.(form.id, payload) ??
+          feriasService.update?.(form.id, payload));
         setSuccess('Período de férias atualizado com sucesso.');
       } else {
-        await (feriasService.criar?.(payload)
-          ?? feriasService.adicionar?.(payload)
-          ?? feriasService.create?.(payload));
+        await (feriasService.criar?.(payload) ??
+          feriasService.adicionar?.(payload) ??
+          feriasService.create?.(payload));
         setSuccess('Período de férias cadastrado com sucesso.');
       }
 
@@ -513,33 +505,36 @@ export default function FeriasPage() {
     } finally {
       setSalvando(false);
     }
-  }, [carregarDados, form]);
+  }, [carregarDados, filtros.ano, form]);
 
-  const handleDelete = useCallback(async (item: FeriasListItem) => {
-    const confirmado = window.confirm(`Excluir o período de férias de ${item.servidorNome}?`);
-    if (!confirmado) return;
+  const handleDelete = useCallback(
+    async (item: FeriasListItem) => {
+      const confirmado = window.confirm(`Excluir o período de férias de ${item.servidorNome}?`);
+      if (!confirmado) return;
 
-    setError('');
-    try {
-      await (feriasService.excluir?.(item.id)
-        ?? feriasService.remover?.(item.id)
-        ?? feriasService.delete?.(item.id));
-      setSuccess('Período de férias excluído com sucesso.');
-      await carregarDados();
-    } catch (err: any) {
-      console.error('Erro ao excluir férias:', err);
-      setError(err?.message || 'Não foi possível excluir o período selecionado.');
-    }
-  }, [carregarDados]);
+      setError('');
+      try {
+        await (feriasService.excluir?.(item.id) ??
+          feriasService.remover?.(item.id) ??
+          feriasService.delete?.(item.id));
+        setSuccess('Período de férias excluído com sucesso.');
+        await carregarDados();
+      } catch (err: any) {
+        console.error('Erro ao excluir férias:', err);
+        setError(err?.message || 'Não foi possível excluir o período selecionado.');
+      }
+    },
+    [carregarDados],
+  );
 
   const handleExport = useCallback(async () => {
     setExportando(true);
     setError('');
 
     try {
-      const result = downloadFeriasDoc(exportFilters, registros, servidores);
+      const result = exportFeriasFile(exportFilters, registros, servidores);
       setSuccess(
-        `Exportação concluída com sucesso. ${result.totalLinhas} linha(s) em ${result.totalSecoes} grupo(s).`,
+        `Exportação concluída com sucesso. ${result.totalLinhas} linha(s), ${result.totalComFerias} com férias e ${result.totalSemFerias} sem férias.`,
       );
       setExportModalOpen(false);
     } catch (err: any) {
@@ -549,13 +544,6 @@ export default function FeriasPage() {
       setExportando(false);
     }
   }, [exportFilters, registros, servidores]);
-
-  const updateExportFilter = useCallback(
-    <K extends keyof FeriasExportFilters>(field: K, value: FeriasExportFilters[K]) => {
-      setExportFilters((prev) => ({ ...prev, [field]: value }));
-    },
-    [],
-  );
 
   return (
     <div className="space-y-6">
@@ -599,17 +587,14 @@ export default function FeriasPage() {
       )}
 
       {success && (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{success}</div>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {success}
+        </div>
       )}
 
       <FeriasStatsCards stats={stats} carregando={carregando} />
 
-      <FeriasFilters
-        filtros={filtros}
-        setores={setores}
-        onChange={handleFilterChange}
-        onReset={handleResetFilters}
-      />
+      <FeriasFilters filtros={filtros} setores={setores} onChange={handleFilterChange} onReset={handleResetFilters} />
 
       <FeriasCalendar
         ano={filtros.ano}
@@ -630,7 +615,9 @@ export default function FeriasPage() {
         <div className="border-b border-white/10 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-white">{form.id ? 'Editar período de férias' : 'Novo período de férias'}</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {form.id ? 'Editar período de férias' : 'Novo período de férias'}
+              </h2>
               <p className="mt-1 text-sm text-slate-400">Preencha os dados do servidor e o intervalo do afastamento.</p>
             </div>
             <button
@@ -763,7 +750,7 @@ export default function FeriasPage() {
         </div>
       </Modal>
 
-      <Modal open={exportModalOpen} maxWidthClass="max-w-5xl">
+      <Modal open={exportModalOpen} maxWidthClass="max-w-6xl">
         <div className="border-b border-white/10 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -772,9 +759,10 @@ export default function FeriasPage() {
                 Exportar férias no modelo oficial
               </h2>
               <p className="mt-1 text-sm text-slate-400">
-                Gere a Programação Anual de Férias do CIAPI com filtros avançados por categoria, setor, status e mês.
+                Gere a Programação Anual de Férias do CIAPI com filtros avançados, tipos de extração, ordenação e múltiplos formatos.
               </p>
             </div>
+
             <button
               type="button"
               onClick={() => setExportModalOpen(false)}
@@ -786,15 +774,15 @@ export default function FeriasPage() {
         </div>
 
         <div className="space-y-6 px-6 py-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Exercício</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ano / exercício</span>
               <input
                 type="number"
                 min={2024}
                 max={2100}
                 value={exportFilters.ano}
-                onChange={(event) => updateExportFilter('ano', Number(event.target.value) || defaultYear)}
+                onChange={(event) => updateExportFilter('ano', Number(event.target.value) || new Date().getFullYear())}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               />
             </label>
@@ -806,7 +794,7 @@ export default function FeriasPage() {
                 onChange={(event) => updateExportFilter('categoria', event.target.value as ExportCategoria)}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
-                {CATEGORIAS_EXPORTACAO.map((categoria) => (
+                {feriasExportLabels.categorias.map((categoria) => (
                   <option key={categoria} value={categoria}>
                     {categoria === 'TODOS' ? 'Todos' : categoria}
                   </option>
@@ -837,11 +825,9 @@ export default function FeriasPage() {
                 onChange={(event) => updateExportFilter('status', event.target.value as ExportStatus)}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
-                {STATUS_EXPORTACAO.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
+                <option value="TODOS">Todos</option>
+                <option value="ATIVO">ATIVO</option>
+                <option value="INATIVO">INATIVO</option>
               </select>
             </label>
 
@@ -852,45 +838,97 @@ export default function FeriasPage() {
                 onChange={(event) => updateExportFilter('mes', Number(event.target.value))}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
-                {MESES.map((mes) => (
-                  <option key={mes.value} value={mes.value}>
-                    {mes.label}
+                {feriasExportLabels.meses.map((mes, index) => (
+                  <option key={index} value={index}>
+                    {mes}
                   </option>
                 ))}
               </select>
             </label>
+
+            <label className="space-y-2 xl:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de extração</span>
+              <select
+                value={exportFilters.tipoExtracao}
+                onChange={(event) => updateExportFilter('tipoExtracao', event.target.value as ExportTipoExtracao)}
+                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+              >
+                <option value="TODOS_SERVIDORES">Todos os servidores</option>
+                <option value="COM_FERIAS_CADASTRADAS">Somente servidores com férias cadastradas</option>
+                <option value="COM_FERIAS_NO_MES">Somente servidores com férias no mês selecionado</option>
+                <option value="PLANEJAMENTO_ANUAL_COMPLETO">Planejamento anual completo</option>
+                <option value="APENAS_1_PERIODO">Apenas 1º período</option>
+                <option value="APENAS_2_PERIODO">Apenas 2º período</option>
+                <option value="APENAS_3_PERIODO">Apenas 3º período</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ordenação</span>
+              <select
+                value={exportFilters.ordenacao}
+                onChange={(event) => updateExportFilter('ordenacao', event.target.value as ExportOrdenacao)}
+                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+              >
+                <option value="NOME_ASC">Nome A-Z</option>
+                <option value="MATRICULA">Matrícula</option>
+                <option value="CATEGORIA">Categoria</option>
+                <option value="SETOR">Setor</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Formato de saída</span>
+              <select
+                value={exportFilters.formato}
+                onChange={(event) => updateExportFilter('formato', event.target.value as ExportFormato)}
+                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+              >
+                <option value="DOCX">DOCX</option>
+                <option value="PDF">PDF</option>
+                <option value="CSV">CSV</option>
+              </select>
+            </label>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Prévia da exportação</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Linhas</p>
               <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalLinhas}</div>
-              <p className="mt-1 text-sm text-cyan-100">linha(s) no documento</p>
+              <p className="mt-1 text-sm text-cyan-100">registros que serão exportados</p>
             </div>
 
             <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Grupos</p>
-              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalSecoes}</div>
-              <p className="mt-1 text-sm text-emerald-100">seção(ões) por categoria</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Com férias</p>
+              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalComFerias}</div>
+              <p className="mt-1 text-sm text-emerald-100">servidores com algum período</p>
+            </div>
+
+            <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">Sem férias</p>
+              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalSemFerias}</div>
+              <p className="mt-1 text-sm text-amber-100">apenas quando o tipo permitir</p>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saída</p>
-              <div className="mt-3 text-lg font-semibold text-white">Word compatível (.doc)</div>
-              <p className="mt-1 text-sm text-slate-300">
-                Documento pronto para abrir no Word e imprimir no modelo institucional.
-              </p>
+              <div className="mt-3 text-lg font-semibold text-white">{exportFilters.formato}</div>
+              <p className="mt-1 text-sm text-slate-300">Geração conforme os filtros e o modelo anual do CIAPI.</p>
             </div>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Resumo dos filtros</h3>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-cyan-300" />
+              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Resumo da exportação</h3>
+            </div>
+
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
                 Exercício: {exportFilters.ano}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Categoria: {exportFilters.categoria === 'TODOS' ? 'Todas' : exportFilters.categoria}
+                Categoria: {exportFilters.categoria === 'TODOS' ? 'Todos' : exportFilters.categoria}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
                 Setor: {exportFilters.setor || 'Todos'}
@@ -899,7 +937,16 @@ export default function FeriasPage() {
                 Status: {exportFilters.status}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Mês: {MESES.find((item) => item.value === exportFilters.mes)?.label || 'Todos os meses'}
+                Mês: {feriasExportLabels.meses[exportFilters.mes]}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
+                Tipo: {feriasExportLabels.tiposExtracao[exportFilters.tipoExtracao]}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
+                Ordenação: {feriasExportLabels.ordenacao[exportFilters.ordenacao]}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
+                Formato: {exportFilters.formato}
               </span>
             </div>
           </div>
@@ -907,7 +954,7 @@ export default function FeriasPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-5">
           <div className="text-sm text-slate-400">
-            O documento será gerado no modelo oficial de Programação Anual de Férias do CIAPI.
+            O documento repetirá cabeçalho e título quando houver quebra de página no Word ou PDF.
           </div>
 
           <div className="flex items-center gap-3">
@@ -918,6 +965,7 @@ export default function FeriasPage() {
             >
               Cancelar
             </button>
+
             <button
               type="button"
               onClick={handleExport}
@@ -925,7 +973,7 @@ export default function FeriasPage() {
               className="inline-flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Gerar documento
+              Gerar exportação
             </button>
           </div>
         </div>
@@ -937,7 +985,8 @@ export default function FeriasPage() {
             <div>
               <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <CalendarRange className="h-5 w-5 text-cyan-300" />
-                Detalhes do dia {dayPreview?.date ? new Date(`${dayPreview.date}T00:00:00`).toLocaleDateString('pt-BR') : ''}
+                Detalhes do dia{' '}
+                {dayPreview?.date ? new Date(`${dayPreview.date}T00:00:00`).toLocaleDateString('pt-BR') : ''}
               </h2>
               <p className="mt-1 text-sm text-slate-400">Servidores em férias na data selecionada.</p>
             </div>
