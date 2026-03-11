@@ -1,32 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  Plus,
-  CalendarRange,
-  Loader2,
-  X,
-  Save,
-  Download,
-  FileText,
-  Filter,
-} from 'lucide-react';
+import { Plus, CalendarRange, Loader2, X, Save, Download } from 'lucide-react';
 import { FeriasStatsCards } from '../components/ferias/FeriasStatsCards';
 import { FeriasFilters, FeriasFiltroState } from '../components/ferias/FeriasFilters';
 import { FeriasCalendar, FeriasCalendarItem } from '../components/ferias/FeriasCalendar';
 import { FeriasList, FeriasListItem } from '../components/ferias/FeriasList';
+import ExportarFeriasModal from '../components/ferias/ExportarFeriasModal';
 import * as feriasServiceModule from '../services/feriasService';
 import * as servidoresServiceModule from '../services/servidoresService';
 import {
-  buildFeriasExportData,
   exportFeriasFile,
   getDefaultFeriasExportFilters,
-  feriasExportLabels,
   ExportFeriasFilters,
-  ExportCategoria,
-  ExportFormato,
-  ExportOrdenacao,
-  ExportStatus,
-  ExportTipoExtracao,
 } from '../services/feriasExportService';
 
 type FeriasStatus = 'PROGRAMADAS' | 'EM_ANDAMENTO' | 'FINALIZADAS';
@@ -251,16 +236,6 @@ function toListItems(registros: FeriasRecord[]): FeriasListItem[] {
   }));
 }
 
-function getMesExportValue(mes?: number | 'TODOS') {
-  if (mes === undefined || mes === null || mes === 'TODOS') return 'TODOS';
-  return String(mes);
-}
-
-function getMesExportLabel(mes?: number | 'TODOS') {
-  if (mes === undefined || mes === null || mes === 'TODOS') return feriasExportLabels.meses[0] || 'Todos os meses';
-  return feriasExportLabels.meses[Number(mes)] || 'Todos os meses';
-}
-
 function Modal({
   open,
   children,
@@ -306,10 +281,10 @@ export default function FeriasPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [dayPreview, setDayPreview] = useState<{ date: string; records: FeriasCalendarItem[] } | null>(null);
   const [exportFilters, setExportFilters] = useState<ExportFeriasFilters>(
     getDefaultFeriasExportFilters(initialFilters.ano),
   );
+  const [dayPreview, setDayPreview] = useState<{ date: string; records: FeriasCalendarItem[] } | null>(null);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
@@ -321,8 +296,8 @@ export default function FeriasPage() {
           feriasService.list?.({ ano: filtros.ano }) ??
           feriasService.getAll?.({ ano: filtros.ano }) ??
           Promise.resolve([]),
-        servidoresService.listar?.({ limit: 1000, limite: 1000 }) ??
-          servidoresService.list?.({ limit: 1000, limite: 1000 }) ??
+        servidoresService.listar?.({ limite: 1000, limit: 1000 }) ??
+          servidoresService.list?.({ limite: 1000, limit: 1000 }) ??
           Promise.resolve([]),
       ]);
 
@@ -387,19 +362,6 @@ export default function FeriasPage() {
   const stats = useMemo(() => buildStats(registros, filtros), [registros, filtros]);
   const calendarItems = useMemo(() => buildCalendarItems(registrosFiltrados), [registrosFiltrados]);
   const listItems = useMemo(() => toListItems(registrosFiltrados), [registrosFiltrados]);
-
-  const exportPreview = useMemo(() => {
-    try {
-      return buildFeriasExportData(exportFilters, registros, servidores);
-    } catch {
-      return {
-        sections: [],
-        totalLinhas: 0,
-        totalComFerias: 0,
-        totalSemFerias: 0,
-      };
-    }
-  }, [exportFilters, registros, servidores]);
 
   const handleFilterChange = useCallback(<K extends keyof FeriasFiltroState>(field: K, value: FeriasFiltroState[K]) => {
     setFiltros((prev) => ({ ...prev, [field]: value }));
@@ -544,10 +506,8 @@ export default function FeriasPage() {
     setError('');
 
     try {
-      const result = exportFeriasFile(exportFilters, registros, servidores);
-      setSuccess(
-        `Exportação concluída com sucesso. ${result.totalLinhas} linha(s), ${result.totalComFerias} com férias e ${result.totalSemFerias} sem férias.`,
-      );
+      const result = await exportFeriasFile(exportFilters);
+      setSuccess(`Exportação concluída com sucesso. Arquivo gerado: ${result.filename}`);
       setExportModalOpen(false);
     } catch (err: any) {
       console.error('Erro ao exportar férias:', err);
@@ -555,7 +515,7 @@ export default function FeriasPage() {
     } finally {
       setExportando(false);
     }
-  }, [exportFilters, registros, servidores]);
+  }, [exportFilters]);
 
   return (
     <div className="space-y-6">
@@ -594,17 +554,17 @@ export default function FeriasPage() {
         </div>
       </section>
 
-      {error && (
+      {error ? (
         <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {error}
         </div>
-      )}
+      ) : null}
 
-      {success && (
+      {success ? (
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           {success}
         </div>
-      )}
+      ) : null}
 
       <FeriasStatsCards stats={stats} carregando={carregando} />
 
@@ -764,237 +724,18 @@ export default function FeriasPage() {
         </div>
       </Modal>
 
-      <Modal open={exportModalOpen} maxWidthClass="max-w-6xl">
-        <div className="border-b border-white/10 px-6 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
-                <FileText className="h-5 w-5 text-cyan-300" />
-                Exportar férias no modelo oficial
-              </h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Gere a Programação Anual de Férias do CIAPI com filtros avançados, tipos de extração, ordenação e múltiplos formatos.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setExportModalOpen(false)}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-slate-300 transition hover:bg-white/[0.08]"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ano / exercício</span>
-              <input
-                type="number"
-                min={2024}
-                max={2100}
-                value={exportFilters.ano}
-                onChange={(event) => updateExportFilter('ano', Number(event.target.value) || new Date().getFullYear())}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Categoria</span>
-              <select
-                value={(exportFilters.categoria || 'TODOS') as string}
-                onChange={(event) => updateExportFilter('categoria', event.target.value as ExportCategoria)}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                {feriasExportLabels.categorias.map((categoria) => (
-                  <option key={categoria} value={categoria}>
-                    {categoria === 'TODOS' ? 'Todos' : categoria}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</span>
-              <select
-                value={(exportFilters.setor || 'TODOS') as string}
-                onChange={(event) => updateExportFilter('setor', event.target.value as string | 'TODOS')}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                <option value="TODOS">Todos</option>
-                {setoresExportacao.map((setor) => (
-                  <option key={setor} value={setor}>
-                    {setor}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status do servidor</span>
-              <select
-                value={(exportFilters.status || 'ATIVO') as string}
-                onChange={(event) => updateExportFilter('status', event.target.value as ExportStatus)}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                <option value="TODOS">Todos</option>
-                <option value="ATIVO">ATIVO</option>
-                <option value="INATIVO">INATIVO</option>
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mês</span>
-              <select
-                value={getMesExportValue(exportFilters.mes)}
-                onChange={(event) =>
-                  updateExportFilter('mes', event.target.value === 'TODOS' ? 'TODOS' : Number(event.target.value))
-                }
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                <option value="TODOS">Todos os meses</option>
-                {feriasExportLabels.meses.slice(1).map((mes, index) => (
-                  <option key={mes} value={index + 1}>
-                    {mes}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2 xl:col-span-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de extração</span>
-              <select
-                value={exportFilters.tipoExtracao}
-                onChange={(event) => updateExportFilter('tipoExtracao', event.target.value as ExportTipoExtracao)}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                <option value="TODOS_SERVIDORES">Todos os servidores</option>
-                <option value="COM_FERIAS">Somente servidores com férias cadastradas</option>
-                <option value="NO_MES">Somente servidores com férias no mês selecionado</option>
-                <option value="PLANEJAMENTO_ANUAL">Planejamento anual completo</option>
-                <option value="APENAS_1_PERIODO">Apenas 1º período</option>
-                <option value="APENAS_2_PERIODO">Apenas 2º período</option>
-                <option value="APENAS_3_PERIODO">Apenas 3º período</option>
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ordenação</span>
-              <select
-                value={(exportFilters.ordenacao || 'NOME') as string}
-                onChange={(event) => updateExportFilter('ordenacao', event.target.value as ExportOrdenacao)}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                <option value="NOME">Nome A-Z</option>
-                <option value="MATRICULA">Matrícula</option>
-                <option value="CATEGORIA">Categoria</option>
-                <option value="SETOR">Setor</option>
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Formato de saída</span>
-              <select
-                value={exportFilters.formato}
-                onChange={(event) => updateExportFilter('formato', event.target.value as ExportFormato)}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-              >
-                <option value="DOCX">DOCX</option>
-                <option value="PDF">PDF</option>
-                <option value="CSV">CSV</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Linhas</p>
-              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalLinhas}</div>
-              <p className="mt-1 text-sm text-cyan-100">registros que serão exportados</p>
-            </div>
-
-            <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Com férias</p>
-              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalComFerias}</div>
-              <p className="mt-1 text-sm text-emerald-100">servidores com algum período</p>
-            </div>
-
-            <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">Sem férias</p>
-              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.totalSemFerias}</div>
-              <p className="mt-1 text-sm text-amber-100">apenas quando o tipo permitir</p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Seções</p>
-              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.sections?.length || 0}</div>
-              <p className="mt-1 text-sm text-slate-300">grupos por categoria no arquivo</p>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-cyan-300" />
-              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Resumo da exportação</h3>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
-                Exercício: {exportFilters.ano}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Categoria: {(exportFilters.categoria || 'TODOS') === 'TODOS' ? 'Todos' : exportFilters.categoria}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Setor: {(exportFilters.setor || 'TODOS') === 'TODOS' ? 'Todos' : exportFilters.setor}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Status: {exportFilters.status || 'ATIVO'}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Mês: {getMesExportLabel(exportFilters.mes)}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Tipo: {feriasExportLabels.tiposExtracao[exportFilters.tipoExtracao]}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Ordenação: {feriasExportLabels.ordenacao[(exportFilters.ordenacao || 'NOME') as ExportOrdenacao]}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Formato: {exportFilters.formato}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-5">
-          <div className="text-sm text-slate-400">
-            O documento repetirá cabeçalho e título quando houver quebra de página no Word ou PDF.
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setExportModalOpen(false)}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exportando}
-              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Gerar documento
-            </button>
-          </div>
-        </div>
-      </Modal>
+      <ExportarFeriasModal
+        open={exportModalOpen}
+        loading={exportando}
+        filters={exportFilters}
+        registros={registros}
+        servidores={servidores}
+        setores={setoresExportacao}
+        error={error}
+        onClose={() => setExportModalOpen(false)}
+        onChange={updateExportFilter}
+        onSubmit={handleExport}
+      />
 
       <Modal open={!!dayPreview}>
         <div className="border-b border-white/10 px-6 py-5">
