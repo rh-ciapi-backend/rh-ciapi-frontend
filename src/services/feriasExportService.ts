@@ -1,4 +1,4 @@
-import { API_CONFIG } from '../config/api';
+import { API_BASE_URL } from '../config/api';
 
 export type ExportCategoria =
   | 'TODOS'
@@ -461,20 +461,6 @@ export const buildFeriasExportData = (
   };
 };
 
-const resolveApiBaseUrl = () => {
-  const envBase =
-    (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_API_BACKEND_URL) ||
-    '';
-
-  const configBase =
-    (API_CONFIG as any)?.backendUrl ||
-    (API_CONFIG as any)?.apiBaseUrl ||
-    (API_CONFIG as any)?.baseUrl ||
-    '';
-
-  return String(envBase || configBase || '').replace(/\/+$/, '');
-};
-
 const parseFilenameFromHeader = (headerValue: string | null) => {
   if (!headerValue) return '';
   const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
@@ -484,11 +470,14 @@ const parseFilenameFromHeader = (headerValue: string | null) => {
   return plainMatch?.[1] || '';
 };
 
+const resolveApiBaseUrl = () => {
+  return String(API_BASE_URL || 'https://api.rhciapi.com.br').replace(/\/+$/, '');
+};
+
 export const exportFeriasFile = async (
   filters: ExportFeriasFilters,
 ): Promise<{ filename: string; size: number }> => {
-  const apiBase = resolveApiBaseUrl();
-  const endpoint = `${apiBase}/api/ferias/exportar`;
+  const endpoint = `${resolveApiBaseUrl()}/api/ferias/exportar`;
 
   const response = await fetch(endpoint, {
     method: 'POST',
