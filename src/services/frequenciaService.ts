@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../config/api';
 
 type Nullable<T> = T | null | undefined;
 
@@ -189,6 +190,21 @@ export interface ConsolidacaoFrequenciaResult {
   dayMap: DayMap;
   templateData: Record<string, string | boolean | number>;
   warnings: string[];
+}
+
+export interface FrequenciaExportPayload {
+  templateData: Record<string, string | boolean | number>;
+  formato: 'docx' | 'pdf';
+  outputFileName: string;
+  removerLinhasExcedentes: boolean;
+  metadata: {
+    servidor: NormalizedServidor;
+    ano: number;
+    mes: number;
+    totalDiasMes: number;
+    hiddenRowsFrom: number;
+    hiddenRowsTo: number;
+  };
 }
 
 interface NormalizedServidor {
@@ -560,8 +576,7 @@ function findOcorrenciaByDate(ocorrencias: NormalizedOcorrencia[], dateISO: stri
 
 function hasTipoFalta(ocorrencia: NormalizedOcorrencia | null): boolean {
   if (!ocorrencia) return false;
-  const tipo = toUpperSafe(ocorrencia.tipo);
-  return tipo === 'FALTA';
+  return toUpperSafe(ocorrencia.tipo) === 'FALTA';
 }
 
 function hasManualContent(ocorrencia: NormalizedOcorrencia | null): boolean {
@@ -628,14 +643,12 @@ function collectConflitos(input: {
   if (input.ferias && input.atestado) conflitos.push('Conflito: férias + atestado');
   if (input.evento && input.falta) conflitos.push('Conflito: feriado + falta');
   if ((input.isSaturday || input.isSunday) && input.manual) conflitos.push('Conflito: fim de semana + ocorrência manual');
-  if (input.atestado && input.ferias) conflitos.push('Conflito: atestado + férias');
   if (input.ponto && input.falta) conflitos.push('Conflito: ponto facultativo + falta');
 
   return conflitos;
 }
 
 function buildDayItem(args: {
-  servidor: NormalizedServidor;
   ano: number;
   mes: number;
   dia: number;
@@ -799,18 +812,17 @@ function buildTemplateData(
 ): Record<string, string | boolean | number> {
   const totalDiasMes = getLastDayOfMonth(ano, mes);
   const data: Record<string, string | boolean | number> = {
-    ANO: String(ano),
-    MES: monthNamePtBr(mes),
-    MES_NUMERO: pad2(mes),
     NOME: servidor.nome,
-    NOME_COMPLETO: servidor.nome,
     MATRICULA: servidor.matricula,
+    CATEGORIA: servidor.categoria,
     CPF: servidor.cpf,
     CARGO: servidor.cargo,
-    CATEGORIA: servidor.categoria,
-    SETOR: servidor.setor,
     CH_DIARIA: servidor.chDiaria ? `CH_DIARIA: ${servidor.chDiaria}` : '',
     CH_SEMANAL: servidor.chSemanal ? `CH_SEMANAL: ${servidor.chSemanal}` : '',
+    MES: monthNamePtBr(mes),
+    ANO: String(ano),
+    SETOR: servidor.setor || '',
+    NOME_COMPLETO: servidor.nome,
     C_H_DIARIA: servidor.chDiaria || '',
     C_H_SEMANAL: servidor.chSemanal || '',
     LAST_DAY: totalDiasMes,
@@ -875,7 +887,6 @@ export function consolidarFrequenciaMensal(
 
   for (let dia = 1; dia <= totalDiasMes; dia += 1) {
     dayMap[dia] = buildDayItem({
-      servidor,
       ano,
       mes,
       dia,
@@ -933,7 +944,7 @@ export async function carregarDadosConsolidadosFrequencia(params: {
     eventos = eventosQuery.data;
   }
 
-  let feriasQuery = null as any;
+  let feriasQuery: any = null;
   if (cpf) {
     feriasQuery = await supabase
       .from('ferias')
@@ -950,7 +961,7 @@ export async function carregarDadosConsolidadosFrequencia(params: {
     ferias = feriasQuery.data;
   }
 
-  let atestadosQuery = null as any;
+  let atestadosQuery: any = null;
   if (cpf) {
     atestadosQuery = await supabase
       .from('atestados')
@@ -967,7 +978,7 @@ export async function carregarDadosConsolidadosFrequencia(params: {
     atestados = atestadosQuery.data;
   }
 
-  let ocorrenciasQuery = null as any;
+  let ocorrenciasQuery: any = null;
   if (cpf) {
     ocorrenciasQuery = await supabase
       .from('frequencia_ocorrencias')
@@ -978,7 +989,7 @@ export async function carregarDadosConsolidadosFrequencia(params: {
   }
 
   if (ocorrenciasQuery?.error || !Array.isArray(ocorrenciasQuery?.data)) {
-    let fallbackQuery = null as any;
+    let fallbackQuery: any = null;
 
     if (cpf) {
       fallbackQuery = await supabase
@@ -1014,6 +1025,100 @@ export async function carregarDadosConsolidadosFrequencia(params: {
     incluirPontoFacultativo,
     faltaVaiParaRubrica
   });
+}
+
+export function montarPayloadExportacaoFrequencia(params: ConsolidarFrequenciaOptions & {
+  formato?: 'docx' | 'pdf';
+  outputFileName?: string;
+}): FrequenciaExportPayload {
+  const result = consolidarFrequenciaMensal(params);
+
+  const formato = params.formato ?? 'docx';
+  const baseName = `${result.servidor.nome || 'servidor'}_${pad2(result.mes)}_${result.ano}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '_');
+
+  return {
+    templateData: result.templateData,
+    formato,
+    outputFileName: params.outputFileName || `frequencia_${baseName}.${formato}`,
+    removerLinhasExcedentes: true,
+    metadata: {
+      servidor: result.servidor,
+      ano: result.ano,
+      mes: result.mes,
+      totalDiasMes: result.totalDiasMes,
+      hiddenRowsFrom: result.hiddenRowsFrom,
+      hiddenRowsTo: result.hiddenRowsTo
+    }
+  };
+}
+
+function parseFilenameFromContentDisposition(headerValue: string | null): string | null {
+  if (!headerValue) return null;
+
+  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const normalMatch = headerValue.match(/filename="?([^"]+)"?/i);
+  return normalMatch?.[1] ?? null;
+}
+
+export async function exportarFrequenciaArquivo(params: ConsolidarFrequenciaOptions & {
+  formato?: 'docx' | 'pdf';
+  templatePath?: string;
+  outputFileName?: string;
+}): Promise<{
+  blob: Blob;
+  fileName: string;
+  contentType: string;
+  payload: FrequenciaExportPayload;
+}> {
+  const payload = montarPayloadExportacaoFrequencia(params);
+  const endpoint = `${String(API_BASE_URL || '').replace(/\/+$/, '')}/api/frequencia/exportar`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      ...payload,
+      templatePath: params.templatePath || undefined
+    })
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Falha ao exportar frequência.';
+    try {
+      const errorBody = await response.json();
+      errorMessage = errorBody?.error || errorBody?.details || errorMessage;
+    } catch {
+      // noop
+    }
+    throw new Error(errorMessage);
+  }
+
+  const blob = await response.blob();
+  const contentType = response.headers.get('content-type') || 'application/octet-stream';
+  const fileName =
+    parseFilenameFromContentDisposition(response.headers.get('content-disposition')) ||
+    payload.outputFileName;
+
+  return {
+    blob,
+    fileName,
+    contentType,
+    payload
+  };
 }
 
 export function montarDayMapParaExportacao(params: ConsolidarFrequenciaOptions): DayMap {
