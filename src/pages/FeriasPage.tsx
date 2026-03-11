@@ -21,7 +21,7 @@ import {
   exportFeriasFile,
   getDefaultFeriasExportFilters,
   feriasExportLabels,
-  FeriasExportFilters,
+  ExportFeriasFilters,
   ExportCategoria,
   ExportFormato,
   ExportOrdenacao,
@@ -161,7 +161,9 @@ function normalizeFerias(item: any): FeriasRecord {
     rowId: normalizeString(item?.rowId || item?.row_id || item?.ferias_id),
     slot: Number(item?.slot || item?.periodo || 0),
     servidorId: normalizeString(item?.servidorId || item?.servidor_id || item?.servidor || item?.cpf),
-    servidorNome: normalizeString(item?.servidorNome || item?.nomeServidor || item?.servidor_nome || item?.nome || item?.nome_completo),
+    servidorNome: normalizeString(
+      item?.servidorNome || item?.nomeServidor || item?.servidor_nome || item?.nome || item?.nome_completo,
+    ),
     matricula: normalizeString(item?.matricula),
     cpf: normalizeString(item?.cpf),
     setor: normalizeString(item?.setor || item?.lotacao || item?.lotacao_interna),
@@ -249,6 +251,16 @@ function toListItems(registros: FeriasRecord[]): FeriasListItem[] {
   }));
 }
 
+function getMesExportValue(mes?: number | 'TODOS') {
+  if (mes === undefined || mes === null || mes === 'TODOS') return 'TODOS';
+  return String(mes);
+}
+
+function getMesExportLabel(mes?: number | 'TODOS') {
+  if (mes === undefined || mes === null || mes === 'TODOS') return feriasExportLabels.meses[0] || 'Todos os meses';
+  return feriasExportLabels.meses[Number(mes)] || 'Todos os meses';
+}
+
 function Modal({
   open,
   children,
@@ -272,7 +284,7 @@ function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.18 }}
-            className={`w-full ${maxWidthClass} overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-[0_20px_80px_rgba(0,0,0,0.45)]`}
+            className={`w-full ${maxWidthClass} max-h-[92vh] overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-[0_20px_80px_rgba(0,0,0,0.45)]`}
           >
             {children}
           </motion.div>
@@ -295,7 +307,7 @@ export default function FeriasPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [dayPreview, setDayPreview] = useState<{ date: string; records: FeriasCalendarItem[] } | null>(null);
-  const [exportFilters, setExportFilters] = useState<FeriasExportFilters>(
+  const [exportFilters, setExportFilters] = useState<ExportFeriasFilters>(
     getDefaultFeriasExportFilters(initialFilters.ano),
   );
 
@@ -381,7 +393,7 @@ export default function FeriasPage() {
       return buildFeriasExportData(exportFilters, registros, servidores);
     } catch {
       return {
-        rows: [],
+        sections: [],
         totalLinhas: 0,
         totalComFerias: 0,
         totalSemFerias: 0,
@@ -404,8 +416,8 @@ export default function FeriasPage() {
     setExportFilters({
       ...getDefaultFeriasExportFilters(filtros.ano),
       ano: filtros.ano || new Date().getFullYear(),
-      mes: filtros.mes || 0,
-      setor: filtros.setor || '',
+      mes: filtros.mes || 'TODOS',
+      setor: filtros.setor || 'TODOS',
     });
     setExportModalOpen(true);
   }, [filtros.ano, filtros.mes, filtros.setor]);
@@ -449,7 +461,7 @@ export default function FeriasPage() {
   );
 
   const updateExportFilter = useCallback(
-    <K extends keyof FeriasExportFilters>(field: K, value: FeriasExportFilters[K]) => {
+    <K extends keyof ExportFeriasFilters>(field: K, value: ExportFeriasFilters[K]) => {
       setExportFilters((prev) => ({ ...prev, [field]: value }));
     },
     [],
@@ -583,7 +595,9 @@ export default function FeriasPage() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div>
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {error}
+        </div>
       )}
 
       {success && (
@@ -630,7 +644,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5 overflow-y-auto px-6 py-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Servidor</span>
@@ -773,7 +787,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="space-y-6 px-6 py-5">
+        <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ano / exercício</span>
@@ -790,7 +804,7 @@ export default function FeriasPage() {
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Categoria</span>
               <select
-                value={exportFilters.categoria}
+                value={(exportFilters.categoria || 'TODOS') as string}
                 onChange={(event) => updateExportFilter('categoria', event.target.value as ExportCategoria)}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
@@ -805,11 +819,11 @@ export default function FeriasPage() {
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</span>
               <select
-                value={exportFilters.setor}
-                onChange={(event) => updateExportFilter('setor', event.target.value)}
+                value={(exportFilters.setor || 'TODOS') as string}
+                onChange={(event) => updateExportFilter('setor', event.target.value as string | 'TODOS')}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
-                <option value="">Todos</option>
+                <option value="TODOS">Todos</option>
                 {setoresExportacao.map((setor) => (
                   <option key={setor} value={setor}>
                     {setor}
@@ -821,7 +835,7 @@ export default function FeriasPage() {
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status do servidor</span>
               <select
-                value={exportFilters.status}
+                value={(exportFilters.status || 'ATIVO') as string}
                 onChange={(event) => updateExportFilter('status', event.target.value as ExportStatus)}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
@@ -834,12 +848,15 @@ export default function FeriasPage() {
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mês</span>
               <select
-                value={exportFilters.mes}
-                onChange={(event) => updateExportFilter('mes', Number(event.target.value))}
+                value={getMesExportValue(exportFilters.mes)}
+                onChange={(event) =>
+                  updateExportFilter('mes', event.target.value === 'TODOS' ? 'TODOS' : Number(event.target.value))
+                }
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
-                {feriasExportLabels.meses.map((mes, index) => (
-                  <option key={index} value={index}>
+                <option value="TODOS">Todos os meses</option>
+                {feriasExportLabels.meses.slice(1).map((mes, index) => (
+                  <option key={mes} value={index + 1}>
                     {mes}
                   </option>
                 ))}
@@ -854,9 +871,9 @@ export default function FeriasPage() {
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
                 <option value="TODOS_SERVIDORES">Todos os servidores</option>
-                <option value="COM_FERIAS_CADASTRADAS">Somente servidores com férias cadastradas</option>
-                <option value="COM_FERIAS_NO_MES">Somente servidores com férias no mês selecionado</option>
-                <option value="PLANEJAMENTO_ANUAL_COMPLETO">Planejamento anual completo</option>
+                <option value="COM_FERIAS">Somente servidores com férias cadastradas</option>
+                <option value="NO_MES">Somente servidores com férias no mês selecionado</option>
+                <option value="PLANEJAMENTO_ANUAL">Planejamento anual completo</option>
                 <option value="APENAS_1_PERIODO">Apenas 1º período</option>
                 <option value="APENAS_2_PERIODO">Apenas 2º período</option>
                 <option value="APENAS_3_PERIODO">Apenas 3º período</option>
@@ -866,11 +883,11 @@ export default function FeriasPage() {
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ordenação</span>
               <select
-                value={exportFilters.ordenacao}
+                value={(exportFilters.ordenacao || 'NOME') as string}
                 onChange={(event) => updateExportFilter('ordenacao', event.target.value as ExportOrdenacao)}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
               >
-                <option value="NOME_ASC">Nome A-Z</option>
+                <option value="NOME">Nome A-Z</option>
                 <option value="MATRICULA">Matrícula</option>
                 <option value="CATEGORIA">Categoria</option>
                 <option value="SETOR">Setor</option>
@@ -911,9 +928,9 @@ export default function FeriasPage() {
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saída</p>
-              <div className="mt-3 text-lg font-semibold text-white">{exportFilters.formato}</div>
-              <p className="mt-1 text-sm text-slate-300">Geração conforme os filtros e o modelo anual do CIAPI.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Seções</p>
+              <div className="mt-3 text-3xl font-bold text-white">{exportPreview.sections?.length || 0}</div>
+              <p className="mt-1 text-sm text-slate-300">grupos por categoria no arquivo</p>
             </div>
           </div>
 
@@ -928,22 +945,22 @@ export default function FeriasPage() {
                 Exercício: {exportFilters.ano}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Categoria: {exportFilters.categoria === 'TODOS' ? 'Todos' : exportFilters.categoria}
+                Categoria: {(exportFilters.categoria || 'TODOS') === 'TODOS' ? 'Todos' : exportFilters.categoria}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Setor: {exportFilters.setor || 'Todos'}
+                Setor: {(exportFilters.setor || 'TODOS') === 'TODOS' ? 'Todos' : exportFilters.setor}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Status: {exportFilters.status}
+                Status: {exportFilters.status || 'ATIVO'}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Mês: {feriasExportLabels.meses[exportFilters.mes]}
+                Mês: {getMesExportLabel(exportFilters.mes)}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
                 Tipo: {feriasExportLabels.tiposExtracao[exportFilters.tipoExtracao]}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
-                Ordenação: {feriasExportLabels.ordenacao[exportFilters.ordenacao]}
+                Ordenação: {feriasExportLabels.ordenacao[(exportFilters.ordenacao || 'NOME') as ExportOrdenacao]}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
                 Formato: {exportFilters.formato}
@@ -973,7 +990,7 @@ export default function FeriasPage() {
               className="inline-flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Gerar exportação
+              Gerar documento
             </button>
           </div>
         </div>
@@ -1000,7 +1017,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           {!dayPreview?.records.length ? (
             <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/35 px-4 py-10 text-center text-sm text-slate-400">
               Nenhum servidor em férias nesta data.
