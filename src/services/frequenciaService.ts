@@ -1,497 +1,1051 @@
-import { OcorrenciaFrequencia } from '../types';
-import { MOCK_FREQUENCIA } from '../data/frequencia';
-import { API_CONFIG, fetchJson } from '../config/api';
 import { supabase } from '../lib/supabaseClient';
-import { ListarFrequenciaParams } from './apiTypes';
-import { logsService } from './logsService';
 
-type RegistrarOcorrenciaInput = {
-  servidorId?: string;
-  servidorCpf?: string;
-  data: string;
-  tipo: string;
-  turno?: string;
-  descricao?: string;
-};
+type Nullable<T> = T | null | undefined;
 
-type ExportarFrequenciaInput = {
-  servidorId: string;
+export type TipoEventoCalendario =
+  | 'FERIADO'
+  | 'PONTO'
+  | 'PONTO FACULTATIVO'
+  | 'EVENTO'
+  | 'OUTRO';
+
+export type StatusConsolidadoDia =
+  | 'NORMAL'
+  | 'SABADO'
+  | 'DOMINGO'
+  | 'FERIADO'
+  | 'FERIAS'
+  | 'ATESTADO'
+  | 'FALTA'
+  | 'PONTO_FACULTATIVO'
+  | 'MANUAL';
+
+export interface ServidorFrequencia {
+  id?: string;
+  servidor?: string;
+  uuid?: string;
+  servidor_id?: string;
+  nome?: string;
+  nomeCompleto?: string;
+  nome_completo?: string;
+  cpf?: string;
+  matricula?: string;
+  categoria?: string;
+  setor?: string;
+  cargo?: string;
+  chDiaria?: string | number | null;
+  ch_diaria?: string | number | null;
+  chSemanal?: string | number | null;
+  ch_semanal?: string | number | null;
+  status?: string;
+  [key: string]: any;
+}
+
+export interface EventoCalendario {
+  id?: string | number;
+  data?: string | null;
+  date?: string | null;
+  dataISO?: string | null;
+  tipo?: string | null;
+  type?: string | null;
+  titulo?: string | null;
+  title?: string | null;
+  descricao?: string | null;
+  description?: string | null;
+  [key: string]: any;
+}
+
+export interface FeriasRegistro {
+  id?: string | number;
+  servidor_id?: string | null;
+  servidorId?: string | null;
+  servidor?: string | null;
+  cpf?: string | null;
+  servidor_cpf?: string | null;
+  nome?: string | null;
+  nome_completo?: string | null;
+
+  periodo1_inicio?: string | null;
+  periodo1_fim?: string | null;
+  periodo2_inicio?: string | null;
+  periodo2_fim?: string | null;
+  periodo3_inicio?: string | null;
+  periodo3_fim?: string | null;
+
+  inicio?: string | null;
+  fim?: string | null;
+
+  observacao?: string | null;
+  descricao?: string | null;
+  [key: string]: any;
+}
+
+export interface AtestadoRegistro {
+  id?: string | number;
+  servidor_id?: string | null;
+  servidorId?: string | null;
+  servidor?: string | null;
+  cpf?: string | null;
+  servidor_cpf?: string | null;
+  nome?: string | null;
+  nome_completo?: string | null;
+
+  data_inicio?: string | null;
+  data_fim?: string | null;
+  inicio?: string | null;
+  fim?: string | null;
+  periodo_inicio?: string | null;
+  periodo_fim?: string | null;
+
+  motivo?: string | null;
+  observacao?: string | null;
+  descricao?: string | null;
+  [key: string]: any;
+}
+
+export interface OcorrenciaFrequencia {
+  id?: string | number;
+  servidor_id?: string | null;
+  servidorId?: string | null;
+  servidor?: string | null;
+  cpf?: string | null;
+  servidor_cpf?: string | null;
+  nome?: string | null;
+  nome_completo?: string | null;
+
+  data?: string | null;
+  date?: string | null;
+  dataISO?: string | null;
+  inicio?: string | null;
+  fim?: string | null;
+
+  tipo?: string | null;
+  turno?: string | null;
+  rubrica?: string | null;
+  rubrica1?: string | null;
+  rubrica2?: string | null;
+  ocorrencia1?: string | null;
+  ocorrencia2?: string | null;
+  o1?: string | null;
+  o2?: string | null;
+  observacao?: string | null;
+  descricao?: string | null;
+  [key: string]: any;
+}
+
+export interface DayMapItem {
+  dia: number;
+  dataISO: string;
+  weekday: number;
+  weekdayLabel: string;
+  isSaturday: boolean;
+  isSunday: boolean;
+  isHoliday: boolean;
+  isPontoFacultativo: boolean;
+  isVacation: boolean;
+  isAtestado: boolean;
+  isFalta: boolean;
+  rubrica: string;
+  rubrica1: string;
+  rubrica2: string;
+  ocorrencia1: string;
+  ocorrencia2: string;
+  observacoes: string;
+  finalStatus: StatusConsolidadoDia;
+  conflitos: string[];
+  avisos: string[];
+  fontes: {
+    evento?: EventoCalendario | null;
+    ponto?: EventoCalendario | null;
+    ferias?: NormalizedPeriod | null;
+    atestado?: NormalizedPeriod | null;
+    falta?: NormalizedOcorrencia | null;
+    manual?: NormalizedOcorrencia | null;
+  };
+}
+
+export type DayMap = Record<number, DayMapItem>;
+
+export interface ConsolidarFrequenciaOptions {
+  servidor: ServidorFrequencia;
   mes: number;
   ano: number;
-  incluirPonto?: boolean;
-};
+  eventos?: EventoCalendario[];
+  ferias?: FeriasRegistro[];
+  atestados?: AtestadoRegistro[];
+  ocorrencias?: OcorrenciaFrequencia[];
+  incluirPontoFacultativo?: boolean;
+  faltaVaiParaRubrica?: boolean;
+  logger?: Pick<Console, 'warn' | 'log' | 'error'>;
+}
 
-type ApiListResponse<T> =
-  | T[]
-  | {
-      ok?: boolean;
-      data?: T[];
-      error?: string;
-      message?: string;
-    };
+export interface ConsolidacaoFrequenciaResult {
+  servidor: NormalizedServidor;
+  ano: number;
+  mes: number;
+  totalDiasMes: number;
+  hiddenRowsFrom: number;
+  hiddenRowsTo: number;
+  dayMap: DayMap;
+  templateData: Record<string, string | boolean | number>;
+  warnings: string[];
+}
 
-type ApiItemResponse<T> =
-  | T
-  | {
-      ok?: boolean;
-      data?: T;
-      error?: string;
-      message?: string;
-    };
+interface NormalizedServidor {
+  id: string;
+  cpf: string;
+  nome: string;
+  matricula: string;
+  categoria: string;
+  setor: string;
+  cargo: string;
+  chDiaria: string;
+  chSemanal: string;
+  status: string;
+}
 
-let frequenciaMock = Array.isArray(MOCK_FREQUENCIA) ? [...MOCK_FREQUENCIA] : [];
+interface NormalizedEvent {
+  id: string;
+  dataISO: string;
+  tipo: TipoEventoCalendario;
+  titulo: string;
+  descricao: string;
+  raw: EventoCalendario;
+}
 
-const normalizeString = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
-  return String(value).trim();
-};
+interface NormalizedPeriod {
+  id: string;
+  servidorKey: string;
+  inicio: string;
+  fim: string;
+  observacao: string;
+  raw: any;
+}
 
-const onlyDigits = (value: unknown): string => {
-  return String(value || '').replace(/\D/g, '');
-};
+interface NormalizedOcorrencia {
+  id: string;
+  servidorKey: string;
+  dataISO?: string;
+  inicio?: string;
+  fim?: string;
+  tipo: string;
+  turno: string;
+  rubrica: string;
+  rubrica1: string;
+  rubrica2: string;
+  ocorrencia1: string;
+  ocorrencia2: string;
+  observacao: string;
+  raw: any;
+}
 
-const normalizeDate = (value: unknown): string => {
-  const raw = normalizeString(value);
+const WEEKDAY_LABELS = [
+  'DOMINGO',
+  'SEGUNDA-FEIRA',
+  'TERÇA-FEIRA',
+  'QUARTA-FEIRA',
+  'QUINTA-FEIRA',
+  'SEXTA-FEIRA',
+  'SÁBADO'
+] as const;
+
+const STATUS_PRIORITY: StatusConsolidadoDia[] = [
+  'SABADO',
+  'DOMINGO',
+  'FERIADO',
+  'FERIAS',
+  'ATESTADO',
+  'FALTA',
+  'PONTO_FACULTATIVO',
+  'MANUAL'
+];
+
+function createDefaultLogger(): Pick<Console, 'warn' | 'log' | 'error'> {
+  return console;
+}
+
+function pad2(value: number | string): string {
+  return String(value).padStart(2, '0');
+}
+
+function toUpperSafe(value: Nullable<any>): string {
+  return String(value ?? '').trim().toUpperCase();
+}
+
+function normalizeSpaces(value: Nullable<any>): string {
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function removeNonDigits(value: Nullable<any>): string {
+  return String(value ?? '').replace(/\D+/g, '');
+}
+
+function normalizeName(value: Nullable<any>): string {
+  const raw = normalizeSpaces(value);
   if (!raw) return '';
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw.slice(0, 10);
+function isoFromParts(year: number, month: number, day: number): string {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+function parseDateToISO(value: Nullable<any>): string | null {
+  if (!value) return null;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (brMatch) {
+    return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  }
 
   const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return raw;
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())}`;
+  }
 
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+  return null;
+}
 
-const buildMonthRange = (ano: number, mes: number) => {
-  const month = String(mes).padStart(2, '0');
-  const startDate = `${ano}-${month}-01`;
-  const lastDay = new Date(ano, mes, 0).getDate();
-  const endDate = `${ano}-${month}-${String(lastDay).padStart(2, '0')}`;
-  return { startDate, endDate };
-};
+function getLastDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
 
-const mapFromDB = (data: any): OcorrenciaFrequencia => ({
-  id: data?.id,
-  servidorId:
-    data?.servidor_id ??
-    data?.servidorId ??
-    data?.servidor ??
+function getWeekday(year: number, month: number, day: number): number {
+  return new Date(year, month - 1, day).getDay();
+}
+
+function monthNamePtBr(month: number): string {
+  const names = [
     '',
-  data: normalizeDate(data?.data),
-  tipo: normalizeString(data?.tipo ?? data?.ocorrencia).toUpperCase(),
-  turno: normalizeString(data?.turno || 'INTEGRAL').toUpperCase(),
-  descricao: normalizeString(data?.descricao ?? data?.observacao),
-});
+    'JANEIRO',
+    'FEVEREIRO',
+    'MARÇO',
+    'ABRIL',
+    'MAIO',
+    'JUNHO',
+    'JULHO',
+    'AGOSTO',
+    'SETEMBRO',
+    'OUTUBRO',
+    'NOVEMBRO',
+    'DEZEMBRO'
+  ];
+  return names[month] ?? '';
+}
 
-const mapToDB = (data: Partial<OcorrenciaFrequencia> | RegistrarOcorrenciaInput) => {
-  const servidorId = normalizeString((data as any)?.servidorId);
-  const servidorCpf = onlyDigits((data as any)?.servidorCpf);
+function toStringSafe(value: Nullable<any>): string {
+  return String(value ?? '').trim();
+}
 
-  const payload: Record<string, any> = {
-    data: normalizeDate((data as any)?.data),
-    tipo: normalizeString((data as any)?.tipo).toUpperCase(),
-    turno: normalizeString((data as any)?.turno || 'INTEGRAL').toUpperCase(),
-    descricao: normalizeString((data as any)?.descricao),
-  };
+function dateBetweenInclusive(dateISO: string, startISO?: string, endISO?: string): boolean {
+  if (!dateISO || !startISO || !endISO) return false;
+  return dateISO >= startISO && dateISO <= endISO;
+}
 
-  if (servidorId) payload.servidor_id = servidorId;
-  if (servidorCpf) payload.servidor_cpf = servidorCpf;
-
-  return payload;
-};
-
-const unwrapListResponse = <T>(response: ApiListResponse<T>): T[] => {
-  if (Array.isArray(response)) return response;
-  if (response && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
-const unwrapItemResponse = <T>(response: ApiItemResponse<T>): T => {
-  if (response && typeof response === 'object' && 'data' in response && response.data) {
-    return response.data;
-  }
-  return response as T;
-};
-
-const getApiBaseUrl = (): string => {
-  return (
-    (API_CONFIG as any)?.baseUrl ||
-    (API_CONFIG as any)?.apiBaseUrl ||
-    (API_CONFIG as any)?.backendURL ||
-    (API_CONFIG as any)?.backendUrl ||
-    ''
+function buildServidorIdentityKeys(servidor: ServidorFrequencia): string[] {
+  const id = toStringSafe(
+    servidor.id ??
+      servidor.servidor ??
+      servidor.uuid ??
+      servidor.servidor_id
   );
-};
 
-const downloadBlob = (blob: Blob, fileName: string) => {
-  if (typeof window === 'undefined') return;
+  const cpf = removeNonDigits(servidor.cpf);
+  const nome = normalizeName(servidor.nomeCompleto ?? servidor.nome_completo ?? servidor.nome);
 
-  const url = window.URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.URL.revokeObjectURL(url);
-};
+  return [cpf && `cpf:${cpf}`, id && `id:${id}`, nome && `nome:${nome}`].filter(Boolean) as string[];
+}
 
-const buildExportFileName = (ext: 'docx' | 'pdf' | 'csv', params: ExportarFrequenciaInput) => {
-  const mes = String(params.mes).padStart(2, '0');
-  return `frequencia_${params.ano}_${mes}_${params.servidorId}.${ext}`;
-};
+function resolveRegistroIdentityKey(registro: any): string {
+  const cpf = removeNonDigits(registro?.cpf ?? registro?.servidor_cpf);
+  if (cpf) return `cpf:${cpf}`;
 
-const registrarLog = async (
-  acao: 'CRIAR' | 'EDITAR' | 'EXCLUIR' | 'EXPORTAR',
-  entidadeId: string,
-  detalhes: Record<string, any>,
-) => {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const id = toStringSafe(
+    registro?.servidor_id ??
+      registro?.servidorId ??
+      registro?.servidor ??
+      registro?.id_servidor
+  );
+  if (id) return `id:${id}`;
 
-    await logsService.registrar({
-      user_id: user?.id || 'sistema',
-      user_email: user?.email,
-      acao,
-      entidade: 'FREQUENCIA',
-      entidade_id: entidadeId,
-      detalhes,
-    });
-  } catch (error) {
-    console.warn('[frequenciaService] Falha ao registrar log:', error);
-  }
-};
+  const nome = normalizeName(registro?.nome_completo ?? registro?.nome);
+  if (nome) return `nome:${nome}`;
 
-const tentarExportarViaApi = async (
-  formato: 'docx' | 'pdf' | 'csv',
-  params: ExportarFrequenciaInput,
-) => {
-  const endpoint = `/api/frequencia/exportar/${formato}`;
-  const payload = {
-    servidorId: params.servidorId,
-    mes: params.mes,
-    ano: params.ano,
-    incluirPonto: !!params.incluirPonto,
+  return '';
+}
+
+function matchesServidor(servidor: ServidorFrequencia, registro: any): boolean {
+  const keys = buildServidorIdentityKeys(servidor);
+  const registroKey = resolveRegistroIdentityKey(registro);
+  return !!registroKey && keys.includes(registroKey);
+}
+
+function normalizeServidor(servidor: ServidorFrequencia): NormalizedServidor {
+  return {
+    id: toStringSafe(servidor.id ?? servidor.servidor ?? servidor.uuid ?? servidor.servidor_id),
+    cpf: removeNonDigits(servidor.cpf),
+    nome: normalizeSpaces(servidor.nomeCompleto ?? servidor.nome_completo ?? servidor.nome),
+    matricula: normalizeSpaces(servidor.matricula),
+    categoria: normalizeSpaces(servidor.categoria),
+    setor: normalizeSpaces(servidor.setor),
+    cargo: normalizeSpaces(servidor.cargo),
+    chDiaria: toStringSafe(servidor.chDiaria ?? servidor.ch_diaria),
+    chSemanal: toStringSafe(servidor.chSemanal ?? servidor.ch_semanal),
+    status: normalizeSpaces(servidor.status)
   };
+}
 
-  const apiBase = getApiBaseUrl();
-  const url = `${String(apiBase || '').replace(/\/$/, '')}${endpoint}`;
+function normalizeEventType(value: Nullable<any>): TipoEventoCalendario {
+  const v = toUpperSafe(value);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  if (v === 'FERIADO') return 'FERIADO';
+  if (v === 'PONTO' || v === 'PONTO FACULTATIVO') return 'PONTO FACULTATIVO';
+  if (v === 'EVENTO') return 'EVENTO';
+  return 'OUTRO';
+}
+
+function normalizeEventos(eventos: EventoCalendario[] = []): NormalizedEvent[] {
+  return eventos
+    .map((evento, index) => {
+      const dataISO = parseDateToISO(evento.data ?? evento.date ?? evento.dataISO);
+      if (!dataISO) return null;
+
+      return {
+        id: toStringSafe(evento.id ?? index + 1),
+        dataISO,
+        tipo: normalizeEventType(evento.tipo ?? evento.type),
+        titulo: normalizeSpaces(evento.titulo ?? evento.title),
+        descricao: normalizeSpaces(evento.descricao ?? evento.description),
+        raw: evento
+      };
+    })
+    .filter(Boolean) as NormalizedEvent[];
+}
+
+function normalizeFerias(servidor: ServidorFrequencia, ferias: FeriasRegistro[] = []): NormalizedPeriod[] {
+  const filtradas = ferias.filter((item) => matchesServidor(servidor, item));
+
+  const periods: NormalizedPeriod[] = [];
+
+  filtradas.forEach((item, index) => {
+    const servidorKey = resolveRegistroIdentityKey(item);
+
+    const periodos = [
+      {
+        inicio: item.periodo1_inicio ?? item.inicio,
+        fim: item.periodo1_fim ?? item.fim
+      },
+      {
+        inicio: item.periodo2_inicio,
+        fim: item.periodo2_fim
+      },
+      {
+        inicio: item.periodo3_inicio,
+        fim: item.periodo3_fim
+      }
+    ];
+
+    periodos.forEach((periodo, pIndex) => {
+      const inicio = parseDateToISO(periodo.inicio);
+      const fim = parseDateToISO(periodo.fim);
+
+      if (!inicio || !fim) return;
+
+      periods.push({
+        id: `${toStringSafe(item.id ?? index + 1)}_${pIndex + 1}`,
+        servidorKey,
+        inicio,
+        fim,
+        observacao: normalizeSpaces(item.observacao ?? item.descricao ?? 'Férias'),
+        raw: item
+      });
+    });
   });
 
-  if (!response.ok) {
-    let message = `Falha ao exportar ${formato.toUpperCase()}.`;
-    try {
-      const json = await response.json();
-      message = json?.error || json?.message || message;
-    } catch {
-      // ignore
-    }
-    throw new Error(message);
-  }
+  return periods;
+}
 
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    const json = await response.json();
-
-    if (json?.downloadUrl && typeof window !== 'undefined') {
-      window.open(json.downloadUrl, '_blank');
-      return;
-    }
-
-    if (json?.url && typeof window !== 'undefined') {
-      window.open(json.url, '_blank');
-      return;
-    }
-
-    if (json?.ok) return;
-
-    throw new Error(json?.error || `Exportação ${formato.toUpperCase()} retornou resposta inesperada.`);
-  }
-
-  const blob = await response.blob();
-  downloadBlob(blob, buildExportFileName(formato, params));
-};
-
-export const apiFrequencia = {
-  listar: async (filtros?: ListarFrequenciaParams): Promise<OcorrenciaFrequencia[]> => {
-    if (API_CONFIG.useMock) {
-      let result = [...frequenciaMock];
-
-      if (filtros?.servidorId) {
-        result = result.filter((f) => f.servidorId === filtros.servidorId);
-      }
-
-      if (filtros?.ano && filtros?.mes) {
-        const prefix = `${filtros.ano}-${String(filtros.mes).padStart(2, '0')}`;
-        result = result.filter((f) => normalizeDate(f.data).startsWith(prefix));
-      }
-
-      return result
-        .map(mapFromDB)
-        .sort((a, b) => normalizeDate(a.data).localeCompare(normalizeDate(b.data)));
-    }
-
-    try {
-      const queryParams = new URLSearchParams();
-
-      if (filtros?.servidorId) queryParams.append('servidorId', filtros.servidorId);
-      if ((filtros as any)?.servidorCpf) queryParams.append('servidorCpf', onlyDigits((filtros as any).servidorCpf));
-      if (filtros?.ano) queryParams.append('ano', String(filtros.ano));
-      if (filtros?.mes) queryParams.append('mes', String(filtros.mes));
-
-      const queryString = queryParams.toString();
-      const response = await fetchJson<ApiListResponse<any>>(
-        `/api/frequencia${queryString ? `?${queryString}` : ''}`
+function normalizeAtestados(
+  servidor: ServidorFrequencia,
+  atestados: AtestadoRegistro[] = []
+): NormalizedPeriod[] {
+  return atestados
+    .filter((item) => matchesServidor(servidor, item))
+    .map((item, index) => {
+      const inicio = parseDateToISO(
+        item.data_inicio ?? item.inicio ?? item.periodo_inicio
+      );
+      const fim = parseDateToISO(
+        item.data_fim ?? item.fim ?? item.periodo_fim
       );
 
-      return unwrapListResponse(response).map(mapFromDB);
-    } catch (error) {
-      console.warn('[frequenciaService] Falha ao buscar da API, tentando Supabase diretamente...', error);
+      if (!inicio || !fim) return null;
 
-      let query = supabase.from('frequencia').select('*');
+      return {
+        id: toStringSafe(item.id ?? index + 1),
+        servidorKey: resolveRegistroIdentityKey(item),
+        inicio,
+        fim,
+        observacao: normalizeSpaces(item.observacao ?? item.motivo ?? item.descricao ?? 'Atestado'),
+        raw: item
+      };
+    })
+    .filter(Boolean) as NormalizedPeriod[];
+}
 
-      if (filtros?.servidorId) {
-        query = query.eq('servidor_id', filtros.servidorId);
-      }
+function normalizeOcorrencias(
+  servidor: ServidorFrequencia,
+  ocorrencias: OcorrenciaFrequencia[] = []
+): NormalizedOcorrencia[] {
+  return ocorrencias
+    .filter((item) => matchesServidor(servidor, item))
+    .map((item, index) => {
+      const dataISO = parseDateToISO(item.data ?? item.date ?? item.dataISO) ?? undefined;
+      const inicio = parseDateToISO(item.inicio) ?? undefined;
+      const fim = parseDateToISO(item.fim) ?? undefined;
 
-      if ((filtros as any)?.servidorCpf) {
-        query = query.eq('servidor_cpf', onlyDigits((filtros as any).servidorCpf));
-      }
+      return {
+        id: toStringSafe(item.id ?? index + 1),
+        servidorKey: resolveRegistroIdentityKey(item),
+        dataISO,
+        inicio,
+        fim,
+        tipo: toUpperSafe(item.tipo),
+        turno: toUpperSafe(item.turno),
+        rubrica: normalizeSpaces(item.rubrica),
+        rubrica1: normalizeSpaces(item.rubrica1),
+        rubrica2: normalizeSpaces(item.rubrica2),
+        ocorrencia1: normalizeSpaces(item.ocorrencia1 ?? item.o1),
+        ocorrencia2: normalizeSpaces(item.ocorrencia2 ?? item.o2),
+        observacao: normalizeSpaces(item.observacao ?? item.descricao),
+        raw: item
+      };
+    });
+}
 
-      if (filtros?.ano && filtros?.mes) {
-        const { startDate, endDate } = buildMonthRange(filtros.ano, filtros.mes);
-        query = query.gte('data', startDate).lte('data', endDate);
-      }
+function findEventoByDate(eventos: NormalizedEvent[], dateISO: string, tipo: TipoEventoCalendario): NormalizedEvent | null {
+  return eventos.find((e) => e.dataISO === dateISO && e.tipo === tipo) ?? null;
+}
 
-      const { data, error: sbError } = await query.order('data', { ascending: true });
+function findPeriodoByDate(periodos: NormalizedPeriod[], dateISO: string): NormalizedPeriod | null {
+  return periodos.find((p) => dateBetweenInclusive(dateISO, p.inicio, p.fim)) ?? null;
+}
 
-      if (sbError) throw sbError;
+function findOcorrenciaByDate(ocorrencias: NormalizedOcorrencia[], dateISO: string): NormalizedOcorrencia | null {
+  return (
+    ocorrencias.find((o) => {
+      if (o.dataISO) return o.dataISO === dateISO;
+      if (o.inicio && o.fim) return dateBetweenInclusive(dateISO, o.inicio, o.fim);
+      return false;
+    }) ?? null
+  );
+}
 
-      return (data || []).map(mapFromDB);
+function hasTipoFalta(ocorrencia: NormalizedOcorrencia | null): boolean {
+  if (!ocorrencia) return false;
+  const tipo = toUpperSafe(ocorrencia.tipo);
+  return tipo === 'FALTA';
+}
+
+function hasManualContent(ocorrencia: NormalizedOcorrencia | null): boolean {
+  if (!ocorrencia) return false;
+  return Boolean(
+    ocorrencia.rubrica ||
+      ocorrencia.rubrica1 ||
+      ocorrencia.rubrica2 ||
+      ocorrencia.ocorrencia1 ||
+      ocorrencia.ocorrencia2 ||
+      ocorrencia.observacao
+  );
+}
+
+function chooseFinalStatus(candidates: Record<StatusConsolidadoDia, boolean>): StatusConsolidadoDia {
+  for (const status of STATUS_PRIORITY) {
+    if (candidates[status]) return status;
+  }
+  return 'NORMAL';
+}
+
+function statusToRubrica(status: StatusConsolidadoDia): string {
+  switch (status) {
+    case 'SABADO':
+      return 'SÁBADO';
+    case 'DOMINGO':
+      return 'DOMINGO';
+    case 'FERIADO':
+      return 'FERIADO';
+    case 'FERIAS':
+      return 'FÉRIAS';
+    case 'ATESTADO':
+      return 'ATESTADO';
+    case 'FALTA':
+      return 'FALTA';
+    case 'PONTO_FACULTATIVO':
+      return 'PONTO FACULTATIVO';
+    default:
+      return '';
+  }
+}
+
+function addAviso(
+  warnings: string[],
+  logger: Pick<Console, 'warn' | 'log' | 'error'>,
+  message: string
+): void {
+  warnings.push(message);
+  logger.warn(`[frequenciaService] ${message}`);
+}
+
+function collectConflitos(input: {
+  isSaturday: boolean;
+  isSunday: boolean;
+  evento: NormalizedEvent | null;
+  ponto: NormalizedEvent | null;
+  ferias: NormalizedPeriod | null;
+  atestado: NormalizedPeriod | null;
+  falta: NormalizedOcorrencia | null;
+  manual: NormalizedOcorrencia | null;
+}): string[] {
+  const conflitos: string[] = [];
+
+  if (input.ferias && input.atestado) conflitos.push('Conflito: férias + atestado');
+  if (input.evento && input.falta) conflitos.push('Conflito: feriado + falta');
+  if ((input.isSaturday || input.isSunday) && input.manual) conflitos.push('Conflito: fim de semana + ocorrência manual');
+  if (input.atestado && input.ferias) conflitos.push('Conflito: atestado + férias');
+  if (input.ponto && input.falta) conflitos.push('Conflito: ponto facultativo + falta');
+
+  return conflitos;
+}
+
+function buildDayItem(args: {
+  servidor: NormalizedServidor;
+  ano: number;
+  mes: number;
+  dia: number;
+  eventos: NormalizedEvent[];
+  ferias: NormalizedPeriod[];
+  atestados: NormalizedPeriod[];
+  ocorrencias: NormalizedOcorrencia[];
+  incluirPontoFacultativo: boolean;
+  faltaVaiParaRubrica: boolean;
+  warnings: string[];
+  logger: Pick<Console, 'warn' | 'log' | 'error'>;
+}): DayMapItem {
+  const {
+    ano,
+    mes,
+    dia,
+    eventos,
+    ferias,
+    atestados,
+    ocorrencias,
+    incluirPontoFacultativo,
+    faltaVaiParaRubrica,
+    warnings,
+    logger
+  } = args;
+
+  const dataISO = isoFromParts(ano, mes, dia);
+  const weekday = getWeekday(ano, mes, dia);
+  const isSaturday = weekday === 6;
+  const isSunday = weekday === 0;
+
+  const evento = findEventoByDate(eventos, dataISO, 'FERIADO');
+  const ponto = findEventoByDate(eventos, dataISO, 'PONTO FACULTATIVO');
+  const feriasDia = findPeriodoByDate(ferias, dataISO);
+  const atestadoDia = findPeriodoByDate(atestados, dataISO);
+  const ocorrenciaDia = findOcorrenciaByDate(ocorrencias, dataISO);
+
+  const faltaDia = hasTipoFalta(ocorrenciaDia) ? ocorrenciaDia : null;
+  const manualDia = hasManualContent(ocorrenciaDia) ? ocorrenciaDia : null;
+
+  const conflitos = collectConflitos({
+    isSaturday,
+    isSunday,
+    evento,
+    ponto,
+    ferias: feriasDia,
+    atestado: atestadoDia,
+    falta: faltaDia,
+    manual: manualDia
+  });
+
+  if (conflitos.length > 0) {
+    conflitos.forEach((conflito) => {
+      addAviso(warnings, logger, `${dataISO} - ${conflito}`);
+    });
+  }
+
+  const candidates: Record<StatusConsolidadoDia, boolean> = {
+    NORMAL: false,
+    SABADO: isSaturday,
+    DOMINGO: isSunday,
+    FERIADO: Boolean(evento),
+    FERIAS: Boolean(feriasDia),
+    ATESTADO: Boolean(atestadoDia),
+    FALTA: Boolean(faltaDia) && faltaVaiParaRubrica,
+    PONTO_FACULTATIVO: Boolean(ponto) && incluirPontoFacultativo,
+    MANUAL:
+      Boolean(manualDia?.rubrica) ||
+      Boolean(manualDia?.rubrica1) ||
+      Boolean(manualDia?.rubrica2)
+  };
+
+  const finalStatus = chooseFinalStatus(candidates);
+
+  let rubrica = '';
+  let rubrica1 = '';
+  let rubrica2 = '';
+  let ocorrencia1 = '';
+  let ocorrencia2 = '';
+  const observacoesList: string[] = [];
+
+  const statusInstitucionalBloqueiaOcorrencia =
+    finalStatus === 'SABADO' ||
+    finalStatus === 'DOMINGO' ||
+    finalStatus === 'FERIADO' ||
+    finalStatus === 'FERIAS' ||
+    finalStatus === 'ATESTADO' ||
+    finalStatus === 'PONTO_FACULTATIVO' ||
+    (finalStatus === 'FALTA' && faltaVaiParaRubrica);
+
+  if (finalStatus !== 'NORMAL' && finalStatus !== 'MANUAL') {
+    rubrica = statusToRubrica(finalStatus);
+    rubrica1 = rubrica;
+    rubrica2 = rubrica;
+  }
+
+  if (finalStatus === 'MANUAL' && manualDia) {
+    rubrica = manualDia.rubrica || manualDia.rubrica1 || manualDia.rubrica2 || '';
+    rubrica1 = manualDia.rubrica1 || manualDia.rubrica || '';
+    rubrica2 = manualDia.rubrica2 || manualDia.rubrica || '';
+  }
+
+  if (faltaDia && !faltaVaiParaRubrica) {
+    if (!statusInstitucionalBloqueiaOcorrencia) {
+      ocorrencia1 = 'FALTA';
+      ocorrencia2 = 'FALTA';
+    } else {
+      observacoesList.push('Falta registrada no dia');
     }
-  },
+  }
 
-  listarPorMes: async (ano: number, mes: number, servidorId?: string): Promise<OcorrenciaFrequencia[]> => {
-    return apiFrequencia.listar({
+  if (!statusInstitucionalBloqueiaOcorrencia && manualDia) {
+    if (!ocorrencia1) ocorrencia1 = manualDia.ocorrencia1 || '';
+    if (!ocorrencia2) ocorrencia2 = manualDia.ocorrencia2 || '';
+  }
+
+  if (evento?.titulo) observacoesList.push(`Feriado: ${evento.titulo}`);
+  if (ponto?.titulo) observacoesList.push(`Ponto facultativo: ${ponto.titulo}`);
+  if (feriasDia?.observacao) observacoesList.push(feriasDia.observacao);
+  if (atestadoDia?.observacao) observacoesList.push(atestadoDia.observacao);
+  if (faltaDia?.observacao) observacoesList.push(faltaDia.observacao);
+  if (manualDia?.observacao) observacoesList.push(manualDia.observacao);
+
+  return {
+    dia,
+    dataISO,
+    weekday,
+    weekdayLabel: WEEKDAY_LABELS[weekday],
+    isSaturday,
+    isSunday,
+    isHoliday: Boolean(evento),
+    isPontoFacultativo: Boolean(ponto) && incluirPontoFacultativo,
+    isVacation: Boolean(feriasDia),
+    isAtestado: Boolean(atestadoDia),
+    isFalta: Boolean(faltaDia),
+    rubrica,
+    rubrica1,
+    rubrica2,
+    ocorrencia1,
+    ocorrencia2,
+    observacoes: observacoesList.filter(Boolean).join(' | '),
+    finalStatus,
+    conflitos,
+    avisos: [...conflitos],
+    fontes: {
+      evento: evento?.raw ?? null,
+      ponto: ponto?.raw ?? null,
+      ferias: feriasDia ?? null,
+      atestado: atestadoDia ?? null,
+      falta: faltaDia ?? null,
+      manual: manualDia ?? null
+    }
+  };
+}
+
+function buildTemplateData(
+  servidor: NormalizedServidor,
+  ano: number,
+  mes: number,
+  dayMap: DayMap
+): Record<string, string | boolean | number> {
+  const totalDiasMes = getLastDayOfMonth(ano, mes);
+  const data: Record<string, string | boolean | number> = {
+    ANO: String(ano),
+    MES: monthNamePtBr(mes),
+    MES_NUMERO: pad2(mes),
+    NOME: servidor.nome,
+    NOME_COMPLETO: servidor.nome,
+    MATRICULA: servidor.matricula,
+    CPF: servidor.cpf,
+    CARGO: servidor.cargo,
+    CATEGORIA: servidor.categoria,
+    SETOR: servidor.setor,
+    CH_DIARIA: servidor.chDiaria ? `CH_DIARIA: ${servidor.chDiaria}` : '',
+    CH_SEMANAL: servidor.chSemanal ? `CH_SEMANAL: ${servidor.chSemanal}` : '',
+    C_H_DIARIA: servidor.chDiaria || '',
+    C_H_SEMANAL: servidor.chSemanal || '',
+    LAST_DAY: totalDiasMes,
+    HIDDEN_ROWS_FROM: totalDiasMes < 31 ? totalDiasMes + 1 : '',
+    HIDDEN_ROWS_TO: totalDiasMes < 31 ? 31 : '',
+    HAS_EXCESS_ROWS: totalDiasMes < 31
+  };
+
+  for (let dia = 1; dia <= 31; dia += 1) {
+    const item = dayMap[dia];
+
+    if (item) {
+      data[`D${dia}`] = String(dia);
+      data[`T${dia}`] = item.weekdayLabel;
+      data[`S${dia}`] = item.rubrica;
+      data[`R1_${dia}`] = item.rubrica1;
+      data[`R2_${dia}`] = item.rubrica2;
+      data[`O1_${dia}`] = item.ocorrencia1;
+      data[`O2_${dia}`] = item.ocorrencia2;
+      data[`OBS_${dia}`] = item.observacoes;
+      data[`SHOW_ROW_${dia}`] = true;
+      data[`VIS_${dia}`] = true;
+    } else {
+      data[`D${dia}`] = '';
+      data[`T${dia}`] = '';
+      data[`S${dia}`] = '';
+      data[`R1_${dia}`] = '';
+      data[`R2_${dia}`] = '';
+      data[`O1_${dia}`] = '';
+      data[`O2_${dia}`] = '';
+      data[`OBS_${dia}`] = '';
+      data[`SHOW_ROW_${dia}`] = false;
+      data[`VIS_${dia}`] = false;
+    }
+  }
+
+  return data;
+}
+
+export function consolidarFrequenciaMensal(
+  options: ConsolidarFrequenciaOptions
+): ConsolidacaoFrequenciaResult {
+  const logger = options.logger ?? createDefaultLogger();
+  const warnings: string[] = [];
+
+  const ano = Number(options.ano);
+  const mes = Number(options.mes);
+
+  if (!ano || !mes || mes < 1 || mes > 12) {
+    throw new Error('Mês/ano inválidos para consolidação da frequência.');
+  }
+
+  const servidor = normalizeServidor(options.servidor);
+
+  const eventos = normalizeEventos(options.eventos ?? []);
+  const ferias = normalizeFerias(options.servidor, options.ferias ?? []);
+  const atestados = normalizeAtestados(options.servidor, options.atestados ?? []);
+  const ocorrencias = normalizeOcorrencias(options.servidor, options.ocorrencias ?? []);
+
+  const totalDiasMes = getLastDayOfMonth(ano, mes);
+  const dayMap: DayMap = {};
+
+  for (let dia = 1; dia <= totalDiasMes; dia += 1) {
+    dayMap[dia] = buildDayItem({
+      servidor,
       ano,
       mes,
-      servidorId,
+      dia,
+      eventos,
+      ferias,
+      atestados,
+      ocorrencias,
+      incluirPontoFacultativo: Boolean(options.incluirPontoFacultativo),
+      faltaVaiParaRubrica: options.faltaVaiParaRubrica !== false,
+      warnings,
+      logger
     });
-  },
+  }
 
-  obterPorId: async (id: string): Promise<OcorrenciaFrequencia> => {
-    if (API_CONFIG.useMock) {
-      const item = frequenciaMock.find((f) => f.id === id);
-      if (!item) throw new Error('Ocorrência não encontrada');
-      return mapFromDB(item);
-    }
+  return {
+    servidor,
+    ano,
+    mes,
+    totalDiasMes,
+    hiddenRowsFrom: totalDiasMes + 1,
+    hiddenRowsTo: 31,
+    dayMap,
+    templateData: buildTemplateData(servidor, ano, mes, dayMap),
+    warnings
+  };
+}
 
-    try {
-      const response = await fetchJson<ApiItemResponse<any>>(`/api/frequencia/${id}`);
-      return mapFromDB(unwrapItemResponse(response));
-    } catch {
-      const { data, error } = await supabase
-        .from('frequencia')
+export async function carregarDadosConsolidadosFrequencia(params: {
+  servidor: ServidorFrequencia;
+  mes: number;
+  ano: number;
+  incluirPontoFacultativo?: boolean;
+  faltaVaiParaRubrica?: boolean;
+}): Promise<ConsolidacaoFrequenciaResult> {
+  const { servidor, mes, ano, incluirPontoFacultativo, faltaVaiParaRubrica } = params;
+
+  const cpf = removeNonDigits(servidor.cpf);
+  const servidorId = toStringSafe(servidor.id ?? servidor.servidor ?? servidor.uuid ?? servidor.servidor_id);
+
+  const firstDay = `${ano}-${pad2(mes)}-01`;
+  const lastDay = `${ano}-${pad2(mes)}-${pad2(getLastDayOfMonth(ano, mes))}`;
+
+  let eventos: EventoCalendario[] = [];
+  let ferias: FeriasRegistro[] = [];
+  let atestados: AtestadoRegistro[] = [];
+  let ocorrencias: OcorrenciaFrequencia[] = [];
+
+  const eventosQuery = await supabase
+    .from('eventos')
+    .select('*')
+    .gte('data', firstDay)
+    .lte('data', lastDay);
+
+  if (!eventosQuery.error && Array.isArray(eventosQuery.data)) {
+    eventos = eventosQuery.data;
+  }
+
+  let feriasQuery = null as any;
+  if (cpf) {
+    feriasQuery = await supabase
+      .from('ferias')
+      .select('*')
+      .eq('servidor_cpf', cpf);
+  } else if (servidorId) {
+    feriasQuery = await supabase
+      .from('ferias')
+      .select('*')
+      .or(`servidor_id.eq.${servidorId},servidor.eq.${servidorId}`);
+  }
+
+  if (feriasQuery && !feriasQuery.error && Array.isArray(feriasQuery.data)) {
+    ferias = feriasQuery.data;
+  }
+
+  let atestadosQuery = null as any;
+  if (cpf) {
+    atestadosQuery = await supabase
+      .from('atestados')
+      .select('*')
+      .eq('servidor_cpf', cpf);
+  } else if (servidorId) {
+    atestadosQuery = await supabase
+      .from('atestados')
+      .select('*')
+      .or(`servidor_id.eq.${servidorId},servidor.eq.${servidorId}`);
+  }
+
+  if (atestadosQuery && !atestadosQuery.error && Array.isArray(atestadosQuery.data)) {
+    atestados = atestadosQuery.data;
+  }
+
+  let ocorrenciasQuery = null as any;
+  if (cpf) {
+    ocorrenciasQuery = await supabase
+      .from('frequencia_ocorrencias')
+      .select('*')
+      .eq('servidor_cpf', cpf)
+      .gte('data', firstDay)
+      .lte('data', lastDay);
+  }
+
+  if (ocorrenciasQuery?.error || !Array.isArray(ocorrenciasQuery?.data)) {
+    let fallbackQuery = null as any;
+
+    if (cpf) {
+      fallbackQuery = await supabase
+        .from('faltas')
         .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return mapFromDB(data);
-    }
-  },
-
-  adicionar: async (dados: Omit<OcorrenciaFrequencia, 'id'>): Promise<OcorrenciaFrequencia> => {
-    const payload = mapToDB(dados);
-
-    if (!payload.servidor_id && !payload.servidor_cpf) {
-      throw new Error('Servidor é obrigatório.');
+        .eq('cpf', cpf)
+        .gte('data', firstDay)
+        .lte('data', lastDay);
+    } else if (servidorId) {
+      fallbackQuery = await supabase
+        .from('faltas')
+        .select('*')
+        .or(`servidor_id.eq.${servidorId},servidor.eq.${servidorId}`)
+        .gte('data', firstDay)
+        .lte('data', lastDay);
     }
 
-    if (!payload.data) {
-      throw new Error('Data é obrigatória.');
+    if (!fallbackQuery?.error && Array.isArray(fallbackQuery?.data)) {
+      ocorrencias = fallbackQuery.data;
     }
+  } else {
+    ocorrencias = ocorrenciasQuery.data;
+  }
 
-    if (!payload.tipo) {
-      throw new Error('Tipo é obrigatório.');
-    }
+  return consolidarFrequenciaMensal({
+    servidor,
+    mes,
+    ano,
+    eventos,
+    ferias,
+    atestados,
+    ocorrencias,
+    incluirPontoFacultativo,
+    faltaVaiParaRubrica
+  });
+}
 
-    if (API_CONFIG.useMock) {
-      const novo: OcorrenciaFrequencia = {
-        id: Math.random().toString(36).substring(2, 11),
-        servidorId: payload.servidor_id || '',
-        data: payload.data,
-        tipo: payload.tipo,
-        turno: payload.turno,
-        descricao: payload.descricao,
-      };
+export function montarDayMapParaExportacao(params: ConsolidarFrequenciaOptions): DayMap {
+  return consolidarFrequenciaMensal(params).dayMap;
+}
 
-      frequenciaMock.push(novo);
-      return novo;
-    }
+export function montarTemplateDataFrequencia(params: ConsolidarFrequenciaOptions): Record<string, string | boolean | number> {
+  return consolidarFrequenciaMensal(params).templateData;
+}
 
-    try {
-      const response = await fetchJson<ApiItemResponse<any>>('/api/frequencia', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+export function montarDiagnosticoFrequencia(params: ConsolidarFrequenciaOptions): Array<{
+  dia: number;
+  dataISO: string;
+  weekdayLabel: string;
+  finalStatus: StatusConsolidadoDia;
+  rubrica: string;
+  ocorrencia1: string;
+  ocorrencia2: string;
+  observacoes: string;
+  conflitos: string[];
+}> {
+  const result = consolidarFrequenciaMensal(params);
 
-      const normalized = mapFromDB(unwrapItemResponse(response));
-      await registrarLog('CRIAR', normalized.id, dados as any);
-      return normalized;
-    } catch (error) {
-      console.warn('[frequenciaService] Falha ao criar via API, tentando Supabase...', error);
-
-      const { data, error: sbError } = await supabase
-        .from('frequencia')
-        .insert(payload)
-        .select()
-        .single();
-
-      if (sbError) throw sbError;
-
-      const normalized = mapFromDB(data);
-      await registrarLog('CRIAR', normalized.id, dados as any);
-      return normalized;
-    }
-  },
-
-  registrarOcorrencia: async (dados: RegistrarOcorrenciaInput): Promise<OcorrenciaFrequencia> => {
-    return apiFrequencia.adicionar({
-      servidorId: dados.servidorId || '',
-      data: dados.data,
-      tipo: dados.tipo,
-      turno: dados.turno || 'INTEGRAL',
-      descricao: dados.descricao || '',
-    } as Omit<OcorrenciaFrequencia, 'id'>);
-  },
-
-  editar: async (id: string, dados: Partial<OcorrenciaFrequencia>): Promise<OcorrenciaFrequencia> => {
-    if (!id) {
-      throw new Error('ID da ocorrência é obrigatório.');
-    }
-
-    const payload = mapToDB(dados);
-
-    if (API_CONFIG.useMock) {
-      const index = frequenciaMock.findIndex((f) => f.id === id);
-      if (index === -1) throw new Error('Ocorrência não encontrada');
-
-      frequenciaMock[index] = {
-        ...frequenciaMock[index],
-        ...dados,
-        data: dados.data ? normalizeDate(dados.data) : frequenciaMock[index].data,
-      };
-
-      return mapFromDB(frequenciaMock[index]);
-    }
-
-    try {
-      const response = await fetchJson<ApiItemResponse<any>>(`/api/frequencia/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const normalized = mapFromDB(unwrapItemResponse(response));
-      await registrarLog('EDITAR', id, dados as any);
-      return normalized;
-    } catch (error) {
-      console.warn('[frequenciaService] Falha ao editar via API, tentando Supabase...', error);
-
-      const { data, error: sbError } = await supabase
-        .from('frequencia')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (sbError) throw sbError;
-
-      const normalized = mapFromDB(data);
-      await registrarLog('EDITAR', id, dados as any);
-      return normalized;
-    }
-  },
-
-  excluir: async (id: string): Promise<void> => {
-    if (!id) {
-      throw new Error('ID da ocorrência é obrigatório.');
-    }
-
-    if (API_CONFIG.useMock) {
-      frequenciaMock = frequenciaMock.filter((f) => f.id !== id);
-      return;
-    }
-
-    try {
-      await fetchJson(`/api/frequencia/${id}`, {
-        method: 'DELETE',
-      });
-      await registrarLog('EXCLUIR', id, {});
-      return;
-    } catch (error) {
-      console.warn('[frequenciaService] Falha ao excluir via API, tentando Supabase...', error);
-
-      const { error: sbError } = await supabase
-        .from('frequencia')
-        .delete()
-        .eq('id', id);
-
-      if (sbError) throw sbError;
-
-      await registrarLog('EXCLUIR', id, {});
-    }
-  },
-
-  exportarDocx: async (params: ExportarFrequenciaInput): Promise<void> => {
-    await tentarExportarViaApi('docx', params);
-    await registrarLog('EXPORTAR', params.servidorId, {
-      formato: 'DOCX',
-      mes: params.mes,
-      ano: params.ano,
-      incluirPonto: !!params.incluirPonto,
-    });
-  },
-
-  exportarPdf: async (params: ExportarFrequenciaInput): Promise<void> => {
-    await tentarExportarViaApi('pdf', params);
-    await registrarLog('EXPORTAR', params.servidorId, {
-      formato: 'PDF',
-      mes: params.mes,
-      ano: params.ano,
-      incluirPonto: !!params.incluirPonto,
-    });
-  },
-
-  exportarCsv: async (params: ExportarFrequenciaInput): Promise<void> => {
-    await tentarExportarViaApi('csv', params);
-    await registrarLog('EXPORTAR', params.servidorId, {
-      formato: 'CSV',
-      mes: params.mes,
-      ano: params.ano,
-      incluirPonto: !!params.incluirPonto,
-    });
-  },
-};
-
-export const frequenciaService = apiFrequencia;
+  return Object.values(result.dayMap).map((item) => ({
+    dia: item.dia,
+    dataISO: item.dataISO,
+    weekdayLabel: item.weekdayLabel,
+    finalStatus: item.finalStatus,
+    rubrica: item.rubrica,
+    ocorrencia1: item.ocorrencia1,
+    ocorrencia2: item.ocorrencia2,
+    observacoes: item.observacoes,
+    conflitos: item.conflitos
+  }));
+}
