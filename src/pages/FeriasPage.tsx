@@ -286,6 +286,21 @@ export default function FeriasPage() {
   );
   const [dayPreview, setDayPreview] = useState<{ date: string; records: FeriasCalendarItem[] } | null>(null);
 
+  const clearFeedback = useCallback(() => {
+    setError('');
+    setSuccess('');
+  }, []);
+
+  const showError = useCallback((message: string) => {
+    setSuccess('');
+    setError(message);
+  }, []);
+
+  const showSuccess = useCallback((message: string) => {
+    setError('');
+    setSuccess(message);
+  }, []);
+
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     setError('');
@@ -330,15 +345,21 @@ export default function FeriasPage() {
       setServidores(servidoresNormalizados);
     } catch (err: any) {
       console.error('Erro ao carregar férias:', err);
-      setError(err?.message || 'Não foi possível carregar os dados da aba Férias.');
+      showError(err?.message || 'Não foi possível carregar os dados da aba Férias.');
     } finally {
       setCarregando(false);
     }
-  }, [filtros.ano]);
+  }, [filtros.ano, showError]);
 
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(''), 8000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => {
     if (!success) return;
@@ -364,17 +385,34 @@ export default function FeriasPage() {
   const listItems = useMemo(() => toListItems(registrosFiltrados), [registrosFiltrados]);
 
   const handleFilterChange = useCallback(<K extends keyof FeriasFiltroState>(field: K, value: FeriasFiltroState[K]) => {
+    setError('');
     setFiltros((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleResetFilters = useCallback(() => setFiltros(initialFilters), []);
+  const handleResetFilters = useCallback(() => {
+    clearFeedback();
+    setFiltros(initialFilters);
+  }, [clearFeedback]);
+
+  const closeCreateModal = useCallback(() => {
+    setModalOpen(false);
+    setForm(emptyForm);
+    clearFeedback();
+  }, [clearFeedback]);
+
+  const closeExportModal = useCallback(() => {
+    setExportModalOpen(false);
+    clearFeedback();
+  }, [clearFeedback]);
 
   const openCreateModal = useCallback(() => {
+    clearFeedback();
     setForm(emptyForm);
     setModalOpen(true);
-  }, []);
+  }, [clearFeedback]);
 
   const openExportModal = useCallback(() => {
+    clearFeedback();
     setExportFilters({
       ...getDefaultFeriasExportFilters(filtros.ano),
       ano: filtros.ano || new Date().getFullYear(),
@@ -382,13 +420,14 @@ export default function FeriasPage() {
       setor: filtros.setor || 'TODOS',
     });
     setExportModalOpen(true);
-  }, [filtros.ano, filtros.mes, filtros.setor]);
+  }, [clearFeedback, filtros.ano, filtros.mes, filtros.setor]);
 
   const openEditModal = useCallback(
     (item: FeriasListItem) => {
       const registro = registros.find((entry) => entry.id === item.id);
       if (!registro) return;
 
+      clearFeedback();
       setForm({
         id: registro.id,
         servidorId: registro.servidorId || '',
@@ -402,7 +441,7 @@ export default function FeriasPage() {
       });
       setModalOpen(true);
     },
-    [registros],
+    [clearFeedback, registros],
   );
 
   const selectServidor = useCallback(
@@ -410,6 +449,7 @@ export default function FeriasPage() {
       const servidor = servidores.find((item) => item.id === servidorId || item.cpf === servidorId);
       if (!servidor) return;
 
+      setError('');
       setForm((prev) => ({
         ...prev,
         servidorId: servidor.id,
@@ -424,6 +464,7 @@ export default function FeriasPage() {
 
   const updateExportFilter = useCallback(
     <K extends keyof ExportFeriasFilters>(field: K, value: ExportFeriasFilters[K]) => {
+      setError('');
       setExportFilters((prev) => ({ ...prev, [field]: value }));
     },
     [],
@@ -431,12 +472,12 @@ export default function FeriasPage() {
 
   const handleSave = useCallback(async () => {
     if (!form.servidorNome || !form.inicio || !form.fim) {
-      setError('Preencha servidor, data inicial e data final antes de salvar.');
+      showError('Preencha servidor, data inicial e data final antes de salvar.');
       return;
     }
 
     if (calculateDays(form.inicio, form.fim) <= 0) {
-      setError('O período informado é inválido. Verifique as datas.');
+      showError('O período informado é inválido. Verifique as datas.');
       return;
     }
 
@@ -462,12 +503,12 @@ export default function FeriasPage() {
         await (feriasService.editar?.(form.id, payload) ??
           feriasService.atualizar?.(form.id, payload) ??
           feriasService.update?.(form.id, payload));
-        setSuccess('Período de férias atualizado com sucesso.');
+        showSuccess('Período de férias atualizado com sucesso.');
       } else {
         await (feriasService.criar?.(payload) ??
           feriasService.adicionar?.(payload) ??
           feriasService.create?.(payload));
-        setSuccess('Período de férias cadastrado com sucesso.');
+        showSuccess('Período de férias cadastrado com sucesso.');
       }
 
       setModalOpen(false);
@@ -475,11 +516,11 @@ export default function FeriasPage() {
       await carregarDados();
     } catch (err: any) {
       console.error('Erro ao salvar férias:', err);
-      setError(err?.message || 'Falha ao salvar o período de férias.');
+      showError(err?.message || 'Falha ao salvar o período de férias.');
     } finally {
       setSalvando(false);
     }
-  }, [carregarDados, filtros.ano, form]);
+  }, [carregarDados, filtros.ano, form, showError, showSuccess]);
 
   const handleDelete = useCallback(
     async (item: FeriasListItem) => {
@@ -491,31 +532,31 @@ export default function FeriasPage() {
         await (feriasService.excluir?.(item.id) ??
           feriasService.remover?.(item.id) ??
           feriasService.delete?.(item.id));
-        setSuccess('Período de férias excluído com sucesso.');
+        showSuccess('Período de férias excluído com sucesso.');
         await carregarDados();
       } catch (err: any) {
         console.error('Erro ao excluir férias:', err);
-        setError(err?.message || 'Não foi possível excluir o período selecionado.');
+        showError(err?.message || 'Não foi possível excluir o período selecionado.');
       }
     },
-    [carregarDados],
+    [carregarDados, showError, showSuccess],
   );
 
   const handleExport = useCallback(async () => {
+    clearFeedback();
     setExportando(true);
-    setError('');
 
     try {
       const result = await exportFeriasFile(exportFilters);
-      setSuccess(`Exportação concluída com sucesso. Arquivo gerado: ${result.filename}`);
+      showSuccess(`Exportação concluída com sucesso. Arquivo gerado: ${result.filename}`);
       setExportModalOpen(false);
     } catch (err: any) {
       console.error('Erro ao exportar férias:', err);
-      setError(err?.message || 'Não foi possível exportar o documento de férias.');
+      showError(err?.message || 'Não foi possível exportar o documento de férias.');
     } finally {
       setExportando(false);
     }
-  }, [exportFilters]);
+  }, [clearFeedback, exportFilters, showError, showSuccess]);
 
   return (
     <div className="space-y-6">
@@ -555,14 +596,28 @@ export default function FeriasPage() {
       </section>
 
       {error ? (
-        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          {error}
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <div className="leading-relaxed">{error}</div>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            className="shrink-0 rounded-xl border border-rose-400/20 px-3 py-1 text-xs font-medium text-rose-100 transition hover:bg-rose-400/10"
+          >
+            Fechar
+          </button>
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-          {success}
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="leading-relaxed">{success}</div>
+          <button
+            type="button"
+            onClick={() => setSuccess('')}
+            className="shrink-0 rounded-xl border border-emerald-400/20 px-3 py-1 text-xs font-medium text-emerald-100 transition hover:bg-emerald-400/10"
+          >
+            Fechar
+          </button>
         </div>
       ) : null}
 
@@ -596,7 +651,7 @@ export default function FeriasPage() {
             </div>
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={closeCreateModal}
               className="rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-slate-300 transition hover:bg-white/[0.08]"
             >
               <X className="h-5 w-5" />
@@ -706,7 +761,7 @@ export default function FeriasPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={closeCreateModal}
               className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
             >
               Cancelar
@@ -732,7 +787,7 @@ export default function FeriasPage() {
         servidores={servidores}
         setores={setoresExportacao}
         error={error}
-        onClose={() => setExportModalOpen(false)}
+        onClose={closeExportModal}
         onChange={updateExportFilter}
         onSubmit={handleExport}
       />
