@@ -2,14 +2,17 @@
  * Configuração central da API do RH CIAPI
  */
 
-// URL base do backend (prioriza variável de ambiente do Vite)
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_BACKEND_URL || 'https://api.rhciapi.com.br';
+export const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_BACKEND_URL || 'https://api.rhciapi.com.br';
 
 let healthCheckDone = false;
+
 async function checkHealth() {
   if (healthCheckDone) return;
   healthCheckDone = true;
+
   console.log(`[API] API_BASE_URL = ${API_BASE_URL}`);
+
   try {
     const response = await fetch(`${API_BASE_URL}/health`);
     if (response.ok) {
@@ -22,7 +25,6 @@ async function checkHealth() {
   }
 }
 
-// Executa o check uma vez ao carregar o módulo
 if (typeof window !== 'undefined') {
   checkHealth();
 }
@@ -32,30 +34,26 @@ export interface FetchOptions extends RequestInit {
   retry?: boolean;
 }
 
-/**
- * Função robusta para chamadas à API com timeout, tratamento de erro e retry
- */
 export async function fetchJson<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { timeout = 15000, retry = true, ...fetchOptions } = options;
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
-
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...fetchOptions.headers,
-  };
 
   let attempts = 0;
   const maxAttempts = retry ? 2 : 1;
 
   while (attempts < maxAttempts) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
     try {
       attempts++;
+
       const response = await fetch(url, {
         ...fetchOptions,
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(fetchOptions.headers || {}),
+        },
         signal: controller.signal,
       });
 
@@ -66,23 +64,27 @@ export async function fetchJson<T>(path: string, options: FetchOptions = {}): Pr
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          // Fallback para texto se não for JSON
+        } catch {
+          // ignora fallback
         }
         throw new Error(errorMessage);
       }
 
       return await response.json();
     } catch (error: any) {
+      clearTimeout(id);
+
       if (attempts >= maxAttempts || error.name === 'AbortError') {
-        clearTimeout(id);
-        const finalError = error.name === 'AbortError' ? 'Tempo limite de requisição excedido (15s)' : error.message;
+        const finalError =
+          error.name === 'AbortError'
+            ? 'Tempo limite de requisição excedido (15s)'
+            : error.message;
         console.error(`[API] Erro final em ${path}:`, finalError);
         throw new Error(finalError);
       }
+
       console.warn(`[API] Falha na tentativa ${attempts} para ${path}. Tentando novamente...`);
-      // Pequeno delay antes do retry
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 
@@ -90,7 +92,10 @@ export async function fetchJson<T>(path: string, options: FetchOptions = {}): Pr
 }
 
 export const API_CONFIG = {
-  baseURL: (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:5000/api',
+  baseURL: `${API_BASE_URL}/api`,
   backendURL: API_BASE_URL,
+  backendUrl: API_BASE_URL,
+  apiBaseUrl: API_BASE_URL,
+  baseUrl: API_BASE_URL,
   useMock: false,
 };
