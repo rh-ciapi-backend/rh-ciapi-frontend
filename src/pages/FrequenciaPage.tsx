@@ -373,55 +373,30 @@ const FrequenciaPage: React.FC = () => {
       setSuccessMessage('');
 
       try {
-        const consolidado =
-          preview &&
-          preview.ano === ano &&
-          preview.mes === mes &&
-          preview.servidor.cpf === onlyDigits(selectedServidor.cpf)
-            ? preview
-            : await loadPreview();
+        const servidor = suggestionToServidor(selectedServidor);
 
-        if (!consolidado) {
-          throw new Error('Não foi possível consolidar a frequência antes da exportação.');
-        }
-
-        const normalizedName = (consolidado.servidor.nome || 'servidor')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '_');
-
-        const outputFileName = `frequencia_${normalizedName}_${String(consolidado.mes).padStart(2, '0')}_${consolidado.ano}.${formato}`;
-
-        const { fileName } = await baixarFrequenciaArquivo({
-          servidor: {
-            ...consolidado.servidor,
-            cpf: onlyDigits(consolidado.servidor.cpf || selectedServidor.cpf)
-          },
-          mes: consolidado.mes,
-          ano: consolidado.ano,
+        await baixarFrequenciaArquivo({
+          servidor,
+          mes,
+          ano,
           incluirPontoFacultativo: includePontoFacultativo,
           faltaVaiParaRubrica,
-          formato,
-          outputFileName
+          formato
         });
 
-        setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso: ${fileName}`);
+        const nomeServidor = normalizeSpaces(servidor.nomeCompleto ?? servidor.nome) || 'servidor';
+        setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso para ${nomeServidor}.`);
+
+        if (!preview || preview.ano !== ano || preview.mes !== mes || preview.servidor.cpf !== onlyDigits(selectedServidor.cpf)) {
+          void loadPreview();
+        }
       } catch (error: any) {
         setErrorMessage(error?.message || 'Não foi possível exportar a frequência.');
       } finally {
         setExportingFormat(null);
       }
     },
-    [
-      selectedServidor,
-      preview,
-      ano,
-      mes,
-      loadPreview,
-      includePontoFacultativo,
-      faltaVaiParaRubrica
-    ]
+    [selectedServidor, mes, ano, includePontoFacultativo, faltaVaiParaRubrica, preview, loadPreview]
   );
 
   const dayItems = useMemo(() => {
