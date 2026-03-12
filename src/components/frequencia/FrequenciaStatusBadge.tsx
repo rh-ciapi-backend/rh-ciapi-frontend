@@ -1,233 +1,32 @@
-import { API_BASE_URL } from '../config/api';
-import type {
-  FrequenciaApiResponse,
-  FrequenciaExportFormat,
-  FrequenciaExportPayload,
-  FrequenciaOcorrenciaPayload,
-} from '../types/frequencia';
+import React from 'react';
+import { FREQUENCIA_STATUS_META, type FrequenciaDayStatus } from '../../types/frequencia';
 
-type JsonValue = unknown;
-
-function normalizeBaseUrl(url: string): string {
-  return String(url || '').replace(/\/+$/, '');
+interface Props {
+  status: FrequenciaDayStatus;
+  label?: string;
+  small?: boolean;
+  className?: string;
 }
 
-const BASE_URL = normalizeBaseUrl(API_BASE_URL || '');
-const FREQUENCIA_URL = `${BASE_URL}/api/frequencia`;
+export default function FrequenciaStatusBadge({
+  status,
+  label,
+  small = false,
+  className = '',
+}: Props) {
+  const meta = FREQUENCIA_STATUS_META[status] || FREQUENCIA_STATUS_META.sem_registro;
 
-function toErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error.trim()) return error;
-  return fallback;
-}
-
-async function parseResponse(response: Response): Promise<JsonValue> {
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    try {
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }
-
-  try {
-    return await response.text();
-  } catch {
-    return null;
-  }
-}
-
-function extractArrayPayload(payload: JsonValue): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (!payload || typeof payload !== 'object') return [];
-
-  const record = payload as Record<string, unknown>;
-
-  const candidates = [
-    record.data,
-    record.items,
-    record.results,
-    record.rows,
-    record.registros,
-    record.servidores,
-    record.frequencias,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate;
-  }
-
-  return [];
-}
-
-function sanitizeMes(mes: number): number {
-  const value = Number(mes);
-  if (!Number.isFinite(value) || value < 1 || value > 12) return new Date().getMonth() + 1;
-  return Math.trunc(value);
-}
-
-function sanitizeAno(ano: number): number {
-  const value = Number(ano);
-  if (!Number.isFinite(value) || value < 2000 || value > 2100) return new Date().getFullYear();
-  return Math.trunc(value);
-}
-
-async function httpJson<T = unknown>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
-  });
-
-  const body = await parseResponse(response);
-
-  if (!response.ok) {
-    if (body && typeof body === 'object') {
-      const record = body as Record<string, unknown>;
-      throw new Error(
-        String(record.error || record.message || `Falha na requisição (${response.status})`),
-      );
-    }
-
-    if (typeof body === 'string' && body.trim()) {
-      throw new Error(body);
-    }
-
-    throw new Error(`Falha na requisição (${response.status})`);
-  }
-
-  return body as T;
-}
-
-export async function listarPorMes(ano: number, mes: number): Promise<unknown[]> {
-  const safeAno = sanitizeAno(ano);
-  const safeMes = sanitizeMes(mes);
-
-  const payload = await httpJson<FrequenciaApiResponse<unknown[]>>(
-    `${FREQUENCIA_URL}?ano=${safeAno}&mes=${safeMes}`,
-    { method: 'GET' },
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-2 rounded-full border font-medium',
+        small ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs',
+        meta.chipClassName,
+        className,
+      ].join(' ')}
+    >
+      <span className={['h-2 w-2 rounded-full', meta.dotClassName].join(' ')} />
+      <span>{label || meta.label}</span>
+    </span>
   );
-
-  return extractArrayPayload(payload);
-}
-
-export async function registrarOcorrencia(payload: FrequenciaOcorrenciaPayload): Promise<unknown> {
-  return httpJson(FREQUENCIA_URL, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function editar(id: string, payload: Partial<FrequenciaOcorrenciaPayload>): Promise<unknown> {
-  return httpJson(`${FREQUENCIA_URL}/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function excluir(id: string): Promise<unknown> {
-  return httpJson(`${FREQUENCIA_URL}/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
-}
-
-async function tryExportEndpoint(
-  endpoint: string,
-  payload: FrequenciaExportPayload,
-): Promise<Response | null> {
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) return null;
-    return response;
-  } catch {
-    return null;
-  }
-}
-
-function resolveFilename(response: Response, fallback: string): string {
-  const disposition = response.headers.get('content-disposition') || '';
-  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-  const asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
-
-  const raw = utf8Match?.[1] || asciiMatch?.[1] || fallback;
-
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return raw;
-  }
-}
-
-export async function baixarFrequenciaArquivo(payload: FrequenciaExportPayload): Promise<void> {
-  const safePayload: FrequenciaExportPayload = {
-    ...payload,
-    ano: sanitizeAno(payload.ano),
-    mes: sanitizeMes(payload.mes),
-    formato: payload.formato,
-  };
-
-  const fallbackName = `frequencia_${safePayload.ano}_${String(safePayload.mes).padStart(2, '0')}.${safePayload.formato}`;
-
-  const primaryEndpoint = `${FREQUENCIA_URL}/exportar`;
-  const fallbackEndpoint = `${FREQUENCIA_URL}/exportar/${safePayload.formato}`;
-
-  let response = await tryExportEndpoint(primaryEndpoint, safePayload);
-
-  if (!response) {
-    response = await tryExportEndpoint(fallbackEndpoint, safePayload);
-  }
-
-  if (!response) {
-    throw new Error('Não foi possível exportar a frequência neste momento.');
-  }
-
-  const blob = await response.blob();
-  const filename = resolveFilename(response, fallbackName);
-
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-export async function exportarDocx(payload: Omit<FrequenciaExportPayload, 'formato'>): Promise<void> {
-  return baixarFrequenciaArquivo({ ...payload, formato: 'docx' });
-}
-
-export async function exportarPdf(payload: Omit<FrequenciaExportPayload, 'formato'>): Promise<void> {
-  return baixarFrequenciaArquivo({ ...payload, formato: 'pdf' });
-}
-
-export async function exportarCsv(payload: Omit<FrequenciaExportPayload, 'formato'>): Promise<void> {
-  return baixarFrequenciaArquivo({ ...payload, formato: 'csv' });
-}
-
-const frequenciaService = {
-  listarPorMes,
-  registrarOcorrencia,
-  editar,
-  excluir,
-  baixarFrequenciaArquivo,
-  exportarDocx,
-  exportarPdf,
-  exportarCsv,
-};
-
-export default frequenciaService;
-
-export function getFrequenciaServiceErrorMessage(error: unknown): string {
-  return toErrorMessage(error, 'Falha ao processar a operação de frequência.');
 }
