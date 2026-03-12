@@ -263,338 +263,417 @@ const WEEKDAY_LABELS = [
   'QUINTA-FEIRA',
   'SEXTA-FEIRA',
   'SÁBADO'
-] as const;
-
-const STATUS_PRIORITY: StatusConsolidadoDia[] = [
-  'SABADO',
-  'DOMINGO',
-  'FERIADO',
-  'FERIAS',
-  'ATESTADO',
-  'FALTA',
-  'PONTO_FACULTATIVO',
-  'MANUAL'
 ];
 
-function createDefaultLogger(): Pick<Console, 'warn' | 'log' | 'error'> {
-  return console;
-}
-
-function pad2(value: number | string): string {
-  return String(value).padStart(2, '0');
-}
-
-function toUpperSafe(value: Nullable<any>): string {
-  return String(value ?? '').trim().toUpperCase();
-}
-
-function normalizeSpaces(value: Nullable<any>): string {
-  return String(value ?? '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function removeNonDigits(value: Nullable<any>): string {
+function onlyDigits(value: Nullable<string | number>) {
   return String(value ?? '').replace(/\D+/g, '');
 }
 
-function normalizeName(value: Nullable<any>): string {
-  const raw = normalizeSpaces(value);
-  if (!raw) return '';
-  return raw
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase();
+function normalizeSpaces(value: any): string {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
-function isoFromParts(year: number, month: number, day: number): string {
-  return `${year}-${pad2(month)}-${pad2(day)}`;
+function safeUpper(value: any): string {
+  return normalizeSpaces(value).toUpperCase();
 }
 
-function parseDateToISO(value: Nullable<any>): string | null {
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+function normalizeBaseUrl(url: string): string {
+  return String(url ?? '').replace(/\/+$/, '');
+}
+
+function normalizeIsoDate(value: Nullable<string>): string | null {
   if (!value) return null;
-
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
-  }
 
   const raw = String(value).trim();
   if (!raw) return null;
 
-  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
 
-  const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (brMatch) {
-    return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) {
+    const [, dd, mm, yyyy] = slash;
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   const parsed = new Date(raw);
-  if (!Number.isNaN(parsed.getTime())) {
-    return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())}`;
-  }
+  if (Number.isNaN(parsed.getTime())) return null;
 
-  return null;
+  const yyyy = parsed.getFullYear();
+  const mm = pad2(parsed.getMonth() + 1);
+  const dd = pad2(parsed.getDate());
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatCpf(value: string): string {
+  const digits = onlyDigits(value);
+  if (digits.length !== 11) return value || '';
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}
+
+function monthNamePtBr(month: number): string {
+  return (
+    [
+      '',
+      'JANEIRO',
+      'FEVEREIRO',
+      'MARÇO',
+      'ABRIL',
+      'MAIO',
+      'JUNHO',
+      'JULHO',
+      'AGOSTO',
+      'SETEMBRO',
+      'OUTUBRO',
+      'NOVEMBRO',
+      'DEZEMBRO'
+    ][month] || String(month)
+  );
 }
 
 function getLastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-function getWeekday(year: number, month: number, day: number): number {
-  return new Date(year, month - 1, day).getDay();
-}
-
-function monthNamePtBr(month: number): string {
-  const names = [
-    '',
-    'JANEIRO',
-    'FEVEREIRO',
-    'MARÇO',
-    'ABRIL',
-    'MAIO',
-    'JUNHO',
-    'JULHO',
-    'AGOSTO',
-    'SETEMBRO',
-    'OUTUBRO',
-    'NOVEMBRO',
-    'DEZEMBRO'
-  ];
-  return names[month] ?? '';
-}
-
-function toStringSafe(value: Nullable<any>): string {
-  return String(value ?? '').trim();
-}
-
-function dateBetweenInclusive(dateISO: string, startISO?: string, endISO?: string): boolean {
-  if (!dateISO || !startISO || !endISO) return false;
-  return dateISO >= startISO && dateISO <= endISO;
-}
-
-function buildServidorIdentityKeys(servidor: ServidorFrequencia): string[] {
-  const id = toStringSafe(
-    servidor.id ??
-      servidor.servidor ??
-      servidor.uuid ??
-      servidor.servidor_id
-  );
-
-  const cpf = removeNonDigits(servidor.cpf);
-  const nome = normalizeName(servidor.nomeCompleto ?? servidor.nome_completo ?? servidor.nome);
-
-  return [cpf && `cpf:${cpf}`, id && `id:${id}`, nome && `nome:${nome}`].filter(Boolean) as string[];
-}
-
-function resolveRegistroIdentityKey(registro: any): string {
-  const cpf = removeNonDigits(registro?.cpf ?? registro?.servidor_cpf);
-  if (cpf) return `cpf:${cpf}`;
-
-  const id = toStringSafe(
-    registro?.servidor_id ??
-      registro?.servidorId ??
-      registro?.servidor ??
-      registro?.id_servidor
-  );
-  if (id) return `id:${id}`;
-
-  const nome = normalizeName(registro?.nome_completo ?? registro?.nome);
-  if (nome) return `nome:${nome}`;
-
-  return '';
-}
-
-function matchesServidor(servidor: ServidorFrequencia, registro: any): boolean {
-  const keys = buildServidorIdentityKeys(servidor);
-  const registroKey = resolveRegistroIdentityKey(registro);
-  return !!registroKey && keys.includes(registroKey);
-}
-
-function normalizeServidor(servidor: ServidorFrequencia): NormalizedServidor {
+function buildMonthInterval(year: number, month: number) {
+  const lastDay = getLastDayOfMonth(year, month);
   return {
-    id: toStringSafe(servidor.id ?? servidor.servidor ?? servidor.uuid ?? servidor.servidor_id),
-    cpf: removeNonDigits(servidor.cpf),
-    nome: normalizeSpaces(servidor.nomeCompleto ?? servidor.nome_completo ?? servidor.nome),
-    matricula: normalizeSpaces(servidor.matricula),
-    categoria: normalizeSpaces(servidor.categoria),
-    setor: normalizeSpaces(servidor.setor),
-    cargo: normalizeSpaces(servidor.cargo),
-    chDiaria: toStringSafe(servidor.chDiaria ?? servidor.ch_diaria),
-    chSemanal: toStringSafe(servidor.chSemanal ?? servidor.ch_semanal),
-    status: normalizeSpaces(servidor.status)
+    start: `${year}-${pad2(month)}-01`,
+    end: `${year}-${pad2(month)}-${pad2(lastDay)}`
   };
 }
 
-function normalizeEventType(value: Nullable<any>): TipoEventoCalendario {
-  const v = toUpperSafe(value);
+function createDayMapShell(year: number, month: number): DayMap {
+  const total = getLastDayOfMonth(year, month);
+  const map: DayMap = {};
 
-  if (v === 'FERIADO') return 'FERIADO';
-  if (v === 'PONTO' || v === 'PONTO FACULTATIVO') return 'PONTO FACULTATIVO';
-  if (v === 'EVENTO') return 'EVENTO';
-  return 'OUTRO';
+  for (let day = 1; day <= total; day += 1) {
+    const date = new Date(year, month - 1, day);
+    const dataISO = `${year}-${pad2(month)}-${pad2(day)}`;
+    const weekday = date.getDay();
+    const isSaturday = weekday === 6;
+    const isSunday = weekday === 0;
+
+    map[day] = {
+      dia: day,
+      dataISO,
+      weekday,
+      weekdayLabel: WEEKDAY_LABELS[weekday],
+      isSaturday,
+      isSunday,
+      isHoliday: false,
+      isPontoFacultativo: false,
+      isVacation: false,
+      isAtestado: false,
+      isFalta: false,
+      rubrica: '',
+      rubrica1: '',
+      rubrica2: '',
+      ocorrencia1: '',
+      ocorrencia2: '',
+      observacoes: '',
+      finalStatus: isSaturday ? 'SABADO' : isSunday ? 'DOMINGO' : 'NORMAL',
+      conflitos: [],
+      avisos: [],
+      fontes: {}
+    };
+  }
+
+  return map;
 }
 
-function normalizeEventos(eventos: EventoCalendario[] = []): NormalizedEvent[] {
-  return eventos
-    .map((evento, index) => {
-      const dataISO = parseDateToISO(evento.data ?? evento.date ?? evento.dataISO);
+function normalizeServidor(input: ServidorFrequencia): NormalizedServidor {
+  const id = normalizeSpaces(
+    input.id || input.servidor || input.uuid || input.servidor_id || input.cpf
+  );
+  const cpf = onlyDigits(input.cpf);
+  const nome = normalizeSpaces(input.nomeCompleto || input.nome_completo || input.nome);
+  const matricula = normalizeSpaces(input.matricula);
+  const categoria = normalizeSpaces(input.categoria);
+  const setor = normalizeSpaces(input.setor);
+  const cargo = normalizeSpaces(input.cargo);
+  const chDiaria = normalizeSpaces(input.chDiaria ?? input.ch_diaria);
+  const chSemanal = normalizeSpaces(input.chSemanal ?? input.ch_semanal);
+  const status = normalizeSpaces(input.status || 'ATIVO');
+
+  if (!cpf) throw new Error('Servidor sem CPF válido para consolidar frequência.');
+  if (!nome) throw new Error('Servidor sem nome válido para consolidar frequência.');
+
+  return {
+    id: id || cpf,
+    cpf,
+    nome,
+    matricula,
+    categoria,
+    setor,
+    cargo,
+    chDiaria,
+    chSemanal,
+    status
+  };
+}
+
+function servidorKeys(servidor: NormalizedServidor): string[] {
+  return Array.from(
+    new Set(
+      [
+        onlyDigits(servidor.cpf),
+        normalizeSpaces(servidor.id),
+        safeUpper(servidor.nome),
+        safeUpper(servidor.matricula)
+      ].filter(Boolean)
+    )
+  );
+}
+
+function buildPeriod(
+  raw: any,
+  servidorKey: string,
+  inicio: string | null,
+  fim: string | null,
+  observacao: string
+): NormalizedPeriod | null {
+  if (!inicio || !fim) return null;
+  return {
+    id: normalizeSpaces(raw?.id || `${servidorKey}-${inicio}-${fim}`),
+    servidorKey,
+    inicio,
+    fim,
+    observacao,
+    raw
+  };
+}
+
+function normalizeFeriasRegistros(
+  items: FeriasRegistro[] | undefined,
+  keys: string[]
+): NormalizedPeriod[] {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  const keySet = new Set(keys);
+
+  const matchServidor = (item: FeriasRegistro): string | null => {
+    const options = [
+      onlyDigits(item.cpf),
+      onlyDigits(item.servidor_cpf),
+      normalizeSpaces(item.servidor_id),
+      normalizeSpaces(item.servidorId),
+      normalizeSpaces(item.servidor),
+      safeUpper(item.nome),
+      safeUpper(item.nome_completo)
+    ].filter(Boolean);
+
+    return options.find((candidate) => keySet.has(candidate)) ?? null;
+  };
+
+  const results: NormalizedPeriod[] = [];
+
+  for (const item of items) {
+    const servidorKey = matchServidor(item);
+    if (!servidorKey) continue;
+
+    const observacao = normalizeSpaces(item.observacao || item.descricao || 'FÉRIAS');
+
+    const periods = [
+      buildPeriod(
+        item,
+        servidorKey,
+        normalizeIsoDate(item.periodo1_inicio || item.inicio),
+        normalizeIsoDate(item.periodo1_fim || item.fim),
+        observacao
+      ),
+      buildPeriod(
+        item,
+        servidorKey,
+        normalizeIsoDate(item.periodo2_inicio),
+        normalizeIsoDate(item.periodo2_fim),
+        observacao
+      ),
+      buildPeriod(
+        item,
+        servidorKey,
+        normalizeIsoDate(item.periodo3_inicio),
+        normalizeIsoDate(item.periodo3_fim),
+        observacao
+      )
+    ].filter(Boolean) as NormalizedPeriod[];
+
+    results.push(...periods);
+  }
+
+  return results;
+}
+
+function normalizeAtestadosRegistros(
+  items: AtestadoRegistro[] | undefined,
+  keys: string[]
+): NormalizedPeriod[] {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  const keySet = new Set(keys);
+
+  const matchServidor = (item: AtestadoRegistro): string | null => {
+    const options = [
+      onlyDigits(item.cpf),
+      onlyDigits(item.servidor_cpf),
+      normalizeSpaces(item.servidor_id),
+      normalizeSpaces(item.servidorId),
+      normalizeSpaces(item.servidor),
+      safeUpper(item.nome),
+      safeUpper(item.nome_completo)
+    ].filter(Boolean);
+
+    return options.find((candidate) => keySet.has(candidate)) ?? null;
+  };
+
+  const results: NormalizedPeriod[] = [];
+
+  for (const item of items) {
+    const servidorKey = matchServidor(item);
+    if (!servidorKey) continue;
+
+    const inicio = normalizeIsoDate(item.data_inicio || item.periodo_inicio || item.inicio);
+    const fim = normalizeIsoDate(item.data_fim || item.periodo_fim || item.fim);
+    const observacao = normalizeSpaces(item.motivo || item.observacao || item.descricao || 'ATESTADO');
+
+    const period = buildPeriod(item, servidorKey, inicio, fim, observacao);
+    if (period) results.push(period);
+  }
+
+  return results;
+}
+
+function normalizeEventos(items: EventoCalendario[] | undefined): NormalizedEvent[] {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  return items
+    .map((item) => {
+      const dataISO = normalizeIsoDate(item.data || item.date || item.dataISO);
       if (!dataISO) return null;
 
+      const tipoRaw = safeUpper(item.tipo || item.type);
+      const tipo: TipoEventoCalendario =
+        tipoRaw === 'FERIADO'
+          ? 'FERIADO'
+          : tipoRaw === 'PONTO'
+            ? 'PONTO'
+            : tipoRaw === 'PONTO FACULTATIVO'
+              ? 'PONTO FACULTATIVO'
+              : tipoRaw === 'EVENTO'
+                ? 'EVENTO'
+                : 'OUTRO';
+
       return {
-        id: toStringSafe(evento.id ?? index + 1),
+        id: normalizeSpaces(item.id || `${dataISO}-${tipoRaw || 'EVENTO'}`),
         dataISO,
-        tipo: normalizeEventType(evento.tipo ?? evento.type),
-        titulo: normalizeSpaces(evento.titulo ?? evento.title),
-        descricao: normalizeSpaces(evento.descricao ?? evento.description),
-        raw: evento
+        tipo,
+        titulo: normalizeSpaces(item.titulo || item.title || tipoRaw || 'EVENTO'),
+        descricao: normalizeSpaces(item.descricao || item.description),
+        raw: item
       };
     })
     .filter(Boolean) as NormalizedEvent[];
 }
 
-function normalizeFerias(servidor: ServidorFrequencia, ferias: FeriasRegistro[] = []): NormalizedPeriod[] {
-  const filtradas = ferias.filter((item) => matchesServidor(servidor, item));
-
-  const periods: NormalizedPeriod[] = [];
-
-  filtradas.forEach((item, index) => {
-    const servidorKey = resolveRegistroIdentityKey(item);
-
-    const periodos = [
-      {
-        inicio: item.periodo1_inicio ?? item.inicio,
-        fim: item.periodo1_fim ?? item.fim
-      },
-      {
-        inicio: item.periodo2_inicio,
-        fim: item.periodo2_fim
-      },
-      {
-        inicio: item.periodo3_inicio,
-        fim: item.periodo3_fim
-      }
-    ];
-
-    periodos.forEach((periodo, pIndex) => {
-      const inicio = parseDateToISO(periodo.inicio);
-      const fim = parseDateToISO(periodo.fim);
-
-      if (!inicio || !fim) return;
-
-      periods.push({
-        id: `${toStringSafe(item.id ?? index + 1)}_${pIndex + 1}`,
-        servidorKey,
-        inicio,
-        fim,
-        observacao: normalizeSpaces(item.observacao ?? item.descricao ?? 'Férias'),
-        raw: item
-      });
-    });
-  });
-
-  return periods;
-}
-
-function normalizeAtestados(
-  servidor: ServidorFrequencia,
-  atestados: AtestadoRegistro[] = []
-): NormalizedPeriod[] {
-  return atestados
-    .filter((item) => matchesServidor(servidor, item))
-    .map((item, index) => {
-      const inicio = parseDateToISO(
-        item.data_inicio ?? item.inicio ?? item.periodo_inicio
-      );
-      const fim = parseDateToISO(
-        item.data_fim ?? item.fim ?? item.periodo_fim
-      );
-
-      if (!inicio || !fim) return null;
-
-      return {
-        id: toStringSafe(item.id ?? index + 1),
-        servidorKey: resolveRegistroIdentityKey(item),
-        inicio,
-        fim,
-        observacao: normalizeSpaces(item.observacao ?? item.motivo ?? item.descricao ?? 'Atestado'),
-        raw: item
-      };
-    })
-    .filter(Boolean) as NormalizedPeriod[];
-}
-
 function normalizeOcorrencias(
-  servidor: ServidorFrequencia,
-  ocorrencias: OcorrenciaFrequencia[] = []
+  items: OcorrenciaFrequencia[] | undefined,
+  keys: string[]
 ): NormalizedOcorrencia[] {
-  return ocorrencias
-    .filter((item) => matchesServidor(servidor, item))
-    .map((item, index) => {
-      const dataISO = parseDateToISO(item.data ?? item.date ?? item.dataISO) ?? undefined;
-      const inicio = parseDateToISO(item.inicio) ?? undefined;
-      const fim = parseDateToISO(item.fim) ?? undefined;
+  if (!Array.isArray(items) || items.length === 0) return [];
 
-      return {
-        id: toStringSafe(item.id ?? index + 1),
-        servidorKey: resolveRegistroIdentityKey(item),
-        dataISO,
-        inicio,
-        fim,
-        tipo: toUpperSafe(item.tipo),
-        turno: toUpperSafe(item.turno),
-        rubrica: normalizeSpaces(item.rubrica),
-        rubrica1: normalizeSpaces(item.rubrica1),
-        rubrica2: normalizeSpaces(item.rubrica2),
-        ocorrencia1: normalizeSpaces(item.ocorrencia1 ?? item.o1),
-        ocorrencia2: normalizeSpaces(item.ocorrencia2 ?? item.o2),
-        observacao: normalizeSpaces(item.observacao ?? item.descricao),
-        raw: item
-      };
+  const keySet = new Set(keys);
+
+  const matchServidor = (item: OcorrenciaFrequencia): string | null => {
+    const options = [
+      onlyDigits(item.cpf),
+      onlyDigits(item.servidor_cpf),
+      normalizeSpaces(item.servidor_id),
+      normalizeSpaces(item.servidorId),
+      normalizeSpaces(item.servidor),
+      safeUpper(item.nome),
+      safeUpper(item.nome_completo)
+    ].filter(Boolean);
+
+    return options.find((candidate) => keySet.has(candidate)) ?? null;
+  };
+
+  const results: NormalizedOcorrencia[] = [];
+
+  for (const item of items) {
+    const servidorKey = matchServidor(item);
+    if (!servidorKey) continue;
+
+    const tipo = safeUpper(item.tipo || 'MANUAL');
+    const dataISO = normalizeIsoDate(item.data || item.date || item.dataISO || item.inicio);
+    const inicio = normalizeIsoDate(item.inicio);
+    const fim = normalizeIsoDate(item.fim);
+    const turno = safeUpper(item.turno);
+    const rubrica = normalizeSpaces(item.rubrica);
+    const rubrica1 = normalizeSpaces(item.rubrica1 || rubrica);
+    const rubrica2 = normalizeSpaces(item.rubrica2 || rubrica);
+    const ocorrencia1 = normalizeSpaces(item.ocorrencia1 || item.o1);
+    const ocorrencia2 = normalizeSpaces(item.ocorrencia2 || item.o2);
+    const observacao = normalizeSpaces(item.observacao || item.descricao);
+
+    results.push({
+      id: normalizeSpaces(item.id || `${servidorKey}-${dataISO || inicio || 'ocorrencia'}`),
+      servidorKey,
+      dataISO: dataISO || undefined,
+      inicio: inicio || undefined,
+      fim: fim || undefined,
+      tipo,
+      turno,
+      rubrica,
+      rubrica1,
+      rubrica2,
+      ocorrencia1,
+      ocorrencia2,
+      observacao,
+      raw: item
     });
-}
-
-function findEventoByDate(eventos: NormalizedEvent[], dateISO: string, tipo: TipoEventoCalendario): NormalizedEvent | null {
-  return eventos.find((e) => e.dataISO === dateISO && e.tipo === tipo) ?? null;
-}
-
-function findPeriodoByDate(periodos: NormalizedPeriod[], dateISO: string): NormalizedPeriod | null {
-  return periodos.find((p) => dateBetweenInclusive(dateISO, p.inicio, p.fim)) ?? null;
-}
-
-function findOcorrenciaByDate(ocorrencias: NormalizedOcorrencia[], dateISO: string): NormalizedOcorrencia | null {
-  return (
-    ocorrencias.find((o) => {
-      if (o.dataISO) return o.dataISO === dateISO;
-      if (o.inicio && o.fim) return dateBetweenInclusive(dateISO, o.inicio, o.fim);
-      return false;
-    }) ?? null
-  );
-}
-
-function hasTipoFalta(ocorrencia: NormalizedOcorrencia | null): boolean {
-  if (!ocorrencia) return false;
-  return toUpperSafe(ocorrencia.tipo) === 'FALTA';
-}
-
-function hasManualContent(ocorrencia: NormalizedOcorrencia | null): boolean {
-  if (!ocorrencia) return false;
-  return Boolean(
-    ocorrencia.rubrica ||
-      ocorrencia.rubrica1 ||
-      ocorrencia.rubrica2 ||
-      ocorrencia.ocorrencia1 ||
-      ocorrencia.ocorrencia2 ||
-      ocorrencia.observacao
-  );
-}
-
-function chooseFinalStatus(candidates: Record<StatusConsolidadoDia, boolean>): StatusConsolidadoDia {
-  for (const status of STATUS_PRIORITY) {
-    if (candidates[status]) return status;
   }
+
+  return results;
+}
+
+function isDateWithin(dateISO: string, startISO?: string | null, endISO?: string | null) {
+  if (!startISO || !endISO) return false;
+  return dateISO >= startISO && dateISO <= endISO;
+}
+
+function chooseFinalStatus(params: {
+  item: DayMapItem;
+  evento?: NormalizedEvent | null;
+  ponto?: NormalizedEvent | null;
+  feriasDia?: NormalizedPeriod | null;
+  atestadoDia?: NormalizedPeriod | null;
+  faltaDia?: NormalizedOcorrencia | null;
+  manualDia?: NormalizedOcorrencia | null;
+  incluirPontoFacultativo: boolean;
+}): StatusConsolidadoDia {
+  const { item, evento, ponto, feriasDia, atestadoDia, faltaDia, manualDia, incluirPontoFacultativo } =
+    params;
+
+  if (feriasDia) return 'FERIAS';
+  if (atestadoDia) return 'ATESTADO';
+  if (evento?.tipo === 'FERIADO') return 'FERIADO';
+  if (ponto && incluirPontoFacultativo) return 'PONTO_FACULTATIVO';
+  if (item.isSunday) return 'DOMINGO';
+  if (item.isSaturday) return 'SABADO';
+  if (faltaDia) return 'FALTA';
+
+  const hasManual =
+    Boolean(manualDia?.ocorrencia1) ||
+    Boolean(manualDia?.ocorrencia2) ||
+    Boolean(manualDia?.rubrica) ||
+    Boolean(manualDia?.rubrica1) ||
+    Boolean(manualDia?.rubrica2);
+
+  if (hasManual) return 'MANUAL';
+
   return 'NORMAL';
 }
 
@@ -610,118 +689,55 @@ function statusToRubrica(status: StatusConsolidadoDia): string {
       return 'FÉRIAS';
     case 'ATESTADO':
       return 'ATESTADO';
-    case 'FALTA':
-      return 'FALTA';
     case 'PONTO_FACULTATIVO':
       return 'PONTO FACULTATIVO';
+    case 'FALTA':
+      return 'FALTA';
     default:
       return '';
   }
 }
 
-function addAviso(
-  warnings: string[],
-  logger: Pick<Console, 'warn' | 'log' | 'error'>,
-  message: string
-): void {
-  warnings.push(message);
-  logger.warn(`[frequenciaService] ${message}`);
-}
-
-function collectConflitos(input: {
-  isSaturday: boolean;
-  isSunday: boolean;
-  evento: NormalizedEvent | null;
-  ponto: NormalizedEvent | null;
-  ferias: NormalizedPeriod | null;
-  atestado: NormalizedPeriod | null;
-  falta: NormalizedOcorrencia | null;
-  manual: NormalizedOcorrencia | null;
-}): string[] {
-  const conflitos: string[] = [];
-
-  if (input.ferias && input.atestado) conflitos.push('Conflito: férias + atestado');
-  if (input.evento && input.falta) conflitos.push('Conflito: feriado + falta');
-  if ((input.isSaturday || input.isSunday) && input.manual) conflitos.push('Conflito: fim de semana + ocorrência manual');
-  if (input.ponto && input.falta) conflitos.push('Conflito: ponto facultativo + falta');
-
-  return conflitos;
-}
-
-function buildDayItem(args: {
-  ano: number;
-  mes: number;
-  dia: number;
-  eventos: NormalizedEvent[];
-  ferias: NormalizedPeriod[];
-  atestados: NormalizedPeriod[];
-  ocorrencias: NormalizedOcorrencia[];
+function buildDayItem(params: {
+  item: DayMapItem;
   incluirPontoFacultativo: boolean;
   faltaVaiParaRubrica: boolean;
-  warnings: string[];
-  logger: Pick<Console, 'warn' | 'log' | 'error'>;
+  evento?: NormalizedEvent | null;
+  ponto?: NormalizedEvent | null;
+  feriasDia?: NormalizedPeriod | null;
+  atestadoDia?: NormalizedPeriod | null;
+  faltaDia?: NormalizedOcorrencia | null;
+  manualDia?: NormalizedOcorrencia | null;
 }): DayMapItem {
   const {
-    ano,
-    mes,
-    dia,
-    eventos,
-    ferias,
-    atestados,
-    ocorrencias,
+    item,
     incluirPontoFacultativo,
     faltaVaiParaRubrica,
-    warnings,
-    logger
-  } = args;
-
-  const dataISO = isoFromParts(ano, mes, dia);
-  const weekday = getWeekday(ano, mes, dia);
-  const isSaturday = weekday === 6;
-  const isSunday = weekday === 0;
-
-  const evento = findEventoByDate(eventos, dataISO, 'FERIADO');
-  const ponto = findEventoByDate(eventos, dataISO, 'PONTO FACULTATIVO');
-  const feriasDia = findPeriodoByDate(ferias, dataISO);
-  const atestadoDia = findPeriodoByDate(atestados, dataISO);
-  const ocorrenciaDia = findOcorrenciaByDate(ocorrencias, dataISO);
-
-  const faltaDia = hasTipoFalta(ocorrenciaDia) ? ocorrenciaDia : null;
-  const manualDia = hasManualContent(ocorrenciaDia) ? ocorrenciaDia : null;
-
-  const conflitos = collectConflitos({
-    isSaturday,
-    isSunday,
     evento,
     ponto,
-    ferias: feriasDia,
-    atestado: atestadoDia,
-    falta: faltaDia,
-    manual: manualDia
-  });
+    feriasDia,
+    atestadoDia,
+    faltaDia,
+    manualDia
+  } = params;
 
-  if (conflitos.length > 0) {
-    conflitos.forEach((conflito) => {
-      addAviso(warnings, logger, `${dataISO} - ${conflito}`);
-    });
+  const { dia, dataISO, weekday, weekdayLabel, isSaturday, isSunday } = item;
+  const conflitos: string[] = [];
+
+  if (feriasDia && atestadoDia) {
+    conflitos.push('Conflito: férias e atestado no mesmo dia');
   }
 
-  const candidates: Record<StatusConsolidadoDia, boolean> = {
-    NORMAL: false,
-    SABADO: isSaturday,
-    DOMINGO: isSunday,
-    FERIADO: Boolean(evento),
-    FERIAS: Boolean(feriasDia),
-    ATESTADO: Boolean(atestadoDia),
-    FALTA: Boolean(faltaDia) && faltaVaiParaRubrica,
-    PONTO_FACULTATIVO: Boolean(ponto) && incluirPontoFacultativo,
-    MANUAL:
-      Boolean(manualDia?.rubrica) ||
-      Boolean(manualDia?.rubrica1) ||
-      Boolean(manualDia?.rubrica2)
-  };
-
-  const finalStatus = chooseFinalStatus(candidates);
+  const finalStatus = chooseFinalStatus({
+    item,
+    evento,
+    ponto,
+    feriasDia,
+    atestadoDia,
+    faltaDia,
+    manualDia,
+    incluirPontoFacultativo
+  });
 
   let rubrica = '';
   let rubrica1 = '';
@@ -776,7 +792,7 @@ function buildDayItem(args: {
     dia,
     dataISO,
     weekday,
-    weekdayLabel: WEEKDAY_LABELS[weekday],
+    weekdayLabel,
     isSaturday,
     isSunday,
     isHoliday: Boolean(evento),
@@ -862,196 +878,245 @@ function buildTemplateData(
   return data;
 }
 
-export function consolidarFrequenciaMensal(
+async function listarEventosCalendario(ano: number, mes: number): Promise<EventoCalendario[]> {
+  const { start, end } = buildMonthInterval(ano, mes);
+
+  const { data, error } = await supabase
+    .from('eventos')
+    .select('*')
+    .gte('data', start)
+    .lte('data', end);
+
+  if (error) {
+    console.warn('Falha ao buscar eventos do calendário:', error.message);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function listarFerias(servidor: NormalizedServidor): Promise<FeriasRegistro[]> {
+  const cpf = onlyDigits(servidor.cpf);
+
+  const { data, error } = await supabase
+    .from('ferias')
+    .select('*')
+    .or(
+      [
+        cpf ? `servidor_cpf.eq.${cpf}` : '',
+        cpf ? `cpf.eq.${cpf}` : '',
+        servidor.id ? `servidor_id.eq.${servidor.id}` : '',
+        servidor.nome ? `nome.ilike.%${servidor.nome}%` : '',
+        servidor.nome ? `nome_completo.ilike.%${servidor.nome}%` : ''
+      ]
+        .filter(Boolean)
+        .join(',')
+    );
+
+  if (error) {
+    console.warn('Falha ao buscar férias:', error.message);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function listarAtestados(servidor: NormalizedServidor): Promise<AtestadoRegistro[]> {
+  const cpf = onlyDigits(servidor.cpf);
+
+  const { data, error } = await supabase
+    .from('atestados')
+    .select('*')
+    .or(
+      [
+        cpf ? `servidor_cpf.eq.${cpf}` : '',
+        cpf ? `cpf.eq.${cpf}` : '',
+        servidor.id ? `servidor_id.eq.${servidor.id}` : '',
+        servidor.nome ? `nome.ilike.%${servidor.nome}%` : '',
+        servidor.nome ? `nome_completo.ilike.%${servidor.nome}%` : ''
+      ]
+        .filter(Boolean)
+        .join(',')
+    );
+
+  if (error) {
+    console.warn('Falha ao buscar atestados:', error.message);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function listarOcorrencias(
+  servidor: NormalizedServidor,
+  ano: number,
+  mes: number
+): Promise<OcorrenciaFrequencia[]> {
+  const { start, end } = buildMonthInterval(ano, mes);
+  const cpf = onlyDigits(servidor.cpf);
+
+  const tableCandidates = ['frequencia_ocorrencias', 'faltas'];
+
+  for (const table of tableCandidates) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .or(
+        [
+          cpf ? `servidor_cpf.eq.${cpf}` : '',
+          cpf ? `cpf.eq.${cpf}` : '',
+          servidor.id ? `servidor_id.eq.${servidor.id}` : '',
+          servidor.nome ? `nome.ilike.%${servidor.nome}%` : '',
+          servidor.nome ? `nome_completo.ilike.%${servidor.nome}%` : ''
+        ]
+          .filter(Boolean)
+          .join(',')
+      )
+      .or(`data.gte.${start},date.gte.${start},inicio.gte.${start}`)
+      .or(`data.lte.${end},date.lte.${end},inicio.lte.${end}`);
+
+    if (error) {
+      console.warn(`Falha ao buscar ocorrências em ${table}:`, error.message);
+      continue;
+    }
+
+    if (Array.isArray(data)) return data;
+  }
+
+  return [];
+}
+
+export function consolidarFrequencia(
   options: ConsolidarFrequenciaOptions
 ): ConsolidacaoFrequenciaResult {
-  const logger = options.logger ?? createDefaultLogger();
+  const {
+    servidor: inputServidor,
+    mes,
+    ano,
+    eventos = [],
+    ferias = [],
+    atestados = [],
+    ocorrencias = [],
+    incluirPontoFacultativo = true,
+    faltaVaiParaRubrica = true
+  } = options;
+
+  if (!mes || mes < 1 || mes > 12) throw new Error('Mês inválido para consolidar frequência.');
+  if (!ano || ano < 2000 || ano > 2100) throw new Error('Ano inválido para consolidar frequência.');
+
+  const servidor = normalizeServidor(inputServidor);
+  const keys = servidorKeys(servidor);
+  const dayMap = createDayMapShell(ano, mes);
+
+  const eventosNorm = normalizeEventos(eventos);
+  const feriasNorm = normalizeFeriasRegistros(ferias, keys);
+  const atestadosNorm = normalizeAtestadosRegistros(atestados, keys);
+  const ocorrenciasNorm = normalizeOcorrencias(ocorrencias, keys);
+
   const warnings: string[] = [];
 
-  const ano = Number(options.ano);
-  const mes = Number(options.mes);
+  for (let dia = 1; dia <= getLastDayOfMonth(ano, mes); dia += 1) {
+    const item = dayMap[dia];
+    const dataISO = item.dataISO;
 
-  if (!ano || !mes || mes < 1 || mes > 12) {
-    throw new Error('Mês/ano inválidos para consolidação da frequência.');
-  }
+    const evento = eventosNorm.find((e) => e.dataISO === dataISO && e.tipo === 'FERIADO') ?? null;
+    const ponto =
+      eventosNorm.find(
+        (e) => e.dataISO === dataISO && (e.tipo === 'PONTO' || e.tipo === 'PONTO FACULTATIVO')
+      ) ?? null;
+    const feriasDia = feriasNorm.find((f) => isDateWithin(dataISO, f.inicio, f.fim)) ?? null;
+    const atestadoDia = atestadosNorm.find((a) => isDateWithin(dataISO, a.inicio, a.fim)) ?? null;
+    const faltaDia =
+      ocorrenciasNorm.find((o) => o.dataISO === dataISO && safeUpper(o.tipo) === 'FALTA') ?? null;
+    const manualDia =
+      ocorrenciasNorm.find((o) => o.dataISO === dataISO && safeUpper(o.tipo) !== 'FALTA') ?? null;
 
-  const servidor = normalizeServidor(options.servidor);
-
-  const eventos = normalizeEventos(options.eventos ?? []);
-  const ferias = normalizeFerias(options.servidor, options.ferias ?? []);
-  const atestados = normalizeAtestados(options.servidor, options.atestados ?? []);
-  const ocorrencias = normalizeOcorrencias(options.servidor, options.ocorrencias ?? []);
-
-  const totalDiasMes = getLastDayOfMonth(ano, mes);
-  const dayMap: DayMap = {};
-
-  for (let dia = 1; dia <= totalDiasMes; dia += 1) {
-    dayMap[dia] = buildDayItem({
-      ano,
-      mes,
-      dia,
-      eventos,
-      ferias,
-      atestados,
-      ocorrencias,
-      incluirPontoFacultativo: Boolean(options.incluirPontoFacultativo),
-      faltaVaiParaRubrica: options.faltaVaiParaRubrica !== false,
-      warnings,
-      logger
+    const built = buildDayItem({
+      item,
+      incluirPontoFacultativo,
+      faltaVaiParaRubrica,
+      evento,
+      ponto,
+      feriasDia,
+      atestadoDia,
+      faltaDia,
+      manualDia
     });
+
+    dayMap[dia] = built;
+
+    if (built.conflitos.length > 0) {
+      warnings.push(`Dia ${dia}: ${built.conflitos.join('; ')}`);
+    }
   }
+
+  const templateData = buildTemplateData(servidor, ano, mes, dayMap);
+  const totalDiasMes = getLastDayOfMonth(ano, mes);
 
   return {
     servidor,
     ano,
     mes,
     totalDiasMes,
-    hiddenRowsFrom: totalDiasMes + 1,
-    hiddenRowsTo: 31,
+    hiddenRowsFrom: totalDiasMes < 31 ? totalDiasMes + 1 : 0,
+    hiddenRowsTo: totalDiasMes < 31 ? 31 : 0,
     dayMap,
-    templateData: buildTemplateData(servidor, ano, mes, dayMap),
+    templateData,
     warnings
   };
 }
 
-export async function carregarDadosConsolidadosFrequencia(params: {
-  servidor: ServidorFrequencia;
-  mes: number;
-  ano: number;
-  incluirPontoFacultativo?: boolean;
-  faltaVaiParaRubrica?: boolean;
-}): Promise<ConsolidacaoFrequenciaResult> {
-  const { servidor, mes, ano, incluirPontoFacultativo, faltaVaiParaRubrica } = params;
+export async function carregarDadosConsolidadosFrequencia(
+  options: ConsolidarFrequenciaOptions
+): Promise<ConsolidacaoFrequenciaResult> {
+  const servidor = normalizeServidor(options.servidor);
 
-  const cpf = removeNonDigits(servidor.cpf);
-  const servidorId = toStringSafe(servidor.id ?? servidor.servidor ?? servidor.uuid ?? servidor.servidor_id);
+  const [eventos, ferias, atestados, ocorrencias] = await Promise.all([
+    options.eventos ? Promise.resolve(options.eventos) : listarEventosCalendario(options.ano, options.mes),
+    options.ferias ? Promise.resolve(options.ferias) : listarFerias(servidor),
+    options.atestados ? Promise.resolve(options.atestados) : listarAtestados(servidor),
+    options.ocorrencias
+      ? Promise.resolve(options.ocorrencias)
+      : listarOcorrencias(servidor, options.ano, options.mes)
+  ]);
 
-  const firstDay = `${ano}-${pad2(mes)}-01`;
-  const lastDay = `${ano}-${pad2(mes)}-${pad2(getLastDayOfMonth(ano, mes))}`;
-
-  let eventos: EventoCalendario[] = [];
-  let ferias: FeriasRegistro[] = [];
-  let atestados: AtestadoRegistro[] = [];
-  let ocorrencias: OcorrenciaFrequencia[] = [];
-
-  const eventosQuery = await supabase
-    .from('eventos')
-    .select('*')
-    .gte('data', firstDay)
-    .lte('data', lastDay);
-
-  if (!eventosQuery.error && Array.isArray(eventosQuery.data)) {
-    eventos = eventosQuery.data;
-  }
-
-  let feriasQuery: any = null;
-  if (cpf) {
-    feriasQuery = await supabase
-      .from('ferias')
-      .select('*')
-      .eq('servidor_cpf', cpf);
-  } else if (servidorId) {
-    feriasQuery = await supabase
-      .from('ferias')
-      .select('*')
-      .or(`servidor_id.eq.${servidorId},servidor.eq.${servidorId}`);
-  }
-
-  if (feriasQuery && !feriasQuery.error && Array.isArray(feriasQuery.data)) {
-    ferias = feriasQuery.data;
-  }
-
-  let atestadosQuery: any = null;
-  if (cpf) {
-    atestadosQuery = await supabase
-      .from('atestados')
-      .select('*')
-      .eq('servidor_cpf', cpf);
-  } else if (servidorId) {
-    atestadosQuery = await supabase
-      .from('atestados')
-      .select('*')
-      .or(`servidor_id.eq.${servidorId},servidor.eq.${servidorId}`);
-  }
-
-  if (atestadosQuery && !atestadosQuery.error && Array.isArray(atestadosQuery.data)) {
-    atestados = atestadosQuery.data;
-  }
-
-  let ocorrenciasQuery: any = null;
-  if (cpf) {
-    ocorrenciasQuery = await supabase
-      .from('frequencia_ocorrencias')
-      .select('*')
-      .eq('servidor_cpf', cpf)
-      .gte('data', firstDay)
-      .lte('data', lastDay);
-  }
-
-  if (ocorrenciasQuery?.error || !Array.isArray(ocorrenciasQuery?.data)) {
-    let fallbackQuery: any = null;
-
-    if (cpf) {
-      fallbackQuery = await supabase
-        .from('faltas')
-        .select('*')
-        .eq('cpf', cpf)
-        .gte('data', firstDay)
-        .lte('data', lastDay);
-    } else if (servidorId) {
-      fallbackQuery = await supabase
-        .from('faltas')
-        .select('*')
-        .or(`servidor_id.eq.${servidorId},servidor.eq.${servidorId}`)
-        .gte('data', firstDay)
-        .lte('data', lastDay);
-    }
-
-    if (!fallbackQuery?.error && Array.isArray(fallbackQuery?.data)) {
-      ocorrencias = fallbackQuery.data;
-    }
-  } else {
-    ocorrencias = ocorrenciasQuery.data;
-  }
-
-  return consolidarFrequenciaMensal({
+  return consolidarFrequencia({
+    ...options,
     servidor,
-    mes,
-    ano,
     eventos,
     ferias,
     atestados,
-    ocorrencias,
-    incluirPontoFacultativo,
-    faltaVaiParaRubrica
+    ocorrencias
   });
 }
 
-export function montarPayloadExportacaoFrequencia(params: ConsolidarFrequenciaOptions & {
-  formato?: 'docx' | 'pdf';
-  outputFileName?: string;
-}): FrequenciaExportPayload {
-  const result = consolidarFrequenciaMensal(params);
-
-  const formato = params.formato ?? 'docx';
-  const baseName = `${result.servidor.nome || 'servidor'}_${pad2(result.mes)}_${result.ano}`
+export function montarPayloadExportacaoFrequencia(
+  consolidado: ConsolidacaoFrequenciaResult,
+  formato: 'docx' | 'pdf'
+): FrequenciaExportPayload {
+  const nomeBase = normalizeSpaces(consolidado.servidor.nome)
+    .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '_');
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const outputFileName = `frequencia_${nomeBase || 'servidor'}_${consolidado.ano}_${pad2(
+    consolidado.mes
+  )}.${formato}`;
 
   return {
-    templateData: result.templateData,
+    templateData: consolidado.templateData,
     formato,
-    outputFileName: params.outputFileName || `frequencia_${baseName}.${formato}`,
+    outputFileName,
     removerLinhasExcedentes: true,
     metadata: {
-      servidor: result.servidor,
-      ano: result.ano,
-      mes: result.mes,
-      totalDiasMes: result.totalDiasMes,
-      hiddenRowsFrom: result.hiddenRowsFrom,
-      hiddenRowsTo: result.hiddenRowsTo
+      servidor: consolidado.servidor,
+      ano: consolidado.ano,
+      mes: consolidado.mes,
+      totalDiasMes: consolidado.totalDiasMes,
+      hiddenRowsFrom: consolidado.hiddenRowsFrom,
+      hiddenRowsTo: consolidado.hiddenRowsTo
     }
   };
 }
@@ -1068,105 +1133,79 @@ function parseFilenameFromContentDisposition(headerValue: string | null): string
     }
   }
 
-  const normalMatch = headerValue.match(/filename="?([^"]+)"?/i);
-  return normalMatch?.[1] ?? null;
+  const plainMatch = headerValue.match(/filename="?([^"]+)"?/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1];
+  }
+
+  return null;
 }
 
-export async function exportarFrequenciaArquivo(params: ConsolidarFrequenciaOptions & {
-  formato?: 'docx' | 'pdf';
-  templatePath?: string;
-  outputFileName?: string;
-}): Promise<{
-  blob: Blob;
-  fileName: string;
-  contentType: string;
-  payload: FrequenciaExportPayload;
-}> {
-  const payload = montarPayloadExportacaoFrequencia(params);
-  const endpoint = `${String(API_BASE_URL || '').replace(/\/+$/, '')}/api/frequencia/exportar`;
+function saveBlob(blob: Blob, fileName: string) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
 
-  const response = await fetch(endpoint, {
+export async function exportarFrequenciaArquivo(
+  params: ConsolidarFrequenciaOptions & {
+    formato: 'docx' | 'pdf';
+  }
+): Promise<{ blob: Blob; fileName: string; payload: FrequenciaExportPayload }> {
+  const consolidado = await carregarDadosConsolidadosFrequencia(params);
+  const payload = montarPayloadExportacaoFrequencia(consolidado, params.formato);
+
+  const baseUrl = normalizeBaseUrl(API_BASE_URL);
+  if (!baseUrl) {
+    throw new Error('API_BASE_URL não está configurada para exportação da frequência.');
+  }
+
+  const response = await fetch(`${baseUrl}/api/frequencia/exportar`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      ...payload,
-      templatePath: params.templatePath || undefined
-    })
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
-    let errorMessage = 'Falha ao exportar frequência.';
+    let errorText = 'Falha ao exportar a folha.';
     try {
-      const errorBody = await response.json();
-      errorMessage = errorBody?.error || errorBody?.details || errorMessage;
+      const json = await response.json();
+      errorText = json?.error || json?.details || errorText;
     } catch {
       // noop
     }
-    throw new Error(errorMessage);
+    throw new Error(errorText);
   }
 
   const blob = await response.blob();
-  const contentType = response.headers.get('content-type') || 'application/octet-stream';
   const fileName =
     parseFilenameFromContentDisposition(response.headers.get('content-disposition')) ||
     payload.outputFileName;
 
-  return {
-    blob,
-    fileName,
-    contentType,
-    payload
-  };
+  return { blob, fileName, payload };
 }
 
-
-export async function baixarFrequenciaArquivo(params: ConsolidarFrequenciaOptions & {
-  formato?: 'docx' | 'pdf';
-  templatePath?: string;
-  outputFileName?: string;
-}): Promise<{
-  blob: Blob;
-  fileName: string;
-  contentType: string;
-  payload: FrequenciaExportPayload;
-}> {
+export async function baixarFrequenciaArquivo(
+  params: ConsolidarFrequenciaOptions & {
+    formato: 'docx' | 'pdf';
+  }
+): Promise<{ fileName: string }> {
   const result = await exportarFrequenciaArquivo(params);
   saveBlob(result.blob, result.fileName);
-  return result;
+  return { fileName: result.fileName };
 }
 
-export function montarDayMapParaExportacao(params: ConsolidarFrequenciaOptions): DayMap {
-  return consolidarFrequenciaMensal(params).dayMap;
-}
-
-export function montarTemplateDataFrequencia(params: ConsolidarFrequenciaOptions): Record<string, string | boolean | number> {
-  return consolidarFrequenciaMensal(params).templateData;
-}
-
-export function montarDiagnosticoFrequencia(params: ConsolidarFrequenciaOptions): Array<{
-  dia: number;
-  dataISO: string;
-  weekdayLabel: string;
-  finalStatus: StatusConsolidadoDia;
-  rubrica: string;
-  ocorrencia1: string;
-  ocorrencia2: string;
-  observacoes: string;
-  conflitos: string[];
-}> {
-  const result = consolidarFrequenciaMensal(params);
-
-  return Object.values(result.dayMap).map((item) => ({
-    dia: item.dia,
-    dataISO: item.dataISO,
-    weekdayLabel: item.weekdayLabel,
-    finalStatus: item.finalStatus,
-    rubrica: item.rubrica,
-    ocorrencia1: item.ocorrencia1,
-    ocorrencia2: item.ocorrencia2,
-    observacoes: item.observacoes,
-    conflitos: item.conflitos
-  }));
-}
+export default {
+  consolidarFrequencia,
+  carregarDadosConsolidadosFrequencia,
+  montarPayloadExportacaoFrequencia,
+  exportarFrequenciaArquivo,
+  baixarFrequenciaArquivo
+};
