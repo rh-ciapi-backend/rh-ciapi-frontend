@@ -544,37 +544,28 @@ export default function FrequenciaPage() {
                   Folha mensal de frequência
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                  Consulte a consolidação mensal com férias, atestados, feriados, ponto
-                  facultativo e faltas em um painel único.
+                  Consulte a consolidação mensal com férias, atestados, feriados, ponto facultativo e faltas em um painel único.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                  Sábados
-                </div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Sábados</div>
                 <div className="mt-1 text-2xl font-semibold text-white">{counts.sabados}</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                  Domingos
-                </div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Domingos</div>
                 <div className="mt-1 text-2xl font-semibold text-white">{counts.domingos}</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                  Férias/Atestado
-                </div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Férias/Atestado</div>
                 <div className="mt-1 text-2xl font-semibold text-white">
                   {counts.ferias + counts.atestados}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                  Avisos
-                </div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Avisos</div>
                 <div className="mt-1 text-2xl font-semibold text-white">{counts.warnings}</div>
               </div>
             </div>
@@ -743,9 +734,7 @@ export default function FrequenciaPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-white">Período e regras</h2>
-                  <p className="text-sm text-slate-400">
-                    Ajuste o mês e as regras da consolidação.
-                  </p>
+                  <p className="text-sm text-slate-400">Ajuste o mês e as regras da consolidação.</p>
                 </div>
               </div>
 
@@ -878,20 +867,12 @@ export default function FrequenciaPage() {
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-white">Resumo da consolidação</h2>
-                  <p className="text-sm text-slate-400">
-                    Painel de conferência antes da exportação.
-                  </p>
+                  <p className="text-sm text-slate-400">Painel de conferência antes da exportação.</p>
                 </div>
 
                 {preview ? (
                   <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-                    {normalizeSpaces(
-                      (preview as any)?.servidor?.nome ||
-                        (preview as any)?.servidor?.nomeCompleto ||
-                        'Servidor'
-                    )}{' '}
-                    • {monthLabel(toFiniteNumber((preview as any)?.mes, mes))} /{' '}
-                    {toFiniteNumber((preview as any)?.ano, ano)}
+                    {normalizeSpaces((preview as any)?.servidor?.nome || (preview as any)?.servidor?.nomeCompleto || 'Servidor')} • {monthLabel(toFiniteNumber((preview as any)?.mes, mes))} / {toFiniteNumber((preview as any)?.ano, ano)}
                   </div>
                 ) : null}
               </div>
@@ -901,12 +882,9 @@ export default function FrequenciaPage() {
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
                     <ClipboardList className="h-6 w-6" />
                   </div>
-                  <div className="mt-4 text-lg font-semibold text-white">
-                    Nenhuma prévia carregada
-                  </div>
+                  <div className="mt-4 text-lg font-semibold text-white">Nenhuma prévia carregada</div>
                   <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                    Selecione um servidor e clique em <strong>Visualizar</strong> para conferir a
-                    consolidação do mês.
+                    Selecione um servidor e clique em <strong>Visualizar</strong> para conferir a consolidação do mês.
                   </p>
                 </div>
               ) : (
@@ -960,20 +938,14 @@ export default function FrequenciaPage() {
                           {previewDays.length === 0 ? (
                             <tr>
                               <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                                A consolidação foi carregada, mas não retornou dias válidos para
-                                exibição.
+                                A consolidação foi carregada, mas não retornou dias válidos para exibição.
                               </td>
                             </tr>
                           ) : (
                             previewDays.map((item) => (
-                              <tr
-                                key={item.dia}
-                                className="align-top transition hover:bg-white/[0.03]"
-                              >
+                              <tr key={item.dia} className="align-top transition hover:bg-white/[0.03]">
                                 <td className="px-4 py-3 font-semibold text-white">{item.dia}</td>
-                                <td className="px-4 py-3 text-slate-300">
-                                  {item.weekdayLabel || '—'}
-                                </td>
+                                <td className="px-4 py-3 text-slate-300">{item.weekdayLabel || '—'}</td>
                                 <td className="px-4 py-3">
                                   <span
                                     className={cn(
@@ -985,15 +957,9 @@ export default function FrequenciaPage() {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-slate-100">{item.rubrica || '—'}</td>
-                                <td className="px-4 py-3 text-slate-300">
-                                  {item.ocorrencia1 || '—'}
-                                </td>
-                                <td className="px-4 py-3 text-slate-300">
-                                  {item.ocorrencia2 || '—'}
-                                </td>
-                                <td className="px-4 py-3 text-slate-400">
-                                  {item.observacoes || '—'}
-                                </td>
+                                <td className="px-4 py-3 text-slate-300">{item.ocorrencia1 || '—'}</td>
+                                <td className="px-4 py-3 text-slate-300">{item.ocorrencia2 || '—'}</td>
+                                <td className="px-4 py-3 text-slate-400">{item.observacoes || '—'}</td>
                               </tr>
                             ))
                           )}
