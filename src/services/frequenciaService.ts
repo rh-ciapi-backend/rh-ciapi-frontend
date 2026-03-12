@@ -115,41 +115,82 @@ interface NormalizedServidor {
   status: string;
 }
 
+interface BackendServidorShape {
+  id?: string;
+  uuid?: string;
+  servidor?: string;
+  servidor_id?: string;
+  nome?: string;
+  nomeCompleto?: string;
+  nome_completo?: string;
+  cpf?: string;
+  matricula?: string;
+  cargo?: string;
+  categoria?: string;
+  setor?: string;
+  status?: string;
+  chDiaria?: string | number | null;
+  ch_diaria?: string | number | null;
+  chSemanal?: string | number | null;
+  ch_semanal?: string | number | null;
+}
+
+interface BackendOcorrenciaItem {
+  id?: string | number;
+  tipo?: string;
+  turno?: string;
+  observacao?: string;
+  observacoes?: string;
+  descricao?: string;
+  texto?: string;
+  detalhe?: string;
+  nome?: string;
+  titulo?: string;
+}
+
+interface BackendEventoItem {
+  id?: string | number;
+  tipo?: string;
+  titulo?: string;
+  nome?: string;
+  descricao?: string;
+  observacao?: string;
+}
+
+interface BackendDiaItem {
+  dia?: number | string;
+  data?: string;
+  dataISO?: string;
+  ocorrencias?: BackendOcorrenciaItem[] | any;
+  eventos?: BackendEventoItem[] | any;
+  ferias?: boolean | string | number | any;
+  atestado?: boolean | string | number | any;
+  falta?: boolean | string | number | any;
+  pontoFacultativo?: boolean | string | number | any;
+  feriado?: boolean | string | number | any;
+  rubrica?: string;
+  rubrica1?: string;
+  rubrica2?: string;
+  ocorrencia1?: string;
+  ocorrencia2?: string;
+  observacoes?: string;
+  observacao?: string;
+}
+
 interface BackendServidorItem {
-  servidor?: {
-    id?: string;
-    servidor?: string;
-    nome?: string;
-    cpf?: string;
-    matricula?: string;
-    cargo?: string;
-    categoria?: string;
-    setor?: string;
-    status?: string;
-    chDiaria?: string | number | null;
-    ch_diaria?: string | number | null;
-    chSemanal?: string | number | null;
-    ch_semanal?: string | number | null;
-  };
-  dias?: Array<{
-    dia?: number;
-    data?: string;
-    ocorrencias?: Array<{
-      id?: string | number;
-      tipo?: string;
-      turno?: string;
-      observacao?: string;
-      descricao?: string;
-    }>;
-    eventos?: Array<{
-      id?: string | number;
-      tipo?: string;
-      titulo?: string;
-      nome?: string;
-      descricao?: string;
-    }>;
-    ferias?: boolean;
-  }>;
+  servidor?: BackendServidorShape | null;
+  dias?: BackendDiaItem[] | any;
+  dayMap?: Record<string, BackendDiaItem> | BackendDiaItem[] | any;
+  id?: string;
+  uuid?: string;
+  servidor_id?: string;
+  cpf?: string;
+  nome?: string;
+  matricula?: string;
+  categoria?: string;
+  setor?: string;
+  cargo?: string;
+  status?: string;
 }
 
 const WEEKDAY_LABELS = [
@@ -211,10 +252,32 @@ function asArray<T = any>(value: any): T[] {
   if (Array.isArray(value?.data)) return value.data;
   if (Array.isArray(value?.items)) return value.items;
   if (Array.isArray(value?.rows)) return value.rows;
+  if (Array.isArray(value?.results)) return value.results;
   return [];
 }
 
-function firstBy<T>(items: T[], predicate: (item: T) => boolean): T | null {
+function safeObjectValues<T = any>(value: any): T[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  try {
+    return Object.values(value) as T[];
+  } catch {
+    return [];
+  }
+}
+
+function toFiniteNumber(value: any, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isTruthyLike(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value > 0;
+  const normalized = safeUpper(value);
+  return ['1', 'SIM', 'TRUE', 'VERDADEIRO', 'YES', 'Y'].includes(normalized);
+}
+
+function firstBy<T>(items: T[] | any, predicate: (item: T) => boolean): T | null {
   const list = asArray<T>(items);
   for (const item of list) {
     if (predicate(item)) return item;
@@ -397,25 +460,108 @@ function buildTemplateData(
 function parseApiError(payload: any, fallback: string): string {
   if (typeof payload?.error === 'string' && payload.error.trim()) return payload.error.trim();
   if (typeof payload?.details === 'string' && payload.details.trim()) return payload.details.trim();
+  if (typeof payload?.message === 'string' && payload.message.trim()) return payload.message.trim();
+  if (typeof payload === 'string' && payload.trim()) return payload.trim();
   return fallback;
+}
+
+function extractServidorShape(item: BackendServidorItem | any): BackendServidorShape {
+  const nested = item?.servidor ?? {};
+  return {
+    id: normalizeSpaces(
+      nested?.id || nested?.uuid || nested?.servidor || nested?.servidor_id || item?.id || item?.uuid || item?.servidor || item?.servidor_id
+    ),
+    uuid: normalizeSpaces(nested?.uuid || item?.uuid),
+    servidor: normalizeSpaces(nested?.servidor || item?.servidor),
+    servidor_id: normalizeSpaces(nested?.servidor_id || item?.servidor_id),
+    nome: normalizeSpaces(
+      nested?.nome || nested?.nomeCompleto || nested?.nome_completo || item?.nome || item?.nomeCompleto || item?.nome_completo
+    ),
+    cpf: onlyDigits(nested?.cpf || item?.cpf),
+    matricula: normalizeSpaces(nested?.matricula || item?.matricula),
+    cargo: normalizeSpaces(nested?.cargo || item?.cargo),
+    categoria: normalizeSpaces(nested?.categoria || item?.categoria),
+    setor: normalizeSpaces(nested?.setor || item?.setor),
+    status: normalizeSpaces(nested?.status || item?.status),
+    chDiaria: nested?.chDiaria ?? nested?.ch_diaria ?? item?.chDiaria ?? item?.ch_diaria ?? '',
+    ch_diaria: nested?.ch_diaria ?? item?.ch_diaria ?? '',
+    chSemanal: nested?.chSemanal ?? nested?.ch_semanal ?? item?.chSemanal ?? item?.ch_semanal ?? '',
+    ch_semanal: nested?.ch_semanal ?? item?.ch_semanal ?? ''
+  };
 }
 
 function choosePrimaryBackendItem(
   data: BackendServidorItem[] | any,
-  cpf: string
+  servidor: NormalizedServidor
 ): BackendServidorItem | null {
   const list = asArray<BackendServidorItem>(data);
   if (list.length === 0) return null;
 
-  const cpfDigits = onlyDigits(cpf);
+  const cpfDigits = onlyDigits(servidor.cpf);
+  const id = normalizeSpaces(servidor.id);
+  const matricula = normalizeSpaces(servidor.matricula);
 
   for (const item of list) {
-    if (onlyDigits(item?.servidor?.cpf) === cpfDigits) {
+    const extracted = extractServidorShape(item);
+
+    if (cpfDigits && onlyDigits(extracted.cpf) === cpfDigits) {
+      return item;
+    }
+
+    if (id) {
+      const candidateIds = [
+        normalizeSpaces(extracted.id),
+        normalizeSpaces(extracted.uuid),
+        normalizeSpaces(extracted.servidor),
+        normalizeSpaces(extracted.servidor_id)
+      ].filter(Boolean);
+
+      if (candidateIds.includes(id)) {
+        return item;
+      }
+    }
+
+    if (matricula && normalizeSpaces(extracted.matricula) === matricula) {
       return item;
     }
   }
 
   return list[0] || null;
+}
+
+function normalizeDiaItems(item: BackendServidorItem | any): BackendDiaItem[] {
+  const directDias = asArray<BackendDiaItem>(item?.dias);
+  if (directDias.length > 0) return directDias;
+
+  const fromDayMapArray = asArray<BackendDiaItem>(item?.dayMap);
+  if (fromDayMapArray.length > 0) return fromDayMapArray;
+
+  const fromDayMapObject = safeObjectValues<BackendDiaItem>(item?.dayMap);
+  if (fromDayMapObject.length > 0) return fromDayMapObject;
+
+  return [];
+}
+
+function normalizeEventoTitulo(evento: BackendEventoItem | null): string {
+  return normalizeSpaces(
+    evento?.titulo || evento?.nome || evento?.descricao || evento?.observacao
+  );
+}
+
+function normalizeOcorrenciaTexto(ocorrencia: BackendOcorrenciaItem | null): string {
+  return normalizeSpaces(
+    ocorrencia?.observacao ||
+      ocorrencia?.observacoes ||
+      ocorrencia?.descricao ||
+      ocorrencia?.texto ||
+      ocorrencia?.detalhe ||
+      ocorrencia?.titulo ||
+      ocorrencia?.nome
+  );
+}
+
+function normalizeOcorrenciaTurno(ocorrencia: BackendOcorrenciaItem | null): string {
+  return normalizeSpaces(ocorrencia?.turno);
 }
 
 function buildDayMapFromBackend(params: {
@@ -429,42 +575,43 @@ function buildDayMapFromBackend(params: {
 
   const dayMap = createEmptyDayMap(ano, mes);
   const warnings: string[] = [];
-  const dias = asArray(item?.dias);
+  const dias = normalizeDiaItems(item);
 
   for (const diaRaw of dias) {
-    const dia = Number(diaRaw?.dia);
+    const dia = toFiniteNumber(diaRaw?.dia, NaN);
     if (!Number.isFinite(dia) || !dayMap[dia]) continue;
 
     const atual = dayMap[dia];
-    const ocorrencias = asArray(diaRaw?.ocorrencias);
-    const eventos = asArray(diaRaw?.eventos);
+    const ocorrencias = asArray<BackendOcorrenciaItem>(diaRaw?.ocorrencias);
+    const eventos = asArray<BackendEventoItem>(diaRaw?.eventos);
 
     const falta =
-      firstBy(ocorrencias, (o) => safeUpper(o?.tipo) === 'FALTA') || null;
+      firstBy<BackendOcorrenciaItem>(ocorrencias, (o) => safeUpper(o?.tipo) === 'FALTA') || null;
 
     const atestado =
-      firstBy(ocorrencias, (o) => safeUpper(o?.tipo) === 'ATESTADO') || null;
+      firstBy<BackendOcorrenciaItem>(ocorrencias, (o) => safeUpper(o?.tipo) === 'ATESTADO') || null;
 
     const manual =
-      firstBy(ocorrencias, (o) => {
+      firstBy<BackendOcorrenciaItem>(ocorrencias, (o) => {
         const tipo = safeUpper(o?.tipo);
-        return tipo !== 'FALTA' && tipo !== 'ATESTADO';
+        return Boolean(tipo) && tipo !== 'FALTA' && tipo !== 'ATESTADO';
       }) || null;
 
     const feriado =
-      firstBy(eventos, (e) => safeUpper(e?.tipo) === 'FERIADO') || null;
+      firstBy<BackendEventoItem>(eventos, (e) => safeUpper(e?.tipo) === 'FERIADO') || null;
 
     const ponto =
-      firstBy(eventos, (e) => {
+      firstBy<BackendEventoItem>(eventos, (e) => {
         const tipo = safeUpper(e?.tipo);
-        return tipo === 'PONTO' || tipo === 'PONTO FACULTATIVO';
+        return tipo === 'PONTO' || tipo === 'PONTO FACULTATIVO' || tipo === 'PONTO_FACULTATIVO';
       }) || null;
 
-    const isVacation = Boolean(diaRaw?.ferias);
-    const isAtestado = Boolean(atestado);
-    const isHoliday = Boolean(feriado);
-    const isPontoFacultativo = Boolean(ponto) && incluirPontoFacultativo;
-    const isFalta = Boolean(falta);
+    const isVacation = Boolean(diaRaw?.ferias) && diaRaw?.ferias !== false || isTruthyLike(diaRaw?.ferias);
+    const isAtestado = Boolean(atestado) || isTruthyLike(diaRaw?.atestado);
+    const isHoliday = Boolean(feriado) || isTruthyLike(diaRaw?.feriado);
+    const isPontoFacultativo =
+      (Boolean(ponto) || isTruthyLike(diaRaw?.pontoFacultativo)) && incluirPontoFacultativo;
+    const isFalta = Boolean(falta) || isTruthyLike(diaRaw?.falta);
 
     let finalStatus: StatusConsolidadoDia = atual.finalStatus;
 
@@ -495,13 +642,28 @@ function buildDayMapFromBackend(params: {
     let ocorrencia2 = '';
     const observacoes: string[] = [];
 
+    if (normalizeSpaces(diaRaw?.rubrica)) {
+      rubrica = normalizeSpaces(diaRaw.rubrica);
+      rubrica1 = normalizeSpaces(diaRaw?.rubrica1 || diaRaw?.rubrica || '');
+      rubrica2 = normalizeSpaces(diaRaw?.rubrica2 || diaRaw?.rubrica || '');
+    }
+
+    if (normalizeSpaces(diaRaw?.ocorrencia1)) {
+      ocorrencia1 = normalizeSpaces(diaRaw.ocorrencia1);
+    }
+
+    if (normalizeSpaces(diaRaw?.ocorrencia2)) {
+      ocorrencia2 = normalizeSpaces(diaRaw.ocorrencia2);
+    }
+
     if (
-      finalStatus === 'SABADO' ||
-      finalStatus === 'DOMINGO' ||
-      finalStatus === 'FERIADO' ||
-      finalStatus === 'FERIAS' ||
-      finalStatus === 'ATESTADO' ||
-      finalStatus === 'PONTO_FACULTATIVO'
+      !rubrica &&
+      (finalStatus === 'SABADO' ||
+        finalStatus === 'DOMINGO' ||
+        finalStatus === 'FERIADO' ||
+        finalStatus === 'FERIAS' ||
+        finalStatus === 'ATESTADO' ||
+        finalStatus === 'PONTO_FACULTATIVO')
     ) {
       rubrica = statusToRubrica(finalStatus);
       rubrica1 = rubrica;
@@ -510,77 +672,99 @@ function buildDayMapFromBackend(params: {
 
     if (finalStatus === 'FALTA') {
       if (faltaVaiParaRubrica) {
-        rubrica = 'FALTA';
-        rubrica1 = 'FALTA';
-        rubrica2 = 'FALTA';
+        rubrica = rubrica || 'FALTA';
+        rubrica1 = rubrica1 || 'FALTA';
+        rubrica2 = rubrica2 || 'FALTA';
       } else {
-        ocorrencia1 = 'FALTA';
-        ocorrencia2 = 'FALTA';
+        ocorrencia1 = ocorrencia1 || 'FALTA';
+        ocorrencia2 = ocorrencia2 || 'FALTA';
       }
     }
 
     if (manual) {
       const manualTipo = safeUpper(manual?.tipo);
+      const manualLabel = normalizeSpaces(manual?.tipo);
 
       if (!rubrica && manualTipo && manualTipo !== 'NORMAL') {
-        rubrica = normalizeSpaces(manual?.tipo);
-        rubrica1 = rubrica;
-        rubrica2 = rubrica;
+        rubrica = manualLabel;
+        rubrica1 = manualLabel;
+        rubrica2 = manualLabel;
       }
 
-      if (!ocorrencia1 && normalizeSpaces(manual?.observacao)) {
-        ocorrencia1 = normalizeSpaces(manual?.observacao);
+      const manualTexto = normalizeOcorrenciaTexto(manual);
+      const manualTurno = normalizeOcorrenciaTurno(manual);
+
+      if (!ocorrencia1 && manualTexto) {
+        ocorrencia1 = manualTexto;
       }
 
-      if (!ocorrencia2 && normalizeSpaces(manual?.turno)) {
-        ocorrencia2 = normalizeSpaces(manual?.turno);
+      if (!ocorrencia2 && manualTurno) {
+        ocorrencia2 = manualTurno;
       }
     }
 
-    if (feriado?.titulo || feriado?.nome) {
-      observacoes.push(`Feriado: ${normalizeSpaces(feriado.titulo || feriado.nome)}`);
+    const tituloFeriado = normalizeEventoTitulo(feriado);
+    if (tituloFeriado) {
+      observacoes.push(`Feriado: ${tituloFeriado}`);
     }
 
-    if (ponto?.titulo || ponto?.nome) {
-      observacoes.push(`Ponto facultativo: ${normalizeSpaces(ponto.titulo || ponto.nome)}`);
+    const tituloPonto = normalizeEventoTitulo(ponto);
+    if (tituloPonto) {
+      observacoes.push(`Ponto facultativo: ${tituloPonto}`);
     }
 
-    if (falta?.observacao || falta?.descricao) {
-      observacoes.push(normalizeSpaces(falta.observacao || falta.descricao));
+    const textoFalta = normalizeOcorrenciaTexto(falta);
+    if (textoFalta) {
+      observacoes.push(textoFalta);
     }
 
-    if (atestado?.observacao || atestado?.descricao) {
-      observacoes.push(normalizeSpaces(atestado.observacao || atestado.descricao));
+    const textoAtestado = normalizeOcorrenciaTexto(atestado);
+    if (textoAtestado) {
+      observacoes.push(textoAtestado);
     }
 
-    if (manual?.observacao || manual?.descricao) {
-      observacoes.push(normalizeSpaces(manual.observacao || manual.descricao));
+    const textoManual = normalizeOcorrenciaTexto(manual);
+    if (textoManual) {
+      observacoes.push(textoManual);
     }
+
+    if (normalizeSpaces(diaRaw?.observacoes || diaRaw?.observacao)) {
+      observacoes.push(normalizeSpaces(diaRaw?.observacoes || diaRaw?.observacao));
+    }
+
+    const conflitos: string[] = [];
+    const avisos: string[] = [];
 
     if (isVacation && isAtestado) {
+      const conflito = 'Conflito: férias e atestado no mesmo dia';
+      conflitos.push(conflito);
+      avisos.push(conflito);
       warnings.push(`Dia ${dia}: conflito entre férias e atestado.`);
     }
 
+    const dataIsoNormalizada = normalizeIsoDate(diaRaw?.data || diaRaw?.dataISO) || atual.dataISO;
+
     dayMap[dia] = {
       ...atual,
+      dataISO: dataIsoNormalizada,
       isHoliday,
       isPontoFacultativo,
       isVacation,
       isAtestado,
       isFalta,
-      rubrica,
-      rubrica1,
-      rubrica2,
-      ocorrencia1,
-      ocorrencia2,
-      observacoes: observacoes.filter(Boolean).join(' | '),
+      rubrica: normalizeSpaces(rubrica),
+      rubrica1: normalizeSpaces(rubrica1),
+      rubrica2: normalizeSpaces(rubrica2),
+      ocorrencia1: normalizeSpaces(ocorrencia1),
+      ocorrencia2: normalizeSpaces(ocorrencia2),
+      observacoes: observacoes.map(normalizeSpaces).filter(Boolean).join(' | '),
       finalStatus,
-      conflitos: isVacation && isAtestado ? ['Conflito: férias e atestado no mesmo dia'] : [],
-      avisos: isVacation && isAtestado ? ['Conflito: férias e atestado no mesmo dia'] : [],
+      conflitos,
+      avisos,
       fontes: {
         evento: feriado,
         ponto,
-        ferias: diaRaw?.ferias ? diaRaw : null,
+        ferias: isVacation ? diaRaw?.ferias || diaRaw : null,
         atestado,
         falta,
         manual
@@ -591,6 +775,25 @@ function buildDayMapFromBackend(params: {
   return { dayMap, warnings };
 }
 
+async function readResponsePayload(response: Response): Promise<any> {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const text = await response.text();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchJson(url: string): Promise<any> {
   const response = await fetch(url, {
     method: 'GET',
@@ -599,19 +802,33 @@ async function fetchJson(url: string): Promise<any> {
     }
   });
 
-  let payload: any = null;
-
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+  const payload = await readResponsePayload(response);
 
   if (!response.ok) {
     throw new Error(parseApiError(payload, 'Falha ao consultar a frequência.'));
   }
 
   return payload;
+}
+
+function normalizeBackendList(payload: any): BackendServidorItem[] {
+  const list = asArray<BackendServidorItem>(payload?.data ?? payload?.items ?? payload?.results ?? payload);
+
+  if (list.length > 0) return list;
+
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    const maybeSingle =
+      payload?.servidor ||
+      payload?.dias ||
+      payload?.dayMap ||
+      payload?.cpf ||
+      payload?.nome
+        ? [payload as BackendServidorItem]
+        : [];
+    return maybeSingle;
+  }
+
+  return [];
 }
 
 export async function carregarDadosConsolidadosFrequencia(
@@ -641,16 +858,18 @@ export async function carregarDadosConsolidadosFrequencia(
     `&servidorCpf=${encodeURIComponent(servidor.cpf)}`;
 
   const payload = await fetchJson(url);
-  const lista = asArray<BackendServidorItem>(payload?.data ?? payload);
-  const item = choosePrimaryBackendItem(lista, servidor.cpf);
+  const lista = normalizeBackendList(payload);
+  const item = choosePrimaryBackendItem(lista, servidor);
 
   if (!item) {
     throw new Error('Nenhum dado de frequência foi encontrado para o servidor selecionado.');
   }
 
-  const servidorApi = item.servidor || {};
+  const servidorApi = extractServidorShape(item);
   const servidorNormalizado: NormalizedServidor = {
-    id: normalizeSpaces(servidorApi.id || servidor.id || servidor.cpf) || servidor.cpf,
+    id: normalizeSpaces(
+      servidorApi.id || servidorApi.uuid || servidorApi.servidor || servidorApi.servidor_id || servidor.id || servidor.cpf
+    ) || servidor.cpf,
     cpf: onlyDigits(servidorApi.cpf || servidor.cpf),
     nome: normalizeSpaces(servidorApi.nome || servidor.nome),
     matricula: normalizeSpaces(servidorApi.matricula || servidor.matricula),
@@ -774,12 +993,7 @@ export async function exportarFrequenciaArquivo(
   });
 
   if (!response.ok) {
-    let json: any = null;
-    try {
-      json = await response.json();
-    } catch {
-      json = null;
-    }
+    const json = await readResponsePayload(response);
     throw new Error(parseApiError(json, 'Falha ao exportar a folha.'));
   }
 
