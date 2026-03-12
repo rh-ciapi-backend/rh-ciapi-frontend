@@ -3,7 +3,6 @@ import {
   AlertCircle,
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   ClipboardList,
   Clock3,
   Download,
@@ -37,16 +36,7 @@ type Suggestion = {
   raw: any;
 };
 
-type StatusChipTone =
-  | 'default'
-  | 'blue'
-  | 'green'
-  | 'yellow'
-  | 'red'
-  | 'purple'
-  | 'slate';
-
-type NormalizedDayItem = {
+type PreviewDayItem = {
   dia: number;
   weekdayLabel: string;
   finalStatus: string;
@@ -55,20 +45,6 @@ type NormalizedDayItem = {
   ocorrencia2: string;
   observacoes: string;
   avisos: string[];
-};
-
-type NormalizedPreview = {
-  servidor: {
-    nome: string;
-    cpf: string;
-  };
-  mes: number;
-  ano: number;
-  totalDiasMes: number;
-  hiddenRowsFrom: number;
-  hiddenRowsTo: number;
-  dayItems: NormalizedDayItem[];
-  warnings: string[];
 };
 
 const MONTHS = [
@@ -86,20 +62,20 @@ const MONTHS = [
   { value: 12, label: 'Dezembro' }
 ];
 
-const CURRENT_DATE = new Date();
-const DEFAULT_MONTH = CURRENT_DATE.getMonth() + 1;
-const DEFAULT_YEAR = CURRENT_DATE.getFullYear();
+const TODAY = new Date();
+const DEFAULT_MONTH = TODAY.getMonth() + 1;
+const DEFAULT_YEAR = TODAY.getFullYear();
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-function onlyDigits(value: string | null | undefined): string {
-  return String(value ?? '').replace(/\D+/g, '');
-}
-
 function normalizeSpaces(value: any): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function onlyDigits(value: any): string {
+  return String(value ?? '').replace(/\D+/g, '');
 }
 
 function asArray<T = any>(value: any): T[] {
@@ -107,6 +83,7 @@ function asArray<T = any>(value: any): T[] {
   if (Array.isArray(value?.data)) return value.data;
   if (Array.isArray(value?.items)) return value.items;
   if (Array.isArray(value?.results)) return value.results;
+  if (Array.isArray(value?.rows)) return value.rows;
   return [];
 }
 
@@ -124,65 +101,28 @@ function toFiniteNumber(value: any, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function monthLabel(month: number): string {
+  return MONTHS.find((item) => item.value === month)?.label ?? String(month);
+}
+
+function buildYearOptions(centerYear = DEFAULT_YEAR): number[] {
+  const years: number[] = [];
+  for (let year = centerYear - 3; year <= centerYear + 3; year += 1) {
+    years.push(year);
+  }
+  return years;
+}
+
 function maskCpf(value: string): string {
   const digits = onlyDigits(value);
   if (digits.length !== 11) return value || '';
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
-function monthLabel(month: number): string {
-  return MONTHS.find((item) => item.value === month)?.label ?? String(month);
-}
-
-function buildYearOptions(centerYear = DEFAULT_YEAR): number[] {
-  const list: number[] = [];
-  for (let y = centerYear - 3; y <= centerYear + 3; y += 1) {
-    list.push(y);
-  }
-  return list;
-}
-
-function buildStatusTone(status: string): StatusChipTone {
-  switch (String(status || '').toUpperCase()) {
-    case 'FERIAS':
-      return 'green';
-    case 'ATESTADO':
-      return 'yellow';
-    case 'FERIADO':
-      return 'blue';
-    case 'PONTO_FACULTATIVO':
-      return 'purple';
-    case 'FALTA':
-      return 'red';
-    case 'SABADO':
-    case 'DOMINGO':
-      return 'slate';
-    default:
-      return 'default';
-  }
-}
-
-function chipClassName(tone: StatusChipTone): string {
-  switch (tone) {
-    case 'blue':
-      return 'border-blue-500/30 bg-blue-500/10 text-blue-300';
-    case 'green':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
-    case 'yellow':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
-    case 'red':
-      return 'border-rose-500/30 bg-rose-500/10 text-rose-300';
-    case 'purple':
-      return 'border-violet-500/30 bg-violet-500/10 text-violet-300';
-    case 'slate':
-      return 'border-slate-500/30 bg-slate-500/10 text-slate-300';
-    default:
-      return 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300';
-  }
-}
-
 function normalizeSuggestion(row: any): Suggestion | null {
   const nome = normalizeSpaces(row?.nomeCompleto || row?.nome_completo || row?.nome);
+  if (!nome) return null;
+
   const cpf = onlyDigits(row?.cpf);
   const matricula = normalizeSpaces(row?.matricula);
   const id = normalizeSpaces(
@@ -191,18 +131,16 @@ function normalizeSuggestion(row: any): Suggestion | null {
       row?.uuid ||
       row?.servidor_id ||
       row?.cpf ||
-      `${row?.nome || 'srv'}-${row?.matricula || ''}`
+      `${nome}-${matricula || 'sem-id'}`
   );
 
-  if (!nome) return null;
-
   return {
-    id: id || `${nome}-${matricula || cpf || 'sem-id'}`,
+    id: id || `${nome}-${cpf || matricula || 'sem-id'}`,
     nome,
     cpf,
     matricula,
     categoria: normalizeSpaces(row?.categoria || row?.categoria_canonica),
-    setor: normalizeSpaces(row?.setor || row?.lotacao_interna || row?.lotacao),
+    setor: normalizeSpaces(row?.setor || row?.lotacao || row?.lotacao_interna),
     cargo: normalizeSpaces(row?.cargo),
     status: normalizeSpaces(row?.status || 'ATIVO').toUpperCase(),
     raw: row
@@ -228,66 +166,56 @@ function suggestionToServidor(item: Suggestion): ServidorFrequencia {
   };
 }
 
-function statusLabel(item: Suggestion) {
-  return item.status === 'ATIVO' ? 'ATIVO' : item.status || 'SEM STATUS';
-}
+function normalizePreviewDays(preview: ConsolidacaoFrequenciaResult | null): PreviewDayItem[] {
+  if (!preview || typeof preview !== 'object') return [];
 
-function normalizeWarnings(input: any): string[] {
-  return asArray<any>(input)
-    .map((item) => normalizeSpaces(typeof item === 'string' ? item : item?.mensagem || item?.message))
-    .filter(Boolean);
-}
+  const rawDayMap = (preview as any)?.dayMap;
+  const merged = [...asArray<any>(rawDayMap), ...safeObjectValues<any>(rawDayMap)];
 
-function normalizeDayItem(input: any): NormalizedDayItem | null {
-  const dia = toFiniteNumber(input?.dia, NaN);
-  if (!Number.isFinite(dia) || dia <= 0) return null;
+  const mapped = merged
+    .map((item) => {
+      const dia = toFiniteNumber(item?.dia, NaN);
+      if (!Number.isFinite(dia) || dia <= 0) return null;
 
-  return {
-    dia,
-    weekdayLabel: normalizeSpaces(input?.weekdayLabel || input?.semana || input?.diaSemana),
-    finalStatus: normalizeSpaces(input?.finalStatus || input?.status || 'PENDENTE').toUpperCase(),
-    rubrica: normalizeSpaces(input?.rubrica),
-    ocorrencia1: normalizeSpaces(input?.ocorrencia1 || input?.o1 || input?.turno1),
-    ocorrencia2: normalizeSpaces(input?.ocorrencia2 || input?.o2 || input?.turno2),
-    observacoes: normalizeSpaces(input?.observacoes || input?.observacao),
-    avisos: normalizeWarnings(input?.avisos)
-  };
-}
+      return {
+        dia,
+        weekdayLabel: normalizeSpaces(item?.weekdayLabel || item?.semana || item?.diaSemana),
+        finalStatus: normalizeSpaces(item?.finalStatus || item?.status || 'NORMAL').toUpperCase(),
+        rubrica: normalizeSpaces(item?.rubrica),
+        ocorrencia1: normalizeSpaces(item?.ocorrencia1 || item?.o1 || item?.turno1),
+        ocorrencia2: normalizeSpaces(item?.ocorrencia2 || item?.o2 || item?.turno2),
+        observacoes: normalizeSpaces(item?.observacoes || item?.observacao),
+        avisos: asArray<any>(item?.avisos).map((a) => normalizeSpaces(a)).filter(Boolean)
+      } as PreviewDayItem;
+    })
+    .filter((item): item is PreviewDayItem => Boolean(item))
+    .sort((a, b) => a.dia - b.dia);
 
-function normalizePreviewData(input: ConsolidacaoFrequenciaResult | null): NormalizedPreview | null {
-  if (!input || typeof input !== 'object') return null;
-
-  const rawDayMap = (input as any)?.dayMap;
-  const dayItems = [
-    ...asArray<any>(rawDayMap),
-    ...safeObjectValues<any>(rawDayMap)
-  ]
-    .map(normalizeDayItem)
-    .filter((item): item is NormalizedDayItem => Boolean(item))
-    .sort((a, b) => a.dia - b.dia)
-    .filter((item, index, arr) => arr.findIndex((entry) => entry.dia === item.dia) === index);
-
-  const servidorNome = normalizeSpaces(
-    (input as any)?.servidor?.nome ||
-      (input as any)?.servidor?.nomeCompleto ||
-      (input as any)?.servidor?.nome_completo
+  return mapped.filter(
+    (item, index, arr) => arr.findIndex((entry) => entry.dia === item.dia) === index
   );
+}
 
-  const servidorCpf = onlyDigits((input as any)?.servidor?.cpf);
+function chipClassName(status: string): string {
+  const value = String(status || '').toUpperCase();
 
-  return {
-    servidor: {
-      nome: servidorNome || 'Servidor',
-      cpf: servidorCpf
-    },
-    mes: toFiniteNumber((input as any)?.mes, DEFAULT_MONTH),
-    ano: toFiniteNumber((input as any)?.ano, DEFAULT_YEAR),
-    totalDiasMes: toFiniteNumber((input as any)?.totalDiasMes, dayItems.length),
-    hiddenRowsFrom: toFiniteNumber((input as any)?.hiddenRowsFrom, 0),
-    hiddenRowsTo: toFiniteNumber((input as any)?.hiddenRowsTo, 0),
-    dayItems,
-    warnings: normalizeWarnings((input as any)?.warnings)
-  };
+  switch (value) {
+    case 'FERIAS':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+    case 'ATESTADO':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+    case 'FERIADO':
+      return 'border-blue-500/30 bg-blue-500/10 text-blue-300';
+    case 'FALTA':
+      return 'border-rose-500/30 bg-rose-500/10 text-rose-300';
+    case 'PONTO_FACULTATIVO':
+      return 'border-violet-500/30 bg-violet-500/10 text-violet-300';
+    case 'SABADO':
+    case 'DOMINGO':
+      return 'border-slate-500/30 bg-slate-500/10 text-slate-300';
+    default:
+      return 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300';
+  }
 }
 
 function StatCard({
@@ -326,7 +254,7 @@ function ToggleCard({
   description
 }: {
   checked: boolean;
-  onChange: (checked: boolean) => void;
+  onChange: (value: boolean) => void;
   title: string;
   description: string;
 }) {
@@ -352,7 +280,6 @@ export default function FrequenciaPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const [mes, setMes] = useState<number>(DEFAULT_MONTH);
   const [ano, setAno] = useState<number>(DEFAULT_YEAR);
@@ -371,43 +298,10 @@ export default function FrequenciaPage() {
   const searchRequestIdRef = useRef(0);
 
   const yearOptions = useMemo(() => buildYearOptions(), []);
-  const normalizedPreview = useMemo(() => normalizePreviewData(preview), [preview]);
-
-  const dayItems = normalizedPreview?.dayItems ?? [];
-
-  const canPreview = Boolean(selectedServidor) && !loadingPreview;
-  const canExport = Boolean(selectedServidor) && exportingFormat === null;
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!suggestionsBoxRef.current) return;
-      if (!suggestionsBoxRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-        setHighlightedIndex(-1);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!errorMessage && !successMessage) return;
-
-    const timer = window.setTimeout(() => {
-      setErrorMessage('');
-      setSuccessMessage('');
-    }, 5000);
-
-    return () => window.clearTimeout(timer);
-  }, [errorMessage, successMessage]);
-
-  useEffect(() => {
-    setHighlightedIndex(suggestions.length > 0 ? 0 : -1);
-  }, [suggestions]);
+  const previewDays = useMemo(() => normalizePreviewDays(preview), [preview]);
 
   const counts = useMemo(() => {
-    return dayItems.reduce(
+    return previewDays.reduce(
       (acc, item) => {
         if (item.finalStatus === 'SABADO') acc.sabados += 1;
         if (item.finalStatus === 'DOMINGO') acc.domingos += 1;
@@ -427,10 +321,33 @@ export default function FrequenciaPage() {
         feriados: 0,
         faltas: 0,
         ponto: 0,
-        warnings: normalizedPreview?.warnings.length ?? 0
+        warnings: asArray<any>((preview as any)?.warnings).length
       }
     );
-  }, [dayItems, normalizedPreview?.warnings.length]);
+  }, [previewDays, preview]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!suggestionsBoxRef.current) return;
+      if (!suggestionsBoxRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!errorMessage && !successMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setErrorMessage('');
+      setSuccessMessage('');
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [errorMessage, successMessage]);
 
   const searchServidores = useCallback(
     async (term: string) => {
@@ -467,9 +384,7 @@ export default function FrequenciaPage() {
 
         const { data, error } = await query;
 
-        if (requestId !== searchRequestIdRef.current) {
-          return;
-        }
+        if (requestId !== searchRequestIdRef.current) return;
 
         if (error) {
           throw error;
@@ -490,7 +405,7 @@ export default function FrequenciaPage() {
         setDropdownOpen(true);
       } catch (error) {
         if (requestId !== searchRequestIdRef.current) return;
-        console.error('Erro ao buscar servidores para frequência:', error);
+        console.error('Erro ao buscar servidores:', error);
         setSuggestions([]);
         setDropdownOpen(true);
       } finally {
@@ -503,74 +418,37 @@ export default function FrequenciaPage() {
   );
 
   useEffect(() => {
-    const handle = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void searchServidores(buscaServidor);
-    }, 280);
+    }, 300);
 
-    return () => window.clearTimeout(handle);
+    return () => window.clearTimeout(timer);
   }, [buscaServidor, searchServidores]);
 
   const handleSelectServidor = useCallback((item: Suggestion) => {
     setSelectedServidor(item);
     setBuscaServidor(item.nome);
     setDropdownOpen(false);
-    setHighlightedIndex(-1);
-    setSuccessMessage('');
-    setErrorMessage('');
     setPreview(null);
+    setErrorMessage('');
+    setSuccessMessage('');
   }, []);
 
   const handleClearServidor = useCallback(() => {
     setSelectedServidor(null);
     setBuscaServidor('');
     setSuggestions([]);
-    setPreview(null);
     setDropdownOpen(false);
-    setHighlightedIndex(-1);
-    setSuccessMessage('');
+    setPreview(null);
     setErrorMessage('');
+    setSuccessMessage('');
   }, []);
 
-  const handleInputKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!dropdownOpen || suggestions.length === 0) {
-        if (event.key === 'Escape') {
-          setDropdownOpen(false);
-          setHighlightedIndex(-1);
-        }
-        return;
-      }
-
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setHighlightedIndex((prev) => (prev + 1) % suggestions.length);
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setHighlightedIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
-      }
-
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const option = suggestions[highlightedIndex] ?? suggestions[0];
-        if (option) handleSelectServidor(option);
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setDropdownOpen(false);
-        setHighlightedIndex(-1);
-      }
-    },
-    [dropdownOpen, suggestions, highlightedIndex, handleSelectServidor]
-  );
-
-  const loadPreview = useCallback(async () => {
+  const handleLoadPreview = useCallback(async () => {
     if (!selectedServidor) {
       setErrorMessage('Selecione um servidor para visualizar a frequência.');
       setSuccessMessage('');
-      return null;
+      return;
     }
 
     setLoadingPreview(true);
@@ -588,18 +466,17 @@ export default function FrequenciaPage() {
 
       setPreview(result);
       setSuccessMessage(`Pré-visualização carregada para ${selectedServidor.nome}.`);
-      return result;
     } catch (error: any) {
-      const msg = normalizeSpaces(error?.message) || 'Não foi possível carregar a consolidação da frequência.';
       setPreview(null);
-      setErrorMessage(msg);
-      return null;
+      setErrorMessage(
+        normalizeSpaces(error?.message) || 'Não foi possível carregar a consolidação.'
+      );
     } finally {
       setLoadingPreview(false);
     }
   }, [selectedServidor, mes, ano, includePontoFacultativo, faltaVaiParaRubrica]);
 
-  const exportarArquivo = useCallback(
+  const handleExport = useCallback(
     async (formato: ExportFormat) => {
       if (!selectedServidor) {
         setErrorMessage('Selecione um servidor antes de exportar.');
@@ -612,10 +489,8 @@ export default function FrequenciaPage() {
       setSuccessMessage('');
 
       try {
-        const servidor = suggestionToServidor(selectedServidor);
-
         await baixarFrequenciaArquivo({
-          servidor,
+          servidor: suggestionToServidor(selectedServidor),
           mes,
           ano,
           incluirPontoFacultativo: includePontoFacultativo,
@@ -623,32 +498,21 @@ export default function FrequenciaPage() {
           formato
         });
 
-        const nomeServidor = normalizeSpaces(servidor.nomeCompleto ?? servidor.nome) || 'servidor';
-        setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso para ${nomeServidor}.`);
-
-        const previewCpf = onlyDigits((preview as any)?.servidor?.cpf);
-        if (!preview || (preview as any)?.ano !== ano || (preview as any)?.mes !== mes || previewCpf !== onlyDigits(selectedServidor.cpf)) {
-          void loadPreview();
-        }
+        setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso.`);
       } catch (error: any) {
-        setErrorMessage(normalizeSpaces(error?.message) || 'Não foi possível exportar a frequência.');
+        setErrorMessage(normalizeSpaces(error?.message) || 'Não foi possível exportar.');
       } finally {
         setExportingFormat(null);
       }
     },
-    [selectedServidor, mes, ano, includePontoFacultativo, faltaVaiParaRubrica, preview, loadPreview]
+    [selectedServidor, mes, ano, includePontoFacultativo, faltaVaiParaRubrica]
   );
 
-  const previewHeaderText = useMemo(() => {
-    if (!normalizedPreview) return '';
-    return `${normalizedPreview.servidor.nome} • ${monthLabel(normalizedPreview.mes)} / ${normalizedPreview.ano}`;
-  }, [normalizedPreview]);
-
-  const selectedServidorResumo = useMemo(() => {
+  const servidorResumo = useMemo(() => {
     if (!selectedServidor) return null;
 
     return {
-      nome: selectedServidor.nome || 'Servidor sem nome',
+      nome: selectedServidor.nome || 'Servidor',
       cpf: maskCpf(selectedServidor.cpf || ''),
       matricula: selectedServidor.matricula || '—',
       categoria: selectedServidor.categoria || 'Sem categoria',
@@ -656,6 +520,12 @@ export default function FrequenciaPage() {
       cargo: selectedServidor.cargo || 'Sem cargo'
     };
   }, [selectedServidor]);
+
+  const previewWarnings = useMemo(() => {
+    return asArray<any>((preview as any)?.warnings)
+      .map((item) => normalizeSpaces(item))
+      .filter(Boolean);
+  }, [preview]);
 
   return (
     <div className="min-h-full bg-[#07111f] text-slate-100">
@@ -674,7 +544,7 @@ export default function FrequenciaPage() {
                   Folha mensal de frequência
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                  Consulte a consolidação do mês com férias, atestados, feriados, ponto facultativo e faltas em um painel único, estável e pronto para revisão.
+                  Consulte a consolidação mensal com férias, atestados, feriados, ponto facultativo e faltas em um painel único.
                 </p>
               </div>
             </div>
@@ -710,7 +580,6 @@ export default function FrequenciaPage() {
               type="button"
               onClick={() => setErrorMessage('')}
               className="rounded-lg p-1 text-rose-300 transition hover:bg-white/5"
-              aria-label="Fechar mensagem de erro"
             >
               <X className="h-4 w-4" />
             </button>
@@ -725,7 +594,6 @@ export default function FrequenciaPage() {
               type="button"
               onClick={() => setSuccessMessage('')}
               className="rounded-lg p-1 text-emerald-300 transition hover:bg-white/5"
-              aria-label="Fechar mensagem de sucesso"
             >
               <X className="h-4 w-4" />
             </button>
@@ -741,9 +609,7 @@ export default function FrequenciaPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-white">Servidor</h2>
-                  <p className="text-sm text-slate-400">
-                    Busque por nome, matrícula ou CPF.
-                  </p>
+                  <p className="text-sm text-slate-400">Busque por nome, matrícula ou CPF.</p>
                 </div>
               </div>
 
@@ -761,10 +627,10 @@ export default function FrequenciaPage() {
                           setDropdownOpen(true);
                         }
                       }}
-                      onKeyDown={handleInputKeyDown}
                       placeholder="Ex.: Joa, matrícula ou CPF"
                       className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 pr-11 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
                     />
+
                     <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
                       {loadingSuggestions ? (
                         <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
@@ -782,7 +648,7 @@ export default function FrequenciaPage() {
                           </div>
                         ) : suggestions.length === 0 ? (
                           <div className="px-3 py-3 text-sm text-slate-400">
-                            Nenhum servidor encontrado para a busca atual.
+                            Nenhum servidor encontrado.
                           </div>
                         ) : (
                           suggestions.map((item, index) => (
@@ -790,15 +656,10 @@ export default function FrequenciaPage() {
                               key={`${item.id}-${item.cpf || index}`}
                               type="button"
                               onClick={() => handleSelectServidor(item)}
-                              className={cn(
-                                'flex w-full flex-col rounded-xl px-3 py-3 text-left transition',
-                                highlightedIndex === index ? 'bg-white/10' : 'hover:bg-white/5'
-                              )}
+                              className="flex w-full flex-col rounded-xl px-3 py-3 text-left transition hover:bg-white/5"
                             >
                               <div className="flex items-center justify-between gap-3">
-                                <div className="truncate font-medium text-white">
-                                  {item.nome || 'Sem nome'}
-                                </div>
+                                <div className="truncate font-medium text-white">{item.nome}</div>
                                 <span
                                   className={cn(
                                     'rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em]',
@@ -807,14 +668,12 @@ export default function FrequenciaPage() {
                                       : 'border-slate-500/30 bg-slate-500/10 text-slate-300'
                                   )}
                                 >
-                                  {statusLabel(item)}
+                                  {item.status || 'SEM STATUS'}
                                 </span>
                               </div>
-
                               <div className="mt-1 text-xs text-slate-400">
-                                CPF {maskCpf(item.cpf || '')} • Matrícula {item.matricula || '—'}
+                                CPF {maskCpf(item.cpf)} • Matrícula {item.matricula || '—'}
                               </div>
-
                               <div className="mt-1 text-xs text-slate-500">
                                 {item.categoria || 'Sem categoria'} • {item.setor || 'Sem setor'}
                               </div>
@@ -830,24 +689,24 @@ export default function FrequenciaPage() {
                   checked={somenteAtivos}
                   onChange={setSomenteAtivos}
                   title="Mostrar apenas servidores ativos"
-                  description="Reduz o volume de resultados e prioriza quem está em exercício."
+                  description="Prioriza quem está em exercício e reduz o volume da busca."
                 />
 
-                {selectedServidorResumo ? (
+                {servidorResumo ? (
                   <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-2 text-white">
                           <User className="h-4 w-4 flex-shrink-0 text-cyan-300" />
-                          <span className="truncate font-semibold">{selectedServidorResumo.nome}</span>
+                          <span className="truncate font-semibold">{servidorResumo.nome}</span>
                         </div>
                         <div className="text-xs text-slate-300">
-                          CPF {selectedServidorResumo.cpf || '—'} • Matrícula {selectedServidorResumo.matricula}
+                          CPF {servidorResumo.cpf || '—'} • Matrícula {servidorResumo.matricula}
                         </div>
                         <div className="text-xs text-slate-400">
-                          {selectedServidorResumo.categoria} • {selectedServidorResumo.setor}
+                          {servidorResumo.categoria} • {servidorResumo.setor}
                         </div>
-                        <div className="text-xs text-slate-500">{selectedServidorResumo.cargo}</div>
+                        <div className="text-xs text-slate-500">{servidorResumo.cargo}</div>
                       </div>
 
                       <button
@@ -875,9 +734,7 @@ export default function FrequenciaPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-white">Período e regras</h2>
-                  <p className="text-sm text-slate-400">
-                    Ajuste o mês e as opções da consolidação.
-                  </p>
+                  <p className="text-sm text-slate-400">Ajuste o mês e as regras da consolidação.</p>
                 </div>
               </div>
 
@@ -918,25 +775,25 @@ export default function FrequenciaPage() {
                   checked={includePontoFacultativo}
                   onChange={setIncludePontoFacultativo}
                   title="Incluir ponto facultativo na rubrica"
-                  description="Mantém o espelhamento dos eventos opcionais dentro da consolidação mensal."
+                  description="Mantém os eventos opcionais dentro da consolidação mensal."
                 />
 
                 <ToggleCard
                   checked={faltaVaiParaRubrica}
                   onChange={setFaltaVaiParaRubrica}
                   title="Registrar falta na rubrica do servidor"
-                  description="Desative apenas quando quiser que a falta vá para o campo de ocorrência."
+                  description="Desative quando quiser levar a falta para o campo de ocorrência."
                 />
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <button
                   type="button"
-                  onClick={() => void loadPreview()}
-                  disabled={!canPreview}
+                  onClick={() => void handleLoadPreview()}
+                  disabled={!selectedServidor || loadingPreview}
                   className={cn(
                     'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition',
-                    !canPreview
+                    !selectedServidor || loadingPreview
                       ? 'cursor-not-allowed border border-white/10 bg-white/5 text-slate-500'
                       : 'border border-cyan-500/30 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/15'
                   )}
@@ -951,11 +808,11 @@ export default function FrequenciaPage() {
 
                 <button
                   type="button"
-                  onClick={() => void exportarArquivo('docx')}
-                  disabled={!canExport}
+                  onClick={() => void handleExport('docx')}
+                  disabled={!selectedServidor || exportingFormat !== null}
                   className={cn(
                     'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition',
-                    !canExport
+                    !selectedServidor || exportingFormat !== null
                       ? 'cursor-not-allowed border border-white/10 bg-white/5 text-slate-500'
                       : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/15'
                   )}
@@ -970,11 +827,11 @@ export default function FrequenciaPage() {
 
                 <button
                   type="button"
-                  onClick={() => void exportarArquivo('pdf')}
-                  disabled={!canExport}
+                  onClick={() => void handleExport('pdf')}
+                  disabled={!selectedServidor || exportingFormat !== null}
                   className={cn(
                     'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition',
-                    !canExport
+                    !selectedServidor || exportingFormat !== null
                       ? 'cursor-not-allowed border border-white/10 bg-white/5 text-slate-500'
                       : 'border border-sky-500/30 bg-sky-500/10 text-sky-100 hover:bg-sky-500/15'
                   )}
@@ -999,7 +856,7 @@ export default function FrequenciaPage() {
                   icon={<ShieldAlert className="h-5 w-5" />}
                   label="Regra da falta"
                   value={faltaVaiParaRubrica ? 'Rubrica' : 'Ocorrência'}
-                  helper="Compatível com a lógica aprovada no projeto."
+                  helper="Compatível com a lógica já aprovada."
                 />
               </div>
             </section>
@@ -1010,29 +867,24 @@ export default function FrequenciaPage() {
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-white">Resumo da consolidação</h2>
-                  <p className="text-sm text-slate-400">
-                    Painel de conferência antes da exportação.
-                  </p>
+                  <p className="text-sm text-slate-400">Painel de conferência antes da exportação.</p>
                 </div>
 
-                {normalizedPreview ? (
-                  <div className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-                    <ChevronRight className="h-4 w-4 text-cyan-300" />
-                    <span className="truncate">{previewHeaderText}</span>
+                {preview ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+                    {normalizeSpaces((preview as any)?.servidor?.nome || (preview as any)?.servidor?.nomeCompleto || 'Servidor')} • {monthLabel(toFiniteNumber((preview as any)?.mes, mes))} / {toFiniteNumber((preview as any)?.ano, ano)}
                   </div>
                 ) : null}
               </div>
 
-              {!normalizedPreview ? (
+              {!preview ? (
                 <div className="mt-5 rounded-3xl border border-dashed border-white/10 bg-slate-950/50 p-10 text-center">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
                     <ClipboardList className="h-6 w-6" />
                   </div>
-                  <div className="mt-4 text-lg font-semibold text-white">
-                    Nenhuma prévia carregada
-                  </div>
+                  <div className="mt-4 text-lg font-semibold text-white">Nenhuma prévia carregada</div>
                   <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                    Selecione um servidor e clique em <strong>Visualizar</strong> para conferir a consolidação do mês com segurança antes de baixar qualquer arquivo.
+                    Selecione um servidor e clique em <strong>Visualizar</strong> para conferir a consolidação do mês.
                   </p>
                 </div>
               ) : (
@@ -1041,10 +893,10 @@ export default function FrequenciaPage() {
                     <StatCard
                       icon={<CalendarDays className="h-5 w-5" />}
                       label="Dias do mês"
-                      value={normalizedPreview.totalDiasMes}
+                      value={toFiniteNumber((preview as any)?.totalDiasMes, previewDays.length)}
                       helper={
-                        normalizedPreview.hiddenRowsFrom > 0
-                          ? `Linhas ocultadas: ${normalizedPreview.hiddenRowsFrom}-${normalizedPreview.hiddenRowsTo}`
+                        toFiniteNumber((preview as any)?.hiddenRowsFrom, 0) > 0
+                          ? `Linhas ocultadas: ${toFiniteNumber((preview as any)?.hiddenRowsFrom, 0)}-${toFiniteNumber((preview as any)?.hiddenRowsTo, 0)}`
                           : 'Sem linhas excedentes'
                       }
                     />
@@ -1083,27 +935,25 @@ export default function FrequenciaPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5 bg-slate-950/35 text-sm">
-                          {dayItems.length === 0 ? (
+                          {previewDays.length === 0 ? (
                             <tr>
                               <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
                                 A consolidação foi carregada, mas não retornou dias válidos para exibição.
                               </td>
                             </tr>
                           ) : (
-                            dayItems.map((item) => (
+                            previewDays.map((item) => (
                               <tr key={item.dia} className="align-top transition hover:bg-white/[0.03]">
                                 <td className="px-4 py-3 font-semibold text-white">{item.dia}</td>
-                                <td className="px-4 py-3 text-slate-300">
-                                  {item.weekdayLabel || '—'}
-                                </td>
+                                <td className="px-4 py-3 text-slate-300">{item.weekdayLabel || '—'}</td>
                                 <td className="px-4 py-3">
                                   <span
                                     className={cn(
                                       'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]',
-                                      chipClassName(buildStatusTone(item.finalStatus))
+                                      chipClassName(item.finalStatus)
                                     )}
                                   >
-                                    {item.finalStatus || 'PENDENTE'}
+                                    {item.finalStatus || 'NORMAL'}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-slate-100">{item.rubrica || '—'}</td>
@@ -1118,7 +968,7 @@ export default function FrequenciaPage() {
                     </div>
                   </div>
 
-                  {normalizedPreview.warnings.length > 0 ? (
+                  {previewWarnings.length > 0 ? (
                     <div className="mt-5 rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                         <AlertCircle className="h-4 w-4" />
@@ -1126,7 +976,7 @@ export default function FrequenciaPage() {
                       </div>
 
                       <ul className="mt-3 space-y-2 text-sm text-amber-100/90">
-                        {normalizedPreview.warnings.map((warning, index) => (
+                        {previewWarnings.map((warning, index) => (
                           <li
                             key={`${warning}-${index}`}
                             className="rounded-2xl bg-black/10 px-3 py-2"
