@@ -1072,6 +1072,36 @@ function parseFilenameFromContentDisposition(headerValue: string | null): string
   return normalMatch?.[1] ?? null;
 }
 
+function saveBlob(blob: Blob, fileName: string): void {
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}
+
+async function buildExportError(response: Response): Promise<string> {
+  let errorMessage = 'Falha ao exportar frequência.';
+
+  try {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const errorBody = await response.json();
+      errorMessage = errorBody?.error || errorBody?.details || errorBody?.message || errorMessage;
+    } else {
+      const text = await response.text();
+      if (text) errorMessage = text;
+    }
+  } catch {
+    // noop
+  }
+
+  return errorMessage;
+}
+
 export async function exportarFrequenciaArquivo(params: ConsolidarFrequenciaOptions & {
   formato?: 'docx' | 'pdf';
   templatePath?: string;
@@ -1083,7 +1113,13 @@ export async function exportarFrequenciaArquivo(params: ConsolidarFrequenciaOpti
   payload: FrequenciaExportPayload;
 }> {
   const payload = montarPayloadExportacaoFrequencia(params);
-  const endpoint = `${String(API_BASE_URL || '').replace(/\/+$/, '')}/api/frequencia/exportar`;
+  const baseUrl = String(API_BASE_URL || '').replace(/\/+$/, '');
+
+  if (!baseUrl) {
+    throw new Error('API_BASE_URL não configurada para exportação da frequência.');
+  }
+
+  const endpoint = `${baseUrl}/api/frequencia/exportar`;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -1097,14 +1133,7 @@ export async function exportarFrequenciaArquivo(params: ConsolidarFrequenciaOpti
   });
 
   if (!response.ok) {
-    let errorMessage = 'Falha ao exportar frequência.';
-    try {
-      const errorBody = await response.json();
-      errorMessage = errorBody?.error || errorBody?.details || errorMessage;
-    } catch {
-      // noop
-    }
-    throw new Error(errorMessage);
+    throw new Error(await buildExportError(response));
   }
 
   const blob = await response.blob();
@@ -1119,6 +1148,20 @@ export async function exportarFrequenciaArquivo(params: ConsolidarFrequenciaOpti
     contentType,
     payload
   };
+}
+
+export async function baixarFrequenciaArquivo(params: ConsolidarFrequenciaOptions & {
+  formato?: 'docx' | 'pdf';
+  templatePath?: string;
+  outputFileName?: string;
+}): Promise<{
+  fileName: string;
+  contentType: string;
+  payload: FrequenciaExportPayload;
+}> {
+  const { blob, fileName, contentType, payload } = await exportarFrequenciaArquivo(params);
+  saveBlob(blob, fileName);
+  return { fileName, contentType, payload };
 }
 
 export function montarDayMapParaExportacao(params: ConsolidarFrequenciaOptions): DayMap {
