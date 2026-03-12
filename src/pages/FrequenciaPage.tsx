@@ -16,9 +16,9 @@ import {
   Eye
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import { API_BASE_URL } from '../config/api';
 import {
   carregarDadosConsolidadosFrequencia,
+  baixarFrequenciaArquivo,
   type ConsolidacaoFrequenciaResult,
   type ServidorFrequencia
 } from '../services/frequenciaService';
@@ -132,32 +132,6 @@ function chipClassName(tone: StatusChipTone): string {
   }
 }
 
-function saveBlob(blob: Blob, fileName: string) {
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(objectUrl);
-}
-
-function parseFilenameFromContentDisposition(headerValue: string | null): string | null {
-  if (!headerValue) return null;
-
-  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utf8Match?.[1]) {
-    try {
-      return decodeURIComponent(utf8Match[1]);
-    } catch {
-      return utf8Match[1];
-    }
-  }
-
-  const normalMatch = headerValue.match(/filename="?([^"]+)"?/i);
-  return normalMatch?.[1] ?? null;
-}
 
 function serverToSuggestion(row: any): Suggestion {
   const id =
@@ -411,8 +385,6 @@ const FrequenciaPage: React.FC = () => {
           throw new Error('Não foi possível consolidar a frequência antes da exportação.');
         }
 
-        const endpoint = `${String(API_BASE_URL || '').replace(/\/+$/, '')}/api/frequencia/exportar`;
-
         const normalizedName = (consolidado.servidor.nome || 'servidor')
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
@@ -421,52 +393,35 @@ const FrequenciaPage: React.FC = () => {
 
         const outputFileName = `frequencia_${normalizedName}_${String(consolidado.mes).padStart(2, '0')}_${consolidado.ano}.${formato}`;
 
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
+        const { fileName } = await baixarFrequenciaArquivo({
+          servidor: {
+            ...consolidado.servidor,
+            cpf: onlyDigits(consolidado.servidor.cpf || selectedServidor.cpf)
           },
-          body: JSON.stringify({
-            templateData: consolidado.templateData,
-            formato,
-            outputFileName,
-            removerLinhasExcedentes: true,
-            metadata: {
-              servidor: consolidado.servidor,
-              ano: consolidado.ano,
-              mes: consolidado.mes,
-              totalDiasMes: consolidado.totalDiasMes,
-              hiddenRowsFrom: consolidado.hiddenRowsFrom,
-              hiddenRowsTo: consolidado.hiddenRowsTo
-            }
-          })
+          mes: consolidado.mes,
+          ano: consolidado.ano,
+          incluirPontoFacultativo: includePontoFacultativo,
+          faltaVaiParaRubrica,
+          formato,
+          outputFileName
         });
 
-        if (!response.ok) {
-          let errorText = 'Falha ao exportar a folha.';
-          try {
-            const json = await response.json();
-            errorText = json?.error || json?.details || errorText;
-          } catch {
-            // noop
-          }
-          throw new Error(errorText);
-        }
-
-        const blob = await response.blob();
-        const fileName =
-          parseFilenameFromContentDisposition(response.headers.get('content-disposition')) ||
-          outputFileName;
-
-        saveBlob(blob, fileName);
-        setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso.`);
+        setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso: ${fileName}`);
       } catch (error: any) {
         setErrorMessage(error?.message || 'Não foi possível exportar a frequência.');
       } finally {
         setExportingFormat(null);
       }
     },
-    [selectedServidor, preview, ano, mes, loadPreview]
+    [
+      selectedServidor,
+      preview,
+      ano,
+      mes,
+      loadPreview,
+      includePontoFacultativo,
+      faltaVaiParaRubrica
+    ]
   );
 
   const dayItems = useMemo(() => {
