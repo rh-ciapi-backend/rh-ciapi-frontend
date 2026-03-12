@@ -3,13 +3,11 @@ import {
   CalendarDays,
   Download,
   FileText,
-  FileSpreadsheet,
   Search,
   User,
   AlertCircle,
   CheckCircle2,
   Loader2,
-  RefreshCw,
   ClipboardList,
   Clock3,
   ShieldAlert,
@@ -77,6 +75,13 @@ function normalizeSpaces(value: any): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function asArray<T = any>(value: any): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.items)) return value.items;
+  return [];
+}
+
 function maskCpf(value: string): string {
   const digits = onlyDigits(value);
   if (digits.length !== 11) return value || '';
@@ -84,12 +89,17 @@ function maskCpf(value: string): string {
 }
 
 function monthLabel(month: number): string {
-  return MONTHS.find((m) => m.value === month)?.label ?? String(month);
+  for (const item of MONTHS) {
+    if (item.value === month) return item.label;
+  }
+  return String(month);
 }
 
 function buildYearOptions(centerYear = DEFAULT_YEAR): number[] {
   const list: number[] = [];
-  for (let y = centerYear - 3; y <= centerYear + 3; y += 1) list.push(y);
+  for (let y = centerYear - 3; y <= centerYear + 3; y += 1) {
+    list.push(y);
+  }
   return list;
 }
 
@@ -170,7 +180,9 @@ function StatCard({
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-lg shadow-slate-950/20 backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">{label}</div>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+            {label}
+          </div>
           <div className="mt-3 text-2xl font-semibold text-white">{value}</div>
           {helper ? <div className="mt-1 text-xs text-slate-400">{helper}</div> : null}
         </div>
@@ -203,7 +215,6 @@ export default function FrequenciaPage() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const suggestionsBoxRef = useRef<HTMLDivElement | null>(null);
-
   const yearOptions = useMemo(() => buildYearOptions(), []);
 
   useEffect(() => {
@@ -255,28 +266,27 @@ export default function FrequenciaPage() {
           throw error;
         }
 
-        const mapped: Suggestion[] = Array.isArray(data)
-          ? data
-              .map((row: any) => ({
-                id: String(
-                  row?.servidor ||
-                    row?.id ||
-                    row?.uuid ||
-                    row?.servidor_id ||
-                    row?.cpf ||
-                    crypto.randomUUID()
-                ),
-                nome: normalizeSpaces(row?.nomeCompleto || row?.nome_completo || row?.nome),
-                cpf: normalizeSpaces(row?.cpf),
-                matricula: normalizeSpaces(row?.matricula),
-                categoria: normalizeSpaces(row?.categoria || row?.categoria_canonica),
-                setor: normalizeSpaces(row?.setor || row?.lotacao_interna || row?.lotacao),
-                cargo: normalizeSpaces(row?.cargo),
-                status: normalizeSpaces(row?.status || 'ATIVO'),
-                raw: row
-              }))
-              .filter((row) => row.nome && row.cpf)
-          : [];
+        const list = asArray<any>(data);
+        const mapped: Suggestion[] = list
+          .map((row: any) => ({
+            id: String(
+              row?.servidor ||
+                row?.id ||
+                row?.uuid ||
+                row?.servidor_id ||
+                row?.cpf ||
+                `${row?.nome || 'srv'}-${row?.matricula || ''}`
+            ),
+            nome: normalizeSpaces(row?.nomeCompleto || row?.nome_completo || row?.nome),
+            cpf: normalizeSpaces(row?.cpf),
+            matricula: normalizeSpaces(row?.matricula),
+            categoria: normalizeSpaces(row?.categoria || row?.categoria_canonica),
+            setor: normalizeSpaces(row?.setor || row?.lotacao_interna || row?.lotacao),
+            cargo: normalizeSpaces(row?.cargo),
+            status: normalizeSpaces(row?.status || 'ATIVO'),
+            raw: row
+          }))
+          .filter((row) => row.nome && row.cpf);
 
         setSuggestions(mapped);
         setDropdownOpen(mapped.length > 0);
@@ -394,7 +404,7 @@ export default function FrequenciaPage() {
   );
 
   const dayItems = useMemo(() => {
-    if (!preview) return [];
+    if (!preview || !preview.dayMap || typeof preview.dayMap !== 'object') return [];
     return Object.values(preview.dayMap).sort((a, b) => a.dia - b.dia);
   }, [preview]);
 
@@ -421,7 +431,7 @@ export default function FrequenciaPage() {
         if (item.finalStatus === 'FERIADO') acc.feriados += 1;
         if (item.finalStatus === 'FALTA') acc.faltas += 1;
         if (item.finalStatus === 'PONTO_FACULTATIVO') acc.ponto += 1;
-        acc.warnings += item.avisos.length;
+        acc.warnings += Array.isArray(item.avisos) ? item.avisos.length : 0;
         return acc;
       },
       {
@@ -535,7 +545,9 @@ export default function FrequenciaPage() {
                   {dropdownOpen ? (
                     <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/95 p-2 shadow-2xl shadow-slate-950/40 backdrop-blur">
                       {suggestions.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-slate-400">Nenhum servidor encontrado.</div>
+                        <div className="px-3 py-2 text-sm text-slate-400">
+                          Nenhum servidor encontrado.
+                        </div>
                       ) : (
                         suggestions.map((item) => (
                           <button
@@ -545,7 +557,9 @@ export default function FrequenciaPage() {
                             className="flex w-full flex-col rounded-xl px-3 py-3 text-left transition hover:bg-white/5"
                           >
                             <div className="flex items-center justify-between gap-3">
-                              <div className="font-medium text-white">{item.nome || 'Sem nome'}</div>
+                              <div className="font-medium text-white">
+                                {item.nome || 'Sem nome'}
+                              </div>
                               <span
                                 className={cn(
                                   'rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em]',
@@ -589,13 +603,16 @@ export default function FrequenciaPage() {
                           <span className="font-semibold">{selectedServidor.nome}</span>
                         </div>
                         <div className="text-xs text-slate-300">
-                          CPF {maskCpf(selectedServidor.cpf)} • Matrícula {selectedServidor.matricula || '—'}
+                          CPF {maskCpf(selectedServidor.cpf)} • Matrícula{' '}
+                          {selectedServidor.matricula || '—'}
                         </div>
                         <div className="text-xs text-slate-400">
                           {selectedServidor.categoria || 'Sem categoria'} •{' '}
                           {selectedServidor.setor || 'Sem setor'}
                         </div>
-                        <div className="text-xs text-slate-500">{selectedServidor.cargo || 'Sem cargo'}</div>
+                        <div className="text-xs text-slate-500">
+                          {selectedServidor.cargo || 'Sem cargo'}
+                        </div>
                       </div>
 
                       <button
@@ -692,7 +709,11 @@ export default function FrequenciaPage() {
                       : 'border border-cyan-500/30 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/15'
                   )}
                 >
-                  {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  {loadingPreview ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                   Visualizar consolidação
                 </button>
 
@@ -774,10 +795,13 @@ export default function FrequenciaPage() {
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
                     <ClipboardList className="h-6 w-6" />
                   </div>
-                  <div className="mt-4 text-lg font-semibold text-white">Nenhuma prévia carregada</div>
+                  <div className="mt-4 text-lg font-semibold text-white">
+                    Nenhuma prévia carregada
+                  </div>
                   <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                    Selecione um servidor e clique em <strong>Visualizar consolidação</strong> para revisar
-                    sábados, domingos, férias, atestados, feriados, pontos facultativos e faltas.
+                    Selecione um servidor e clique em <strong>Visualizar consolidação</strong> para
+                    revisar sábados, domingos, férias, atestados, feriados, pontos facultativos e
+                    faltas.
                   </p>
                 </div>
               ) : (
@@ -794,7 +818,7 @@ export default function FrequenciaPage() {
                       }
                     />
                     <StatCard
-                      icon={<FileSpreadsheet className="h-5 w-5" />}
+                      icon={<FileText className="h-5 w-5" />}
                       label="Feriados"
                       value={counts.feriados}
                       helper="Levados para rubrica do servidor"
@@ -803,10 +827,12 @@ export default function FrequenciaPage() {
                       icon={<FileText className="h-5 w-5" />}
                       label="Faltas"
                       value={counts.faltas}
-                      helper={faltaVaiParaRubrica ? 'Aplicadas na rubrica' : 'Aplicadas em ocorrência'}
+                      helper={
+                        faltaVaiParaRubrica ? 'Aplicadas na rubrica' : 'Aplicadas em ocorrência'
+                      }
                     />
                     <StatCard
-                      icon={<RefreshCw className="h-5 w-5" />}
+                      icon={<Clock3 className="h-5 w-5" />}
                       label="Ponto facultativo"
                       value={counts.ponto}
                       helper={includePontoFacultativo ? 'Ativado' : 'Desativado'}
@@ -843,9 +869,15 @@ export default function FrequenciaPage() {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-slate-100">{item.rubrica || '—'}</td>
-                              <td className="px-4 py-3 text-slate-300">{item.ocorrencia1 || '—'}</td>
-                              <td className="px-4 py-3 text-slate-300">{item.ocorrencia2 || '—'}</td>
-                              <td className="px-4 py-3 text-slate-400">{item.observacoes || '—'}</td>
+                              <td className="px-4 py-3 text-slate-300">
+                                {item.ocorrencia1 || '—'}
+                              </td>
+                              <td className="px-4 py-3 text-slate-300">
+                                {item.ocorrencia2 || '—'}
+                              </td>
+                              <td className="px-4 py-3 text-slate-400">
+                                {item.observacoes || '—'}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -853,7 +885,7 @@ export default function FrequenciaPage() {
                     </div>
                   </div>
 
-                  {preview.warnings.length > 0 ? (
+                  {Array.isArray(preview.warnings) && preview.warnings.length > 0 ? (
                     <div className="mt-5 rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                         <AlertCircle className="h-4 w-4" />
@@ -861,7 +893,10 @@ export default function FrequenciaPage() {
                       </div>
                       <ul className="mt-3 space-y-2 text-sm text-amber-100/90">
                         {preview.warnings.map((warning, index) => (
-                          <li key={`${warning}-${index}`} className="rounded-2xl bg-black/10 px-3 py-2">
+                          <li
+                            key={`${warning}-${index}`}
+                            className="rounded-2xl bg-black/10 px-3 py-2"
+                          >
                             {warning}
                           </li>
                         ))}
