@@ -1,35 +1,39 @@
 import React from 'react';
-import type { FrequenciaLegendItem } from '../../types/frequencia';
-import FrequenciaStatusBadge from './FrequenciaStatusBadge';
+import { FREQUENCIA_STATUS_META } from '../../types/frequencia';
 
-type Props = {
-  items: FrequenciaLegendItem[];
-};
+const ORDER = [
+  'presente',
+  'falta',
+  'atestado',
+  'ferias',
+  'feriado',
+  'ponto_facultativo',
+  'fim_de_semana',
+  'aniversario',
+  'evento',
+  'sem_registro',
+] as const;
 
-export default function FrequenciaLegend({ items }: Props) {
+export default function FrequenciaLegend() {
   return (
-    <section className="rounded-3xl border border-slate-700/70 bg-slate-900/70 p-5 shadow-xl shadow-black/10 backdrop-blur-sm">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-white">Legenda visual</h3>
-        <p className="mt-1 text-xs text-slate-400">
-          Referência rápida de leitura dos status usados na grade mensal.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {items.map((item) => (
-          <div
-            key={item.key}
-            className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3"
-          >
-            <div className="mb-2">
-              <FrequenciaStatusBadge status={item.key} label={item.label} />
-            </div>
-            <p className="text-xs leading-5 text-slate-400">
-              {item.description || 'Status disponível na visualização mensal.'}
-            </p>
-          </div>
-        ))}
+    <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-black/20">
+      <div className="mb-4 text-sm font-semibold text-white">Legenda da competência</div>
+      <div className="flex flex-wrap gap-2">
+        {ORDER.map((key) => {
+          const item = FREQUENCIA_STATUS_META[key];
+          return (
+            <span
+              key={item.key}
+              className={[
+                'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium',
+                item.chipClassName,
+              ].join(' ')}
+            >
+              <span className={['h-2 w-2 rounded-full', item.dotClassName].join(' ')} />
+              {item.label}
+            </span>
+          );
+        })}
       </div>
     </section>
   );
