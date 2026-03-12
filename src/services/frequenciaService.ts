@@ -183,27 +183,43 @@ function pad2(value: number): string {
 }
 
 function monthNamePtBr(month: number): string {
-  return (
-    [
-      '',
-      'JANEIRO',
-      'FEVEREIRO',
-      'MARÇO',
-      'ABRIL',
-      'MAIO',
-      'JUNHO',
-      'JULHO',
-      'AGOSTO',
-      'SETEMBRO',
-      'OUTUBRO',
-      'NOVEMBRO',
-      'DEZEMBRO'
-    ][month] || String(month)
-  );
+  const names = [
+    '',
+    'JANEIRO',
+    'FEVEREIRO',
+    'MARÇO',
+    'ABRIL',
+    'MAIO',
+    'JUNHO',
+    'JULHO',
+    'AGOSTO',
+    'SETEMBRO',
+    'OUTUBRO',
+    'NOVEMBRO',
+    'DEZEMBRO'
+  ];
+
+  return names[month] || String(month);
 }
 
 function getLastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
+}
+
+function asArray<T = any>(value: any): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.rows)) return value.rows;
+  return [];
+}
+
+function firstBy<T>(items: T[], predicate: (item: T) => boolean): T | null {
+  const list = asArray<T>(items);
+  for (const item of list) {
+    if (predicate(item)) return item;
+  }
+  return null;
 }
 
 function normalizeServidor(input: ServidorFrequencia): NormalizedServidor {
@@ -385,16 +401,21 @@ function parseApiError(payload: any, fallback: string): string {
 }
 
 function choosePrimaryBackendItem(
-  data: BackendServidorItem[],
+  data: BackendServidorItem[] | any,
   cpf: string
 ): BackendServidorItem | null {
-  if (!Array.isArray(data) || data.length === 0) return null;
+  const list = asArray<BackendServidorItem>(data);
+  if (list.length === 0) return null;
 
   const cpfDigits = onlyDigits(cpf);
-  const exactMatch =
-    data.find((item) => onlyDigits(item?.servidor?.cpf) === cpfDigits) ?? null;
 
-  return exactMatch || data[0] || null;
+  for (const item of list) {
+    if (onlyDigits(item?.servidor?.cpf) === cpfDigits) {
+      return item;
+    }
+  }
+
+  return list[0] || null;
 }
 
 function buildDayMapFromBackend(params: {
@@ -408,29 +429,36 @@ function buildDayMapFromBackend(params: {
 
   const dayMap = createEmptyDayMap(ano, mes);
   const warnings: string[] = [];
-  const dias = Array.isArray(item?.dias) ? item.dias : [];
+  const dias = asArray(item?.dias);
 
   for (const diaRaw of dias) {
     const dia = Number(diaRaw?.dia);
     if (!Number.isFinite(dia) || !dayMap[dia]) continue;
 
     const atual = dayMap[dia];
-    const ocorrencias = Array.isArray(diaRaw?.ocorrencias) ? diaRaw.ocorrencias : [];
-    const eventos = Array.isArray(diaRaw?.eventos) ? diaRaw.eventos : [];
+    const ocorrencias = asArray(diaRaw?.ocorrencias);
+    const eventos = asArray(diaRaw?.eventos);
 
-    const falta = ocorrencias.find((o) => safeUpper(o?.tipo) === 'FALTA') || null;
-    const atestado = ocorrencias.find((o) => safeUpper(o?.tipo) === 'ATESTADO') || null;
-    const manual = ocorrencias.find(
-      (o) => !['FALTA', 'ATESTADO'].includes(safeUpper(o?.tipo))
-    ) || null;
+    const falta =
+      firstBy(ocorrencias, (o) => safeUpper(o?.tipo) === 'FALTA') || null;
+
+    const atestado =
+      firstBy(ocorrencias, (o) => safeUpper(o?.tipo) === 'ATESTADO') || null;
+
+    const manual =
+      firstBy(ocorrencias, (o) => {
+        const tipo = safeUpper(o?.tipo);
+        return tipo !== 'FALTA' && tipo !== 'ATESTADO';
+      }) || null;
 
     const feriado =
-      eventos.find((e) => safeUpper(e?.tipo) === 'FERIADO') || null;
+      firstBy(eventos, (e) => safeUpper(e?.tipo) === 'FERIADO') || null;
 
     const ponto =
-      eventos.find((e) =>
-        ['PONTO', 'PONTO FACULTATIVO'].includes(safeUpper(e?.tipo))
-      ) || null;
+      firstBy(eventos, (e) => {
+        const tipo = safeUpper(e?.tipo);
+        return tipo === 'PONTO' || tipo === 'PONTO FACULTATIVO';
+      }) || null;
 
     const isVacation = Boolean(diaRaw?.ferias);
     const isAtestado = Boolean(atestado);
@@ -468,9 +496,12 @@ function buildDayMapFromBackend(params: {
     const observacoes: string[] = [];
 
     if (
-      ['SABADO', 'DOMINGO', 'FERIADO', 'FERIAS', 'ATESTADO', 'PONTO_FACULTATIVO'].includes(
-        finalStatus
-      )
+      finalStatus === 'SABADO' ||
+      finalStatus === 'DOMINGO' ||
+      finalStatus === 'FERIADO' ||
+      finalStatus === 'FERIAS' ||
+      finalStatus === 'ATESTADO' ||
+      finalStatus === 'PONTO_FACULTATIVO'
     ) {
       rubrica = statusToRubrica(finalStatus);
       rubrica1 = rubrica;
@@ -490,6 +521,7 @@ function buildDayMapFromBackend(params: {
 
     if (manual) {
       const manualTipo = safeUpper(manual?.tipo);
+
       if (!rubrica && manualTipo && manualTipo !== 'NORMAL') {
         rubrica = normalizeSpaces(manual?.tipo);
         rubrica1 = rubrica;
@@ -609,7 +641,7 @@ export async function carregarDadosConsolidadosFrequencia(
     `&servidorCpf=${encodeURIComponent(servidor.cpf)}`;
 
   const payload = await fetchJson(url);
-  const lista = Array.isArray(payload?.data) ? payload.data : [];
+  const lista = asArray<BackendServidorItem>(payload?.data ?? payload);
   const item = choosePrimaryBackendItem(lista, servidor.cpf);
 
   if (!item) {
@@ -625,8 +657,12 @@ export async function carregarDadosConsolidadosFrequencia(
     categoria: normalizeSpaces(servidorApi.categoria || servidor.categoria),
     setor: normalizeSpaces(servidorApi.setor || servidor.setor),
     cargo: normalizeSpaces(servidorApi.cargo || servidor.cargo),
-    chDiaria: normalizeSpaces(servidorApi.chDiaria ?? servidorApi.ch_diaria ?? servidor.chDiaria ?? servidor.ch_diaria),
-    chSemanal: normalizeSpaces(servidorApi.chSemanal ?? servidorApi.ch_semanal ?? servidor.chSemanal ?? servidor.ch_semanal),
+    chDiaria: normalizeSpaces(
+      servidorApi.chDiaria ?? servidorApi.ch_diaria ?? servidor.chDiaria ?? servidor.ch_diaria
+    ),
+    chSemanal: normalizeSpaces(
+      servidorApi.chSemanal ?? servidorApi.ch_semanal ?? servidor.chSemanal ?? servidor.ch_semanal
+    ),
     status: normalizeSpaces(servidorApi.status || servidor.status || 'ATIVO')
   };
 
