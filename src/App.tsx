@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { DashboardPage } from './pages/DashboardPage';
@@ -16,7 +16,6 @@ import { AdminUsuariosPage } from './pages/AdminUsuariosPage';
 import { AdminCategoriasPage } from './pages/AdminCategoriasPage';
 import { AdminSetoresPage } from './pages/AdminSetoresPage';
 import { AdminLogsPage } from './pages/AdminLogsPage';
-import { LoginPage } from './pages/LoginPage';
 import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
 import { motion, AnimatePresence } from 'motion/react';
