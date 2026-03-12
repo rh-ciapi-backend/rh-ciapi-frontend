@@ -1,73 +1,66 @@
 import React from 'react';
-import {
-  AlertTriangle,
-  BriefcaseMedical,
-  CalendarClock,
-  CalendarRange,
-  ClipboardCheck,
-  FileWarning,
-  Users,
-} from 'lucide-react';
-import type { FrequenciaKpiItem } from '../../types/frequencia';
+import { AlertTriangle, BriefcaseBusiness, FileText, Hospital, Plane, Users } from 'lucide-react';
+import type { FrequenciaKpisData } from '../../types/frequencia';
 
-type Props = {
-  items: FrequenciaKpiItem[];
-};
+interface Props {
+  data: FrequenciaKpisData;
+}
 
-const ICONS = [
-  Users,
-  ClipboardCheck,
-  AlertTriangle,
-  FileWarning,
-  BriefcaseMedical,
-  CalendarRange,
-  CalendarClock,
+const items = (data: FrequenciaKpisData) => [
+  {
+    label: 'Servidores',
+    value: data.totalServidores,
+    icon: Users,
+    tone: 'from-cyan-500/15 to-cyan-400/5 text-cyan-300',
+  },
+  {
+    label: 'Ativos',
+    value: data.servidoresAtivos,
+    icon: BriefcaseBusiness,
+    tone: 'from-emerald-500/15 to-emerald-400/5 text-emerald-300',
+  },
+  {
+    label: 'Faltas',
+    value: data.totalFaltas,
+    icon: AlertTriangle,
+    tone: 'from-rose-500/15 to-rose-400/5 text-rose-300',
+  },
+  {
+    label: 'Atestados',
+    value: data.totalAtestados,
+    icon: Hospital,
+    tone: 'from-amber-500/15 to-amber-400/5 text-amber-300',
+  },
+  {
+    label: 'Férias',
+    value: data.totalFerias,
+    icon: Plane,
+    tone: 'from-sky-500/15 to-sky-400/5 text-sky-300',
+  },
+  {
+    label: 'Sem registro',
+    value: data.totalSemRegistro,
+    icon: FileText,
+    tone: 'from-slate-500/15 to-slate-400/5 text-slate-300',
+  },
 ];
 
-const TONE_CLASS: Record<NonNullable<FrequenciaKpiItem['tone']>, string> = {
-  primary: 'border-cyan-500/20 bg-cyan-500/8 text-cyan-200',
-  success: 'border-emerald-500/20 bg-emerald-500/8 text-emerald-200',
-  warning: 'border-amber-500/20 bg-amber-500/8 text-amber-200',
-  danger: 'border-rose-500/20 bg-rose-500/8 text-rose-200',
-  info: 'border-blue-500/20 bg-blue-500/8 text-blue-200',
-  neutral: 'border-slate-700/70 bg-slate-900/70 text-slate-200',
-  violet: 'border-violet-500/20 bg-violet-500/8 text-violet-200',
-};
-
-export default function FrequenciaKpis({ items }: Props) {
+export default function FrequenciaKpis({ data }: Props) {
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-      {items.map((item, index) => {
-        const Icon = ICONS[index % ICONS.length];
-        const tone = item.tone || 'neutral';
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      {items(data).map((item) => {
+        const Icon = item.icon;
 
         return (
           <div
-            key={item.id}
-            className="rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4 shadow-lg shadow-black/5 backdrop-blur-sm"
+            key={item.label}
+            className={`rounded-3xl border border-white/10 bg-gradient-to-br ${item.tone} p-5 shadow-lg shadow-black/20`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  {item.label}
-                </p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  {item.hint || 'Leitura consolidada da competência'}
-                </p>
-              </div>
-
-              <div
-                className={[
-                  'rounded-2xl border p-2.5',
-                  TONE_CLASS[tone],
-                ].join(' ')}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">{item.label}</span>
+              <Icon className="h-5 w-5" />
             </div>
+            <div className="text-3xl font-bold text-white">{item.value}</div>
           </div>
         );
       })}
