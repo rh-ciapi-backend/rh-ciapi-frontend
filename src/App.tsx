@@ -4,8 +4,13 @@
  */
 
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
+
 import { DashboardPage } from './pages/DashboardPage';
 import { ServidoresPage } from './pages/ServidoresPage';
 import FeriasPage from './pages/FeriasPage';
@@ -18,32 +23,46 @@ import { AdminSetoresPage } from './pages/AdminSetoresPage';
 import { AdminLogsPage } from './pages/AdminLogsPage';
 import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
-import { motion, AnimatePresence } from 'motion/react';
-import { useAuth } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
+
+type AppTab =
+  | 'dashboard'
+  | 'servidores'
+  | 'atestados'
+  | 'ferias'
+  | 'frequencia'
+  | 'mapas'
+  | 'admin'
+  | 'admin-usuarios'
+  | 'admin-categorias'
+  | 'admin-setores'
+  | 'admin-logs'
+  | 'diagnostico';
 
 export default function App() {
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [initialAction, setInitialAction] = useState<string | null>(null);
 
   const handleLogout = async () => {
-    await signOut();
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erro ao sair da sessão:', error);
+    }
   };
 
   const navigateWithAction = (tab: string, action?: string) => {
-    setActiveTab(tab);
-    if (action) {
-      setInitialAction(action);
-    } else {
-      setInitialAction(null);
-    }
+    const safeTab = (tab || 'dashboard') as AppTab;
+    setActiveTab(safeTab);
+    setInitialAction(action ?? null);
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardPage onNavigate={navigateWithAction} />;
+
       case 'servidores':
         return (
           <ServidoresPage
@@ -51,26 +70,37 @@ export default function App() {
             onActionHandled={() => setInitialAction(null)}
           />
         );
+
       case 'atestados':
         return <AtestadosPage />;
+
       case 'ferias':
         return <FeriasPage />;
+
       case 'frequencia':
         return <FrequenciaPage />;
+
       case 'mapas':
         return <MapasPage />;
+
       case 'admin':
         return <AdminPage onNavigate={navigateWithAction} />;
+
       case 'admin-usuarios':
         return <AdminUsuariosPage />;
+
       case 'admin-categorias':
         return <AdminCategoriasPage />;
+
       case 'admin-setores':
         return <AdminSetoresPage />;
+
       case 'admin-logs':
         return <AdminLogsPage />;
+
       case 'diagnostico':
         return <DiagnosticoPage />;
+
       default:
         return <DashboardPage onNavigate={navigateWithAction} />;
     }
@@ -112,7 +142,7 @@ export default function App() {
       <div className="flex min-h-screen bg-bg-dark">
         <Sidebar
           activeTab={activeTab}
-          setActiveTab={(tab) => navigateWithAction(tab)}
+          setActiveTab={(tab: string) => navigateWithAction(tab)}
           onLogout={handleLogout}
         />
 
