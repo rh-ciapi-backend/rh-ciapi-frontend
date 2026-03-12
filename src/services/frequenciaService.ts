@@ -308,12 +308,6 @@ function normalizeIsoDate(value: Nullable<string>): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function formatCpf(value: string): string {
-  const digits = onlyDigits(value);
-  if (digits.length !== 11) return value || '';
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-}
-
 function monthNamePtBr(month: number): string {
   return (
     [
