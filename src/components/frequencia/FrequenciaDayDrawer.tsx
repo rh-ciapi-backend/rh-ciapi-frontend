@@ -1,209 +1,152 @@
 import React from 'react';
-import {
-  Calendar,
-  Copy,
-  Edit3,
-  Eraser,
-  FileText,
-  Flag,
-  Layers3,
-  Repeat2,
-} from 'lucide-react';
-import type { FrequenciaDayItem } from '../../types/frequencia';
+import { Calendar, ChevronRight, FileText, Info, ShieldAlert, X } from 'lucide-react';
+import type { FrequenciaDayDrawerProps } from '../../types/frequencia';
 import FrequenciaStatusBadge from './FrequenciaStatusBadge';
 
-type Props = {
-  day?: FrequenciaDayItem | null;
-  onEdit?: () => void;
-  onReplicate?: () => void;
-  onClear?: () => void;
-  onLaunch?: () => void;
-};
-
-function InfoBlock({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-      <span className="block text-[11px] uppercase tracking-wide text-slate-500">
-        {label}
-      </span>
-      <strong className="mt-1 block text-sm text-slate-100">
-        {value && value.trim() ? value : 'Não informado'}
-      </strong>
-    </div>
-  );
-}
-
 export default function FrequenciaDayDrawer({
+  open,
+  servidor,
   day,
-  onEdit,
-  onReplicate,
-  onClear,
-  onLaunch,
-}: Props) {
-  if (!day) {
-    return (
-      <aside className="flex min-h-[620px] items-center justify-center rounded-3xl border border-slate-700/70 bg-slate-900/70 p-6 text-center shadow-xl shadow-black/10 backdrop-blur-sm">
-        <div className="max-w-xs">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-700/70 bg-slate-800/70 text-cyan-300">
-            <Layers3 className="h-6 w-6" />
+  onClose,
+}: FrequenciaDayDrawerProps) {
+  return (
+    <>
+      <div
+        className={[
+          'fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm transition',
+          open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+        ].join(' ')}
+        onClick={onClose}
+      />
+
+      <aside
+        className={[
+          'fixed right-0 top-0 z-50 h-full w-full max-w-xl transform border-l border-white/10 bg-slate-950 shadow-2xl shadow-black/50 transition duration-300',
+          open ? 'translate-x-0' : 'translate-x-full',
+        ].join(' ')}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Detalhes do dia</div>
+              <h3 className="mt-2 text-xl font-semibold text-white">
+                {day ? `${String(day.dia).padStart(2, '0')} • ${day.weekdayLabel}` : 'Nenhum dia selecionado'}
+              </h3>
+              {servidor && (
+                <p className="mt-2 text-sm text-slate-400">
+                  {servidor.nome} • CPF {servidor.cpf || 'Não informado'}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <h3 className="text-sm font-semibold text-white">Selecione um dia</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            Abra um dia da grade mensal para visualizar turnos, rubrica,
-            ocorrência, observações e ações rápidas.
-          </p>
+
+          <div className="flex-1 space-y-5 overflow-y-auto p-5">
+            {!day && (
+              <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-slate-400">
+                Selecione um dia na grade mensal para abrir os detalhes.
+              </div>
+            )}
+
+            {day && (
+              <>
+                <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-white">Status do dia</div>
+                    <FrequenciaStatusBadge status={day.status} />
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+                      <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
+                        <Calendar className="h-4 w-4" />
+                        Rubrica
+                      </div>
+                      <div className="text-sm text-white">{day.rubrica || 'Sem rubrica informada.'}</div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+                      <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
+                        <FileText className="h-4 w-4" />
+                        Referência
+                      </div>
+                      <div className="text-sm text-white">{day.referencia || 'Sem referência informada.'}</div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="mb-4 text-sm font-semibold text-white">Ocorrências por turno</div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+                      <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Manhã</div>
+                      <div className="mt-2 text-sm text-white">{day.ocorrenciaManha || 'Sem ocorrência.'}</div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+                      <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Tarde</div>
+                      <div className="mt-2 text-sm text-white">{day.ocorrenciaTarde || 'Sem ocorrência.'}</div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+                    <Info className="h-4 w-4 text-cyan-300" />
+                    Descrição consolidada
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm leading-6 text-slate-200">
+                    {day.descricao || day.titulo || 'Sem descrição detalhada para este dia.'}
+                  </div>
+
+                  {day.badges.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {day.badges.map((badge) => (
+                        <span
+                          key={badge}
+                          className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-300"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {day.avisos.length > 0 && (
+                  <section className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-300">
+                      <ShieldAlert className="h-4 w-4" />
+                      Avisos
+                    </div>
+
+                    <div className="space-y-2">
+                      {day.avisos.map((warning, index) => (
+                        <div
+                          key={`${warning}-${index}`}
+                          className="flex items-start gap-2 rounded-2xl border border-amber-500/10 bg-slate-950/30 px-3 py-3 text-sm text-amber-100"
+                        >
+                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                          <span>{warning}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </aside>
-    );
-  }
-
-  return (
-    <aside className="flex min-h-[620px] flex-col rounded-3xl border border-slate-700/70 bg-slate-900/70 shadow-xl shadow-black/10 backdrop-blur-sm">
-      <div className="border-b border-slate-800 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-white">
-                Detalhes do dia
-              </h3>
-              <FrequenciaStatusBadge status={day.statusFinal} />
-            </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Leitura completa do registro selecionado.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-700/70 bg-slate-800/70 p-2 text-cyan-300">
-            <Calendar className="h-5 w-5" />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/8 p-4">
-          <p className="text-xs uppercase tracking-wide text-cyan-300/80">
-            Data completa
-          </p>
-          <h4 className="mt-1 text-lg font-bold text-white">
-            Dia {day.dia} • {day.weekdayLabel}
-          </h4>
-          <p className="mt-1 text-sm text-slate-300">{day.dataIso}</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3">
-          <InfoBlock label="Turno 1" value={day.turno1} />
-          <InfoBlock label="Turno 2" value={day.turno2} />
-          <InfoBlock label="Rubrica" value={day.rubrica} />
-          <InfoBlock label="Ocorrência" value={day.ocorrencia} />
-          <InfoBlock label="Observações" value={day.observacoes} />
-          <InfoBlock
-            label="Destino da informação"
-            value={
-              day.channel === 'rubrica'
-                ? 'Vai para rubrica'
-                : day.channel === 'ocorrencia'
-                ? 'Vai para ocorrência'
-                : day.channel === 'ambos'
-                ? 'Vai para rubrica e ocorrência'
-                : 'Sem destino definido'
-            }
-          />
-        </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Flag className="h-4 w-4 text-violet-300" />
-            <h4 className="text-sm font-semibold text-white">Vínculos do dia</h4>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {day.isHoliday && (
-              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-300">
-                Feriado
-              </span>
-            )}
-            {day.isPontoFacultativo && (
-              <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1 text-xs text-fuchsia-300">
-                Ponto facultativo
-              </span>
-            )}
-            {day.isFerias && (
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
-                Férias
-              </span>
-            )}
-            {day.isAtestado && (
-              <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300">
-                Atestado
-              </span>
-            )}
-            {day.isFalta && (
-              <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs text-rose-300">
-                Falta
-              </span>
-            )}
-            {day.isPending && (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
-                Pendência
-              </span>
-            )}
-            {!day.isHoliday &&
-              !day.isPontoFacultativo &&
-              !day.isFerias &&
-              !day.isAtestado &&
-              !day.isFalta &&
-              !day.isPending && (
-                <span className="rounded-full border border-slate-700/70 bg-slate-800/70 px-3 py-1 text-xs text-slate-300">
-                  Sem vínculos especiais
-                </span>
-              )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 border-t border-slate-800 p-4">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700/70 bg-slate-800/70 px-3 py-2.5 text-sm font-medium text-slate-100 transition hover:border-slate-600"
-        >
-          <Edit3 className="h-4 w-4" />
-          Editar
-        </button>
-
-        <button
-          type="button"
-          onClick={onReplicate}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700/70 bg-slate-800/70 px-3 py-2.5 text-sm font-medium text-slate-100 transition hover:border-slate-600"
-        >
-          <Repeat2 className="h-4 w-4" />
-          Replicar
-        </button>
-
-        <button
-          type="button"
-          onClick={onClear}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-sm font-medium text-rose-200 transition hover:bg-rose-500/15"
-        >
-          <Eraser className="h-4 w-4" />
-          Limpar
-        </button>
-
-        <button
-          type="button"
-          onClick={onLaunch}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-500/15 px-3 py-2.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/20"
-        >
-          <FileText className="h-4 w-4" />
-          Lançar
-        </button>
-      </div>
-    </aside>
+    </>
   );
 }
