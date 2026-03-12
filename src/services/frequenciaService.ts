@@ -1,14 +1,6 @@
-import { supabase } from '../lib/supabaseClient';
 import { API_BASE_URL } from '../config/api';
 
 type Nullable<T> = T | null | undefined;
-
-export type TipoEventoCalendario =
-  | 'FERIADO'
-  | 'PONTO'
-  | 'PONTO FACULTATIVO'
-  | 'EVENTO'
-  | 'OUTRO';
 
 export type StatusConsolidadoDia =
   | 'NORMAL'
@@ -42,98 +34,6 @@ export interface ServidorFrequencia {
   [key: string]: any;
 }
 
-export interface EventoCalendario {
-  id?: string | number;
-  data?: string | null;
-  date?: string | null;
-  dataISO?: string | null;
-  tipo?: string | null;
-  type?: string | null;
-  titulo?: string | null;
-  title?: string | null;
-  descricao?: string | null;
-  description?: string | null;
-  [key: string]: any;
-}
-
-export interface FeriasRegistro {
-  id?: string | number;
-  servidor_id?: string | null;
-  servidorId?: string | null;
-  servidor?: string | null;
-  cpf?: string | null;
-  servidor_cpf?: string | null;
-  nome?: string | null;
-  nome_completo?: string | null;
-
-  periodo1_inicio?: string | null;
-  periodo1_fim?: string | null;
-  periodo2_inicio?: string | null;
-  periodo2_fim?: string | null;
-  periodo3_inicio?: string | null;
-  periodo3_fim?: string | null;
-
-  inicio?: string | null;
-  fim?: string | null;
-
-  observacao?: string | null;
-  descricao?: string | null;
-  [key: string]: any;
-}
-
-export interface AtestadoRegistro {
-  id?: string | number;
-  servidor_id?: string | null;
-  servidorId?: string | null;
-  servidor?: string | null;
-  cpf?: string | null;
-  servidor_cpf?: string | null;
-  nome?: string | null;
-  nome_completo?: string | null;
-
-  data_inicio?: string | null;
-  data_fim?: string | null;
-  inicio?: string | null;
-  fim?: string | null;
-  periodo_inicio?: string | null;
-  periodo_fim?: string | null;
-
-  motivo?: string | null;
-  observacao?: string | null;
-  descricao?: string | null;
-  [key: string]: any;
-}
-
-export interface OcorrenciaFrequencia {
-  id?: string | number;
-  servidor_id?: string | null;
-  servidorId?: string | null;
-  servidor?: string | null;
-  cpf?: string | null;
-  servidor_cpf?: string | null;
-  nome?: string | null;
-  nome_completo?: string | null;
-
-  data?: string | null;
-  date?: string | null;
-  dataISO?: string | null;
-  inicio?: string | null;
-  fim?: string | null;
-
-  tipo?: string | null;
-  turno?: string | null;
-  rubrica?: string | null;
-  rubrica1?: string | null;
-  rubrica2?: string | null;
-  ocorrencia1?: string | null;
-  ocorrencia2?: string | null;
-  o1?: string | null;
-  o2?: string | null;
-  observacao?: string | null;
-  descricao?: string | null;
-  [key: string]: any;
-}
-
 export interface DayMapItem {
   dia: number;
   dataISO: string;
@@ -156,12 +56,12 @@ export interface DayMapItem {
   conflitos: string[];
   avisos: string[];
   fontes: {
-    evento?: EventoCalendario | null;
-    ponto?: EventoCalendario | null;
-    ferias?: NormalizedPeriod | null;
-    atestado?: NormalizedPeriod | null;
-    falta?: NormalizedOcorrencia | null;
-    manual?: NormalizedOcorrencia | null;
+    evento?: any | null;
+    ponto?: any | null;
+    ferias?: any | null;
+    atestado?: any | null;
+    falta?: any | null;
+    manual?: any | null;
   };
 }
 
@@ -171,13 +71,8 @@ export interface ConsolidarFrequenciaOptions {
   servidor: ServidorFrequencia;
   mes: number;
   ano: number;
-  eventos?: EventoCalendario[];
-  ferias?: FeriasRegistro[];
-  atestados?: AtestadoRegistro[];
-  ocorrencias?: OcorrenciaFrequencia[];
   incluirPontoFacultativo?: boolean;
   faltaVaiParaRubrica?: boolean;
-  logger?: Pick<Console, 'warn' | 'log' | 'error'>;
 }
 
 export interface ConsolidacaoFrequenciaResult {
@@ -220,39 +115,41 @@ interface NormalizedServidor {
   status: string;
 }
 
-interface NormalizedEvent {
-  id: string;
-  dataISO: string;
-  tipo: TipoEventoCalendario;
-  titulo: string;
-  descricao: string;
-  raw: EventoCalendario;
-}
-
-interface NormalizedPeriod {
-  id: string;
-  servidorKey: string;
-  inicio: string;
-  fim: string;
-  observacao: string;
-  raw: any;
-}
-
-interface NormalizedOcorrencia {
-  id: string;
-  servidorKey: string;
-  dataISO?: string;
-  inicio?: string;
-  fim?: string;
-  tipo: string;
-  turno: string;
-  rubrica: string;
-  rubrica1: string;
-  rubrica2: string;
-  ocorrencia1: string;
-  ocorrencia2: string;
-  observacao: string;
-  raw: any;
+interface BackendServidorItem {
+  servidor?: {
+    id?: string;
+    servidor?: string;
+    nome?: string;
+    cpf?: string;
+    matricula?: string;
+    cargo?: string;
+    categoria?: string;
+    setor?: string;
+    status?: string;
+    chDiaria?: string | number | null;
+    ch_diaria?: string | number | null;
+    chSemanal?: string | number | null;
+    ch_semanal?: string | number | null;
+  };
+  dias?: Array<{
+    dia?: number;
+    data?: string;
+    ocorrencias?: Array<{
+      id?: string | number;
+      tipo?: string;
+      turno?: string;
+      observacao?: string;
+      descricao?: string;
+    }>;
+    eventos?: Array<{
+      id?: string | number;
+      tipo?: string;
+      titulo?: string;
+      nome?: string;
+      descricao?: string;
+    }>;
+    ferias?: boolean;
+  }>;
 }
 
 const WEEKDAY_LABELS = [
@@ -265,7 +162,11 @@ const WEEKDAY_LABELS = [
   'SÁBADO'
 ];
 
-function onlyDigits(value: Nullable<string | number>) {
+function normalizeBaseUrl(url: string): string {
+  return String(url ?? '').replace(/\/+$/, '');
+}
+
+function onlyDigits(value: Nullable<string | number>): string {
   return String(value ?? '').replace(/\D+/g, '');
 }
 
@@ -279,33 +180,6 @@ function safeUpper(value: any): string {
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
-}
-
-function normalizeBaseUrl(url: string): string {
-  return String(url ?? '').replace(/\/+$/, '');
-}
-
-function normalizeIsoDate(value: Nullable<string>): string | null {
-  if (!value) return null;
-
-  const raw = String(value).trim();
-  if (!raw) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-
-  const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (slash) {
-    const [, dd, mm, yyyy] = slash;
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return null;
-
-  const yyyy = parsed.getFullYear();
-  const mm = pad2(parsed.getMonth() + 1);
-  const dd = pad2(parsed.getDate());
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 function monthNamePtBr(month: number): string {
@@ -330,53 +204,6 @@ function monthNamePtBr(month: number): string {
 
 function getLastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
-}
-
-function buildMonthInterval(year: number, month: number) {
-  const lastDay = getLastDayOfMonth(year, month);
-  return {
-    start: `${year}-${pad2(month)}-01`,
-    end: `${year}-${pad2(month)}-${pad2(lastDay)}`
-  };
-}
-
-function createDayMapShell(year: number, month: number): DayMap {
-  const total = getLastDayOfMonth(year, month);
-  const map: DayMap = {};
-
-  for (let day = 1; day <= total; day += 1) {
-    const date = new Date(year, month - 1, day);
-    const dataISO = `${year}-${pad2(month)}-${pad2(day)}`;
-    const weekday = date.getDay();
-    const isSaturday = weekday === 6;
-    const isSunday = weekday === 0;
-
-    map[day] = {
-      dia: day,
-      dataISO,
-      weekday,
-      weekdayLabel: WEEKDAY_LABELS[weekday],
-      isSaturday,
-      isSunday,
-      isHoliday: false,
-      isPontoFacultativo: false,
-      isVacation: false,
-      isAtestado: false,
-      isFalta: false,
-      rubrica: '',
-      rubrica1: '',
-      rubrica2: '',
-      ocorrencia1: '',
-      ocorrencia2: '',
-      observacoes: '',
-      finalStatus: isSaturday ? 'SABADO' : isSunday ? 'DOMINGO' : 'NORMAL',
-      conflitos: [],
-      avisos: [],
-      fontes: {}
-    };
-  }
-
-  return map;
 }
 
 function normalizeServidor(input: ServidorFrequencia): NormalizedServidor {
@@ -410,265 +237,65 @@ function normalizeServidor(input: ServidorFrequencia): NormalizedServidor {
   };
 }
 
-function servidorKeys(servidor: NormalizedServidor): string[] {
-  return Array.from(
-    new Set(
-      [
-        onlyDigits(servidor.cpf),
-        normalizeSpaces(servidor.id),
-        safeUpper(servidor.nome),
-        safeUpper(servidor.matricula)
-      ].filter(Boolean)
-    )
-  );
-}
+function normalizeIsoDate(value: Nullable<string>): string | null {
+  if (!value) return null;
 
-function buildPeriod(
-  raw: any,
-  servidorKey: string,
-  inicio: string | null,
-  fim: string | null,
-  observacao: string
-): NormalizedPeriod | null {
-  if (!inicio || !fim) return null;
-  return {
-    id: normalizeSpaces(raw?.id || `${servidorKey}-${inicio}-${fim}`),
-    servidorKey,
-    inicio,
-    fim,
-    observacao,
-    raw
-  };
-}
+  const raw = String(value).trim();
+  if (!raw) return null;
 
-function normalizeFeriasRegistros(
-  items: FeriasRegistro[] | undefined,
-  keys: string[]
-): NormalizedPeriod[] {
-  if (!Array.isArray(items) || items.length === 0) return [];
-
-  const keySet = new Set(keys);
-
-  const matchServidor = (item: FeriasRegistro): string | null => {
-    const options = [
-      onlyDigits(item.cpf),
-      onlyDigits(item.servidor_cpf),
-      normalizeSpaces(item.servidor_id),
-      normalizeSpaces(item.servidorId),
-      normalizeSpaces(item.servidor),
-      safeUpper(item.nome),
-      safeUpper(item.nome_completo)
-    ].filter(Boolean);
-
-    return options.find((candidate) => keySet.has(candidate)) ?? null;
-  };
-
-  const results: NormalizedPeriod[] = [];
-
-  for (const item of items) {
-    const servidorKey = matchServidor(item);
-    if (!servidorKey) continue;
-
-    const observacao = normalizeSpaces(item.observacao || item.descricao || 'FÉRIAS');
-
-    const periods = [
-      buildPeriod(
-        item,
-        servidorKey,
-        normalizeIsoDate(item.periodo1_inicio || item.inicio),
-        normalizeIsoDate(item.periodo1_fim || item.fim),
-        observacao
-      ),
-      buildPeriod(
-        item,
-        servidorKey,
-        normalizeIsoDate(item.periodo2_inicio),
-        normalizeIsoDate(item.periodo2_fim),
-        observacao
-      ),
-      buildPeriod(
-        item,
-        servidorKey,
-        normalizeIsoDate(item.periodo3_inicio),
-        normalizeIsoDate(item.periodo3_fim),
-        observacao
-      )
-    ].filter(Boolean) as NormalizedPeriod[];
-
-    results.push(...periods);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
   }
 
-  return results;
-}
-
-function normalizeAtestadosRegistros(
-  items: AtestadoRegistro[] | undefined,
-  keys: string[]
-): NormalizedPeriod[] {
-  if (!Array.isArray(items) || items.length === 0) return [];
-
-  const keySet = new Set(keys);
-
-  const matchServidor = (item: AtestadoRegistro): string | null => {
-    const options = [
-      onlyDigits(item.cpf),
-      onlyDigits(item.servidor_cpf),
-      normalizeSpaces(item.servidor_id),
-      normalizeSpaces(item.servidorId),
-      normalizeSpaces(item.servidor),
-      safeUpper(item.nome),
-      safeUpper(item.nome_completo)
-    ].filter(Boolean);
-
-    return options.find((candidate) => keySet.has(candidate)) ?? null;
-  };
-
-  const results: NormalizedPeriod[] = [];
-
-  for (const item of items) {
-    const servidorKey = matchServidor(item);
-    if (!servidorKey) continue;
-
-    const inicio = normalizeIsoDate(item.data_inicio || item.periodo_inicio || item.inicio);
-    const fim = normalizeIsoDate(item.data_fim || item.periodo_fim || item.fim);
-    const observacao = normalizeSpaces(item.motivo || item.observacao || item.descricao || 'ATESTADO');
-
-    const period = buildPeriod(item, servidorKey, inicio, fim, observacao);
-    if (period) results.push(period);
+  const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) {
+    const [, dd, mm, yyyy] = slash;
+    return `${yyyy}-${mm}-${dd}`;
   }
 
-  return results;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())}`;
 }
 
-function normalizeEventos(items: EventoCalendario[] | undefined): NormalizedEvent[] {
-  if (!Array.isArray(items) || items.length === 0) return [];
+function createEmptyDayMap(year: number, month: number): DayMap {
+  const totalDiasMes = getLastDayOfMonth(year, month);
+  const result: DayMap = {};
 
-  return items
-    .map((item) => {
-      const dataISO = normalizeIsoDate(item.data || item.date || item.dataISO);
-      if (!dataISO) return null;
+  for (let dia = 1; dia <= totalDiasMes; dia += 1) {
+    const date = new Date(year, month - 1, dia);
+    const weekday = date.getDay();
+    const isSaturday = weekday === 6;
+    const isSunday = weekday === 0;
+    const dataISO = `${year}-${pad2(month)}-${pad2(dia)}`;
 
-      const tipoRaw = safeUpper(item.tipo || item.type);
-      const tipo: TipoEventoCalendario =
-        tipoRaw === 'FERIADO'
-          ? 'FERIADO'
-          : tipoRaw === 'PONTO'
-            ? 'PONTO'
-            : tipoRaw === 'PONTO FACULTATIVO'
-              ? 'PONTO FACULTATIVO'
-              : tipoRaw === 'EVENTO'
-                ? 'EVENTO'
-                : 'OUTRO';
-
-      return {
-        id: normalizeSpaces(item.id || `${dataISO}-${tipoRaw || 'EVENTO'}`),
-        dataISO,
-        tipo,
-        titulo: normalizeSpaces(item.titulo || item.title || tipoRaw || 'EVENTO'),
-        descricao: normalizeSpaces(item.descricao || item.description),
-        raw: item
-      };
-    })
-    .filter(Boolean) as NormalizedEvent[];
-}
-
-function normalizeOcorrencias(
-  items: OcorrenciaFrequencia[] | undefined,
-  keys: string[]
-): NormalizedOcorrencia[] {
-  if (!Array.isArray(items) || items.length === 0) return [];
-
-  const keySet = new Set(keys);
-
-  const matchServidor = (item: OcorrenciaFrequencia): string | null => {
-    const options = [
-      onlyDigits(item.cpf),
-      onlyDigits(item.servidor_cpf),
-      normalizeSpaces(item.servidor_id),
-      normalizeSpaces(item.servidorId),
-      normalizeSpaces(item.servidor),
-      safeUpper(item.nome),
-      safeUpper(item.nome_completo)
-    ].filter(Boolean);
-
-    return options.find((candidate) => keySet.has(candidate)) ?? null;
-  };
-
-  const results: NormalizedOcorrencia[] = [];
-
-  for (const item of items) {
-    const servidorKey = matchServidor(item);
-    if (!servidorKey) continue;
-
-    const tipo = safeUpper(item.tipo || 'MANUAL');
-    const dataISO = normalizeIsoDate(item.data || item.date || item.dataISO || item.inicio);
-    const inicio = normalizeIsoDate(item.inicio);
-    const fim = normalizeIsoDate(item.fim);
-    const turno = safeUpper(item.turno);
-    const rubrica = normalizeSpaces(item.rubrica);
-    const rubrica1 = normalizeSpaces(item.rubrica1 || rubrica);
-    const rubrica2 = normalizeSpaces(item.rubrica2 || rubrica);
-    const ocorrencia1 = normalizeSpaces(item.ocorrencia1 || item.o1);
-    const ocorrencia2 = normalizeSpaces(item.ocorrencia2 || item.o2);
-    const observacao = normalizeSpaces(item.observacao || item.descricao);
-
-    results.push({
-      id: normalizeSpaces(item.id || `${servidorKey}-${dataISO || inicio || 'ocorrencia'}`),
-      servidorKey,
-      dataISO: dataISO || undefined,
-      inicio: inicio || undefined,
-      fim: fim || undefined,
-      tipo,
-      turno,
-      rubrica,
-      rubrica1,
-      rubrica2,
-      ocorrencia1,
-      ocorrencia2,
-      observacao,
-      raw: item
-    });
+    result[dia] = {
+      dia,
+      dataISO,
+      weekday,
+      weekdayLabel: WEEKDAY_LABELS[weekday],
+      isSaturday,
+      isSunday,
+      isHoliday: false,
+      isPontoFacultativo: false,
+      isVacation: false,
+      isAtestado: false,
+      isFalta: false,
+      rubrica: '',
+      rubrica1: '',
+      rubrica2: '',
+      ocorrencia1: '',
+      ocorrencia2: '',
+      observacoes: '',
+      finalStatus: isSaturday ? 'SABADO' : isSunday ? 'DOMINGO' : 'NORMAL',
+      conflitos: [],
+      avisos: [],
+      fontes: {}
+    };
   }
 
-  return results;
-}
-
-function isDateWithin(dateISO: string, startISO?: string | null, endISO?: string | null) {
-  if (!startISO || !endISO) return false;
-  return dateISO >= startISO && dateISO <= endISO;
-}
-
-function chooseFinalStatus(params: {
-  item: DayMapItem;
-  evento?: NormalizedEvent | null;
-  ponto?: NormalizedEvent | null;
-  feriasDia?: NormalizedPeriod | null;
-  atestadoDia?: NormalizedPeriod | null;
-  faltaDia?: NormalizedOcorrencia | null;
-  manualDia?: NormalizedOcorrencia | null;
-  incluirPontoFacultativo: boolean;
-}): StatusConsolidadoDia {
-  const { item, evento, ponto, feriasDia, atestadoDia, faltaDia, manualDia, incluirPontoFacultativo } =
-    params;
-
-  if (feriasDia) return 'FERIAS';
-  if (atestadoDia) return 'ATESTADO';
-  if (evento?.tipo === 'FERIADO') return 'FERIADO';
-  if (ponto && incluirPontoFacultativo) return 'PONTO_FACULTATIVO';
-  if (item.isSunday) return 'DOMINGO';
-  if (item.isSaturday) return 'SABADO';
-  if (faltaDia) return 'FALTA';
-
-  const hasManual =
-    Boolean(manualDia?.ocorrencia1) ||
-    Boolean(manualDia?.ocorrencia2) ||
-    Boolean(manualDia?.rubrica) ||
-    Boolean(manualDia?.rubrica1) ||
-    Boolean(manualDia?.rubrica2);
-
-  if (hasManual) return 'MANUAL';
-
-  return 'NORMAL';
+  return result;
 }
 
 function statusToRubrica(status: StatusConsolidadoDia): string {
@@ -692,128 +319,6 @@ function statusToRubrica(status: StatusConsolidadoDia): string {
   }
 }
 
-function buildDayItem(params: {
-  item: DayMapItem;
-  incluirPontoFacultativo: boolean;
-  faltaVaiParaRubrica: boolean;
-  evento?: NormalizedEvent | null;
-  ponto?: NormalizedEvent | null;
-  feriasDia?: NormalizedPeriod | null;
-  atestadoDia?: NormalizedPeriod | null;
-  faltaDia?: NormalizedOcorrencia | null;
-  manualDia?: NormalizedOcorrencia | null;
-}): DayMapItem {
-  const {
-    item,
-    incluirPontoFacultativo,
-    faltaVaiParaRubrica,
-    evento,
-    ponto,
-    feriasDia,
-    atestadoDia,
-    faltaDia,
-    manualDia
-  } = params;
-
-  const { dia, dataISO, weekday, weekdayLabel, isSaturday, isSunday } = item;
-  const conflitos: string[] = [];
-
-  if (feriasDia && atestadoDia) {
-    conflitos.push('Conflito: férias e atestado no mesmo dia');
-  }
-
-  const finalStatus = chooseFinalStatus({
-    item,
-    evento,
-    ponto,
-    feriasDia,
-    atestadoDia,
-    faltaDia,
-    manualDia,
-    incluirPontoFacultativo
-  });
-
-  let rubrica = '';
-  let rubrica1 = '';
-  let rubrica2 = '';
-  let ocorrencia1 = '';
-  let ocorrencia2 = '';
-  const observacoesList: string[] = [];
-
-  const statusInstitucionalBloqueiaOcorrencia =
-    finalStatus === 'SABADO' ||
-    finalStatus === 'DOMINGO' ||
-    finalStatus === 'FERIADO' ||
-    finalStatus === 'FERIAS' ||
-    finalStatus === 'ATESTADO' ||
-    finalStatus === 'PONTO_FACULTATIVO' ||
-    (finalStatus === 'FALTA' && faltaVaiParaRubrica);
-
-  if (finalStatus !== 'NORMAL' && finalStatus !== 'MANUAL') {
-    rubrica = statusToRubrica(finalStatus);
-    rubrica1 = rubrica;
-    rubrica2 = rubrica;
-  }
-
-  if (finalStatus === 'MANUAL' && manualDia) {
-    rubrica = manualDia.rubrica || manualDia.rubrica1 || manualDia.rubrica2 || '';
-    rubrica1 = manualDia.rubrica1 || manualDia.rubrica || '';
-    rubrica2 = manualDia.rubrica2 || manualDia.rubrica || '';
-  }
-
-  if (faltaDia && !faltaVaiParaRubrica) {
-    if (!statusInstitucionalBloqueiaOcorrencia) {
-      ocorrencia1 = 'FALTA';
-      ocorrencia2 = 'FALTA';
-    } else {
-      observacoesList.push('Falta registrada no dia');
-    }
-  }
-
-  if (!statusInstitucionalBloqueiaOcorrencia && manualDia) {
-    if (!ocorrencia1) ocorrencia1 = manualDia.ocorrencia1 || '';
-    if (!ocorrencia2) ocorrencia2 = manualDia.ocorrencia2 || '';
-  }
-
-  if (evento?.titulo) observacoesList.push(`Feriado: ${evento.titulo}`);
-  if (ponto?.titulo) observacoesList.push(`Ponto facultativo: ${ponto.titulo}`);
-  if (feriasDia?.observacao) observacoesList.push(feriasDia.observacao);
-  if (atestadoDia?.observacao) observacoesList.push(atestadoDia.observacao);
-  if (faltaDia?.observacao) observacoesList.push(faltaDia.observacao);
-  if (manualDia?.observacao) observacoesList.push(manualDia.observacao);
-
-  return {
-    dia,
-    dataISO,
-    weekday,
-    weekdayLabel,
-    isSaturday,
-    isSunday,
-    isHoliday: Boolean(evento),
-    isPontoFacultativo: Boolean(ponto) && incluirPontoFacultativo,
-    isVacation: Boolean(feriasDia),
-    isAtestado: Boolean(atestadoDia),
-    isFalta: Boolean(faltaDia),
-    rubrica,
-    rubrica1,
-    rubrica2,
-    ocorrencia1,
-    ocorrencia2,
-    observacoes: observacoesList.filter(Boolean).join(' | '),
-    finalStatus,
-    conflitos,
-    avisos: [...conflitos],
-    fontes: {
-      evento: evento?.raw ?? null,
-      ponto: ponto?.raw ?? null,
-      ferias: feriasDia ?? null,
-      atestado: atestadoDia ?? null,
-      falta: faltaDia ?? null,
-      manual: manualDia ?? null
-    }
-  };
-}
-
 function buildTemplateData(
   servidor: NormalizedServidor,
   ano: number,
@@ -821,6 +326,7 @@ function buildTemplateData(
   dayMap: DayMap
 ): Record<string, string | boolean | number> {
   const totalDiasMes = getLastDayOfMonth(ano, mes);
+
   const data: Record<string, string | boolean | number> = {
     NOME: servidor.nome,
     MATRICULA: servidor.matricula,
@@ -872,192 +378,208 @@ function buildTemplateData(
   return data;
 }
 
-async function listarEventosCalendario(ano: number, mes: number): Promise<EventoCalendario[]> {
-  const { start, end } = buildMonthInterval(ano, mes);
-
-  const { data, error } = await supabase
-    .from('eventos')
-    .select('*')
-    .gte('data', start)
-    .lte('data', end);
-
-  if (error) {
-    console.warn('Falha ao buscar eventos do calendário:', error.message);
-    return [];
-  }
-
-  return Array.isArray(data) ? data : [];
+function parseApiError(payload: any, fallback: string): string {
+  if (typeof payload?.error === 'string' && payload.error.trim()) return payload.error.trim();
+  if (typeof payload?.details === 'string' && payload.details.trim()) return payload.details.trim();
+  return fallback;
 }
 
-async function listarFerias(servidor: NormalizedServidor): Promise<FeriasRegistro[]> {
-  const cpf = onlyDigits(servidor.cpf);
+function choosePrimaryBackendItem(
+  data: BackendServidorItem[],
+  cpf: string
+): BackendServidorItem | null {
+  if (!Array.isArray(data) || data.length === 0) return null;
 
-  const { data, error } = await supabase
-    .from('ferias')
-    .select('*')
-    .or(
-      [
-        cpf ? `servidor_cpf.eq.${cpf}` : '',
-        cpf ? `cpf.eq.${cpf}` : '',
-        servidor.id ? `servidor_id.eq.${servidor.id}` : '',
-        servidor.nome ? `nome.ilike.%${servidor.nome}%` : '',
-        servidor.nome ? `nome_completo.ilike.%${servidor.nome}%` : ''
-      ]
-        .filter(Boolean)
-        .join(',')
-    );
+  const cpfDigits = onlyDigits(cpf);
+  const exactMatch =
+    data.find((item) => onlyDigits(item?.servidor?.cpf) === cpfDigits) ?? null;
 
-  if (error) {
-    console.warn('Falha ao buscar férias:', error.message);
-    return [];
-  }
-
-  return Array.isArray(data) ? data : [];
+  return exactMatch || data[0] || null;
 }
 
-async function listarAtestados(servidor: NormalizedServidor): Promise<AtestadoRegistro[]> {
-  const cpf = onlyDigits(servidor.cpf);
+function buildDayMapFromBackend(params: {
+  ano: number;
+  mes: number;
+  item: BackendServidorItem;
+  incluirPontoFacultativo: boolean;
+  faltaVaiParaRubrica: boolean;
+}) {
+  const { ano, mes, item, incluirPontoFacultativo, faltaVaiParaRubrica } = params;
 
-  const { data, error } = await supabase
-    .from('atestados')
-    .select('*')
-    .or(
-      [
-        cpf ? `servidor_cpf.eq.${cpf}` : '',
-        cpf ? `cpf.eq.${cpf}` : '',
-        servidor.id ? `servidor_id.eq.${servidor.id}` : '',
-        servidor.nome ? `nome.ilike.%${servidor.nome}%` : '',
-        servidor.nome ? `nome_completo.ilike.%${servidor.nome}%` : ''
-      ]
-        .filter(Boolean)
-        .join(',')
-    );
-
-  if (error) {
-    console.warn('Falha ao buscar atestados:', error.message);
-    return [];
-  }
-
-  return Array.isArray(data) ? data : [];
-}
-
-async function listarOcorrencias(
-  servidor: NormalizedServidor,
-  ano: number,
-  mes: number
-): Promise<OcorrenciaFrequencia[]> {
-  const { start, end } = buildMonthInterval(ano, mes);
-  const cpf = onlyDigits(servidor.cpf);
-
-  const tableCandidates = ['frequencia_ocorrencias', 'faltas'];
-
-  for (const table of tableCandidates) {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .or(
-        [
-          cpf ? `servidor_cpf.eq.${cpf}` : '',
-          cpf ? `cpf.eq.${cpf}` : '',
-          servidor.id ? `servidor_id.eq.${servidor.id}` : '',
-          servidor.nome ? `nome.ilike.%${servidor.nome}%` : '',
-          servidor.nome ? `nome_completo.ilike.%${servidor.nome}%` : ''
-        ]
-          .filter(Boolean)
-          .join(',')
-      )
-      .or(`data.gte.${start},date.gte.${start},inicio.gte.${start}`)
-      .or(`data.lte.${end},date.lte.${end},inicio.lte.${end}`);
-
-    if (error) {
-      console.warn(`Falha ao buscar ocorrências em ${table}:`, error.message);
-      continue;
-    }
-
-    if (Array.isArray(data)) return data;
-  }
-
-  return [];
-}
-
-export function consolidarFrequencia(
-  options: ConsolidarFrequenciaOptions
-): ConsolidacaoFrequenciaResult {
-  const {
-    servidor: inputServidor,
-    mes,
-    ano,
-    eventos = [],
-    ferias = [],
-    atestados = [],
-    ocorrencias = [],
-    incluirPontoFacultativo = true,
-    faltaVaiParaRubrica = true
-  } = options;
-
-  if (!mes || mes < 1 || mes > 12) throw new Error('Mês inválido para consolidar frequência.');
-  if (!ano || ano < 2000 || ano > 2100) throw new Error('Ano inválido para consolidar frequência.');
-
-  const servidor = normalizeServidor(inputServidor);
-  const keys = servidorKeys(servidor);
-  const dayMap = createDayMapShell(ano, mes);
-
-  const eventosNorm = normalizeEventos(eventos);
-  const feriasNorm = normalizeFeriasRegistros(ferias, keys);
-  const atestadosNorm = normalizeAtestadosRegistros(atestados, keys);
-  const ocorrenciasNorm = normalizeOcorrencias(ocorrencias, keys);
-
+  const dayMap = createEmptyDayMap(ano, mes);
   const warnings: string[] = [];
+  const dias = Array.isArray(item?.dias) ? item.dias : [];
 
-  for (let dia = 1; dia <= getLastDayOfMonth(ano, mes); dia += 1) {
-    const item = dayMap[dia];
-    const dataISO = item.dataISO;
+  for (const diaRaw of dias) {
+    const dia = Number(diaRaw?.dia);
+    if (!Number.isFinite(dia) || !dayMap[dia]) continue;
 
-    const evento = eventosNorm.find((e) => e.dataISO === dataISO && e.tipo === 'FERIADO') ?? null;
+    const atual = dayMap[dia];
+    const ocorrencias = Array.isArray(diaRaw?.ocorrencias) ? diaRaw.ocorrencias : [];
+    const eventos = Array.isArray(diaRaw?.eventos) ? diaRaw.eventos : [];
+
+    const falta = ocorrencias.find((o) => safeUpper(o?.tipo) === 'FALTA') || null;
+    const atestado = ocorrencias.find((o) => safeUpper(o?.tipo) === 'ATESTADO') || null;
+    const manual = ocorrencias.find(
+      (o) => !['FALTA', 'ATESTADO'].includes(safeUpper(o?.tipo))
+    ) || null;
+
+    const feriado =
+      eventos.find((e) => safeUpper(e?.tipo) === 'FERIADO') || null;
+
     const ponto =
-      eventosNorm.find(
-        (e) => e.dataISO === dataISO && (e.tipo === 'PONTO' || e.tipo === 'PONTO FACULTATIVO')
-      ) ?? null;
-    const feriasDia = feriasNorm.find((f) => isDateWithin(dataISO, f.inicio, f.fim)) ?? null;
-    const atestadoDia = atestadosNorm.find((a) => isDateWithin(dataISO, a.inicio, a.fim)) ?? null;
-    const faltaDia =
-      ocorrenciasNorm.find((o) => o.dataISO === dataISO && safeUpper(o.tipo) === 'FALTA') ?? null;
-    const manualDia =
-      ocorrenciasNorm.find((o) => o.dataISO === dataISO && safeUpper(o.tipo) !== 'FALTA') ?? null;
+      eventos.find((e) =>
+        ['PONTO', 'PONTO FACULTATIVO'].includes(safeUpper(e?.tipo))
+      ) || null;
 
-    const built = buildDayItem({
-      item,
-      incluirPontoFacultativo,
-      faltaVaiParaRubrica,
-      evento,
-      ponto,
-      feriasDia,
-      atestadoDia,
-      faltaDia,
-      manualDia
-    });
+    const isVacation = Boolean(diaRaw?.ferias);
+    const isAtestado = Boolean(atestado);
+    const isHoliday = Boolean(feriado);
+    const isPontoFacultativo = Boolean(ponto) && incluirPontoFacultativo;
+    const isFalta = Boolean(falta);
 
-    dayMap[dia] = built;
+    let finalStatus: StatusConsolidadoDia = atual.finalStatus;
 
-    if (built.conflitos.length > 0) {
-      warnings.push(`Dia ${dia}: ${built.conflitos.join('; ')}`);
+    if (isVacation) {
+      finalStatus = 'FERIAS';
+    } else if (isAtestado) {
+      finalStatus = 'ATESTADO';
+    } else if (isHoliday) {
+      finalStatus = 'FERIADO';
+    } else if (isPontoFacultativo) {
+      finalStatus = 'PONTO_FACULTATIVO';
+    } else if (atual.isSunday) {
+      finalStatus = 'DOMINGO';
+    } else if (atual.isSaturday) {
+      finalStatus = 'SABADO';
+    } else if (isFalta) {
+      finalStatus = 'FALTA';
+    } else if (manual) {
+      finalStatus = 'MANUAL';
+    } else {
+      finalStatus = 'NORMAL';
     }
+
+    let rubrica = '';
+    let rubrica1 = '';
+    let rubrica2 = '';
+    let ocorrencia1 = '';
+    let ocorrencia2 = '';
+    const observacoes: string[] = [];
+
+    if (
+      ['SABADO', 'DOMINGO', 'FERIADO', 'FERIAS', 'ATESTADO', 'PONTO_FACULTATIVO'].includes(
+        finalStatus
+      )
+    ) {
+      rubrica = statusToRubrica(finalStatus);
+      rubrica1 = rubrica;
+      rubrica2 = rubrica;
+    }
+
+    if (finalStatus === 'FALTA') {
+      if (faltaVaiParaRubrica) {
+        rubrica = 'FALTA';
+        rubrica1 = 'FALTA';
+        rubrica2 = 'FALTA';
+      } else {
+        ocorrencia1 = 'FALTA';
+        ocorrencia2 = 'FALTA';
+      }
+    }
+
+    if (manual) {
+      const manualTipo = safeUpper(manual?.tipo);
+      if (!rubrica && manualTipo && manualTipo !== 'NORMAL') {
+        rubrica = normalizeSpaces(manual?.tipo);
+        rubrica1 = rubrica;
+        rubrica2 = rubrica;
+      }
+
+      if (!ocorrencia1 && normalizeSpaces(manual?.observacao)) {
+        ocorrencia1 = normalizeSpaces(manual?.observacao);
+      }
+
+      if (!ocorrencia2 && normalizeSpaces(manual?.turno)) {
+        ocorrencia2 = normalizeSpaces(manual?.turno);
+      }
+    }
+
+    if (feriado?.titulo || feriado?.nome) {
+      observacoes.push(`Feriado: ${normalizeSpaces(feriado.titulo || feriado.nome)}`);
+    }
+
+    if (ponto?.titulo || ponto?.nome) {
+      observacoes.push(`Ponto facultativo: ${normalizeSpaces(ponto.titulo || ponto.nome)}`);
+    }
+
+    if (falta?.observacao || falta?.descricao) {
+      observacoes.push(normalizeSpaces(falta.observacao || falta.descricao));
+    }
+
+    if (atestado?.observacao || atestado?.descricao) {
+      observacoes.push(normalizeSpaces(atestado.observacao || atestado.descricao));
+    }
+
+    if (manual?.observacao || manual?.descricao) {
+      observacoes.push(normalizeSpaces(manual.observacao || manual.descricao));
+    }
+
+    if (isVacation && isAtestado) {
+      warnings.push(`Dia ${dia}: conflito entre férias e atestado.`);
+    }
+
+    dayMap[dia] = {
+      ...atual,
+      isHoliday,
+      isPontoFacultativo,
+      isVacation,
+      isAtestado,
+      isFalta,
+      rubrica,
+      rubrica1,
+      rubrica2,
+      ocorrencia1,
+      ocorrencia2,
+      observacoes: observacoes.filter(Boolean).join(' | '),
+      finalStatus,
+      conflitos: isVacation && isAtestado ? ['Conflito: férias e atestado no mesmo dia'] : [],
+      avisos: isVacation && isAtestado ? ['Conflito: férias e atestado no mesmo dia'] : [],
+      fontes: {
+        evento: feriado,
+        ponto,
+        ferias: diaRaw?.ferias ? diaRaw : null,
+        atestado,
+        falta,
+        manual
+      }
+    };
   }
 
-  const templateData = buildTemplateData(servidor, ano, mes, dayMap);
-  const totalDiasMes = getLastDayOfMonth(ano, mes);
+  return { dayMap, warnings };
+}
 
-  return {
-    servidor,
-    ano,
-    mes,
-    totalDiasMes,
-    hiddenRowsFrom: totalDiasMes < 31 ? totalDiasMes + 1 : 0,
-    hiddenRowsTo: totalDiasMes < 31 ? 31 : 0,
-    dayMap,
-    templateData,
-    warnings
-  };
+async function fetchJson(url: string): Promise<any> {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  let payload: any = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(parseApiError(payload, 'Falha ao consultar a frequência.'));
+  }
+
+  return payload;
 }
 
 export async function carregarDadosConsolidadosFrequencia(
@@ -1065,23 +587,71 @@ export async function carregarDadosConsolidadosFrequencia(
 ): Promise<ConsolidacaoFrequenciaResult> {
   const servidor = normalizeServidor(options.servidor);
 
-  const [eventos, ferias, atestados, ocorrencias] = await Promise.all([
-    options.eventos ? Promise.resolve(options.eventos) : listarEventosCalendario(options.ano, options.mes),
-    options.ferias ? Promise.resolve(options.ferias) : listarFerias(servidor),
-    options.atestados ? Promise.resolve(options.atestados) : listarAtestados(servidor),
-    options.ocorrencias
-      ? Promise.resolve(options.ocorrencias)
-      : listarOcorrencias(servidor, options.ano, options.mes)
-  ]);
+  if (!options.mes || options.mes < 1 || options.mes > 12) {
+    throw new Error('Mês inválido para consolidar frequência.');
+  }
 
-  return consolidarFrequencia({
-    ...options,
-    servidor,
-    eventos,
-    ferias,
-    atestados,
-    ocorrencias
+  if (!options.ano || options.ano < 2000 || options.ano > 2100) {
+    throw new Error('Ano inválido para consolidar frequência.');
+  }
+
+  const baseUrl = normalizeBaseUrl(API_BASE_URL);
+  if (!baseUrl) {
+    throw new Error('API_BASE_URL não está configurada.');
+  }
+
+  const incluirPontoFacultativo = options.incluirPontoFacultativo !== false;
+  const faltaVaiParaRubrica = options.faltaVaiParaRubrica !== false;
+
+  const url =
+    `${baseUrl}/api/frequencia?ano=${encodeURIComponent(options.ano)}` +
+    `&mes=${encodeURIComponent(options.mes)}` +
+    `&servidorCpf=${encodeURIComponent(servidor.cpf)}`;
+
+  const payload = await fetchJson(url);
+  const lista = Array.isArray(payload?.data) ? payload.data : [];
+  const item = choosePrimaryBackendItem(lista, servidor.cpf);
+
+  if (!item) {
+    throw new Error('Nenhum dado de frequência foi encontrado para o servidor selecionado.');
+  }
+
+  const servidorApi = item.servidor || {};
+  const servidorNormalizado: NormalizedServidor = {
+    id: normalizeSpaces(servidorApi.id || servidor.id || servidor.cpf) || servidor.cpf,
+    cpf: onlyDigits(servidorApi.cpf || servidor.cpf),
+    nome: normalizeSpaces(servidorApi.nome || servidor.nome),
+    matricula: normalizeSpaces(servidorApi.matricula || servidor.matricula),
+    categoria: normalizeSpaces(servidorApi.categoria || servidor.categoria),
+    setor: normalizeSpaces(servidorApi.setor || servidor.setor),
+    cargo: normalizeSpaces(servidorApi.cargo || servidor.cargo),
+    chDiaria: normalizeSpaces(servidorApi.chDiaria ?? servidorApi.ch_diaria ?? servidor.chDiaria ?? servidor.ch_diaria),
+    chSemanal: normalizeSpaces(servidorApi.chSemanal ?? servidorApi.ch_semanal ?? servidor.chSemanal ?? servidor.ch_semanal),
+    status: normalizeSpaces(servidorApi.status || servidor.status || 'ATIVO')
+  };
+
+  const { dayMap, warnings } = buildDayMapFromBackend({
+    ano: options.ano,
+    mes: options.mes,
+    item,
+    incluirPontoFacultativo,
+    faltaVaiParaRubrica
   });
+
+  const totalDiasMes = getLastDayOfMonth(options.ano, options.mes);
+  const templateData = buildTemplateData(servidorNormalizado, options.ano, options.mes, dayMap);
+
+  return {
+    servidor: servidorNormalizado,
+    ano: options.ano,
+    mes: options.mes,
+    totalDiasMes,
+    hiddenRowsFrom: totalDiasMes < 31 ? totalDiasMes + 1 : 0,
+    hiddenRowsTo: totalDiasMes < 31 ? 31 : 0,
+    dayMap,
+    templateData,
+    warnings
+  };
 }
 
 export function montarPayloadExportacaoFrequencia(
@@ -1168,14 +738,13 @@ export async function exportarFrequenciaArquivo(
   });
 
   if (!response.ok) {
-    let errorText = 'Falha ao exportar a folha.';
+    let json: any = null;
     try {
-      const json = await response.json();
-      errorText = json?.error || json?.details || errorText;
+      json = await response.json();
     } catch {
-      // noop
+      json = null;
     }
-    throw new Error(errorText);
+    throw new Error(parseApiError(json, 'Falha ao exportar a folha.'));
   }
 
   const blob = await response.blob();
@@ -1197,7 +766,6 @@ export async function baixarFrequenciaArquivo(
 }
 
 export default {
-  consolidarFrequencia,
   carregarDadosConsolidadosFrequencia,
   montarPayloadExportacaoFrequencia,
   exportarFrequenciaArquivo,
