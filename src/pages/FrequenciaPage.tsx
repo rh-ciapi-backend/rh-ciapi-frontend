@@ -256,9 +256,9 @@ export default function FrequenciaPage() {
         }
 
         const mapped: Suggestion[] = Array.isArray(data)
-          ? data.map((row: any) => ({
-              id:
-                String(
+          ? data
+              .map((row: any) => ({
+                id: String(
                   row?.servidor ||
                     row?.id ||
                     row?.uuid ||
@@ -266,15 +266,16 @@ export default function FrequenciaPage() {
                     row?.cpf ||
                     crypto.randomUUID()
                 ),
-              nome: normalizeSpaces(row?.nomeCompleto || row?.nome_completo || row?.nome),
-              cpf: normalizeSpaces(row?.cpf),
-              matricula: normalizeSpaces(row?.matricula),
-              categoria: normalizeSpaces(row?.categoria || row?.categoria_canonica),
-              setor: normalizeSpaces(row?.setor || row?.lotacao_interna || row?.lotacao),
-              cargo: normalizeSpaces(row?.cargo),
-              status: normalizeSpaces(row?.status || 'ATIVO'),
-              raw: row
-            }))
+                nome: normalizeSpaces(row?.nomeCompleto || row?.nome_completo || row?.nome),
+                cpf: normalizeSpaces(row?.cpf),
+                matricula: normalizeSpaces(row?.matricula),
+                categoria: normalizeSpaces(row?.categoria || row?.categoria_canonica),
+                setor: normalizeSpaces(row?.setor || row?.lotacao_interna || row?.lotacao),
+                cargo: normalizeSpaces(row?.cargo),
+                status: normalizeSpaces(row?.status || 'ATIVO'),
+                raw: row
+              }))
+              .filter((row) => row.nome && row.cpf)
           : [];
 
         setSuggestions(mapped);
@@ -304,6 +305,7 @@ export default function FrequenciaPage() {
     setDropdownOpen(false);
     setSuccessMessage('');
     setErrorMessage('');
+    setPreview(null);
   }, []);
 
   const handleClearServidor = useCallback(() => {
@@ -340,6 +342,7 @@ export default function FrequenciaPage() {
       return result;
     } catch (error: any) {
       const msg = error?.message || 'Não foi possível carregar a consolidação da frequência.';
+      setPreview(null);
       setErrorMessage(msg);
       return null;
     } finally {
@@ -373,7 +376,12 @@ export default function FrequenciaPage() {
         const nomeServidor = normalizeSpaces(servidor.nomeCompleto ?? servidor.nome) || 'servidor';
         setSuccessMessage(`Arquivo ${formato.toUpperCase()} gerado com sucesso para ${nomeServidor}.`);
 
-        if (!preview || preview.ano !== ano || preview.mes !== mes || preview.servidor.cpf !== onlyDigits(selectedServidor.cpf)) {
+        if (
+          !preview ||
+          preview.ano !== ano ||
+          preview.mes !== mes ||
+          preview.servidor.cpf !== onlyDigits(selectedServidor.cpf)
+        ) {
           void loadPreview();
         }
       } catch (error: any) {
@@ -779,7 +787,11 @@ export default function FrequenciaPage() {
                       icon={<CalendarDays className="h-5 w-5" />}
                       label="Dias do mês"
                       value={preview.totalDiasMes}
-                      helper={`Linhas ocultadas: ${preview.hiddenRowsFrom}-${preview.hiddenRowsTo}`}
+                      helper={
+                        preview.hiddenRowsFrom > 0
+                          ? `Linhas ocultadas: ${preview.hiddenRowsFrom}-${preview.hiddenRowsTo}`
+                          : 'Sem linhas excedentes'
+                      }
                     />
                     <StatCard
                       icon={<FileSpreadsheet className="h-5 w-5" />}
