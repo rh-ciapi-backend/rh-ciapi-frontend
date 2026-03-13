@@ -1,4 +1,3 @@
-// src/pages/FrequenciaPage.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -14,7 +13,6 @@ import {
   exportarFrequenciaArquivo,
   listarFrequenciaPorMes,
   type ExportarFrequenciaPayload,
-  type FormatoExportacaoFrequencia,
   type FrequenciaDiaItem,
   type FrequenciaServidorItem,
 } from '../services/frequenciaService';
@@ -32,7 +30,7 @@ const MONTHS = [
   'Outubro',
   'Novembro',
   'Dezembro',
-];
+] as const;
 
 type ToastState = {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -45,6 +43,8 @@ type FiltrosLocais = {
   setor: string;
   status: string;
 };
+
+type FormatoArquivoBackend = 'docx' | 'pdf';
 
 function getCurrentYearMonth() {
   const now = new Date();
@@ -89,10 +89,10 @@ function badgeClass(status?: string) {
   const s = normalizarTexto(status);
   if (s.includes('FALTA')) return 'bg-red-500/15 text-red-300 border-red-500/30';
   if (s.includes('ATESTADO')) return 'bg-blue-500/15 text-blue-300 border-blue-500/30';
-  if (s.includes('FERIAS')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+  if (s.includes('FERIAS') || s.includes('FÉRIAS')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
   if (s.includes('FERIADO')) return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
   if (s.includes('PONTO')) return 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30';
-  if (s.includes('ANIVERSARIO')) return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+  if (s.includes('ANIVERSARIO') || s.includes('ANIVERSÁRIO')) return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
   return 'bg-slate-500/15 text-slate-300 border-slate-500/30';
 }
 
@@ -119,7 +119,7 @@ export default function FrequenciaPage() {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [exportandoFormato, setExportandoFormato] = useState<FormatoExportacaoFrequencia | null>(null);
+  const [exportandoFormato, setExportandoFormato] = useState<FormatoArquivoBackend | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [erroTela, setErroTela] = useState<string>('');
   const [itens, setItens] = useState<FrequenciaServidorItem[]>([]);
@@ -140,12 +140,13 @@ export default function FrequenciaPage() {
         busca: filtros.busca || undefined,
       });
 
-      setItens(Array.isArray(data) ? data : []);
+      const lista = Array.isArray(data) ? data : [];
+      setItens(lista);
 
-      if (Array.isArray(data) && data.length > 0) {
-        const cpfAtualExiste = data.some((item) => item.cpf && item.cpf === servidorSelecionadoCpf);
+      if (lista.length > 0) {
+        const cpfAtualExiste = lista.some((item) => item.cpf && item.cpf === servidorSelecionadoCpf);
         if (!cpfAtualExiste) {
-          setServidorSelecionadoCpf(data[0]?.cpf ?? '');
+          setServidorSelecionadoCpf(lista[0]?.cpf ?? '');
         }
       } else {
         setServidorSelecionadoCpf('');
@@ -202,7 +203,8 @@ export default function FrequenciaPage() {
       const okCategoria =
         !filtros.categoria || normalizarTexto(item.categoria) === normalizarTexto(filtros.categoria);
 
-      const okSetor = !filtros.setor || normalizarTexto(item.setor) === normalizarTexto(filtros.setor);
+      const okSetor =
+        !filtros.setor || normalizarTexto(item.setor) === normalizarTexto(filtros.setor);
 
       const okStatus =
         !filtros.status || normalizarTexto(item.status) === normalizarTexto(filtros.status);
@@ -249,7 +251,7 @@ export default function FrequenciaPage() {
   }, [ano, mes, servidorSelecionado]);
 
   const handleExportarArquivo = useCallback(
-    async (formato: FormatoExportacaoFrequencia) => {
+    async (formato: FormatoArquivoBackend) => {
       if (!exportPayloadBase) {
         setToast({
           type: 'warning',
@@ -533,7 +535,11 @@ export default function FrequenciaPage() {
                   disabled={loading}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
                   Atualizar
                 </button>
               </div>
@@ -742,7 +748,11 @@ export default function FrequenciaPage() {
                             </div>
                             <div className="mt-1 text-2xl font-semibold text-slate-100">{dia}</div>
                           </div>
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] ${badgeClass(item?.statusFinal)}`}>
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-[11px] ${badgeClass(
+                              item?.statusFinal,
+                            )}`}
+                          >
                             {item?.statusFinal || 'SEM REGISTRO'}
                           </span>
                         </div>
@@ -823,7 +833,10 @@ export default function FrequenciaPage() {
                     <div className="text-xs uppercase tracking-wide text-slate-500">Observações</div>
                     <ul className="mt-3 space-y-2 text-sm text-slate-200">
                       {dayMap.get(diaSelecionado)?.observacoes?.map((obs, index) => (
-                        <li key={`${diaSelecionado}-obs-${index}`} className="rounded-xl bg-slate-950/60 px-3 py-2">
+                        <li
+                          key={`${diaSelecionado}-obs-${index}`}
+                          className="rounded-xl bg-slate-950/60 px-3 py-2"
+                        >
                           {obs}
                         </li>
                       ))}
