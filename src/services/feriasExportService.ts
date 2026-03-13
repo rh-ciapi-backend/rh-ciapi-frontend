@@ -40,7 +40,7 @@ export interface FeriasExportPayload extends ExportFeriasFilters {
   rows?: FeriasExportRowInput[];
 }
 
-export const feriasExportLabels = {
+export const feriasExportLabels: Record<string, string> = {
   formato: 'Formato',
   mes: 'Mês',
   ano: 'Ano',
@@ -77,6 +77,45 @@ function sanitizeAno(ano?: number): number | undefined {
   return Math.trunc(value);
 }
 
+export function getDefaultFeriasExportFilters(): ExportFeriasFilters {
+  const now = new Date();
+
+  return {
+    formato: 'docx',
+    mes: now.getMonth() + 1,
+    ano: now.getFullYear(),
+    categoria: '',
+    setor: '',
+    status: 'ATIVO',
+    servidorCpf: '',
+    servidorId: '',
+    incluirInativos: false,
+  };
+}
+
+export function buildFeriasExportData(
+  filters: Partial<ExportFeriasFilters> = {},
+  rows: FeriasExportRowInput[] = [],
+): FeriasExportPayload {
+  const defaults = getDefaultFeriasExportFilters();
+
+  return {
+    formato: (filters.formato as FeriasExportFormato) || defaults.formato,
+    mes: sanitizeMes(filters.mes ?? defaults.mes),
+    ano: sanitizeAno(filters.ano ?? defaults.ano),
+    categoria: asString(filters.categoria ?? defaults.categoria),
+    setor: asString(filters.setor ?? defaults.setor),
+    status: asString(filters.status ?? defaults.status),
+    servidorCpf: asString(filters.servidorCpf ?? defaults.servidorCpf),
+    servidorId: asString(filters.servidorId ?? defaults.servidorId),
+    incluirInativos:
+      typeof filters.incluirInativos === 'boolean'
+        ? filters.incluirInativos
+        : Boolean(defaults.incluirInativos),
+    rows: Array.isArray(rows) ? rows : [],
+  };
+}
+
 function resolveFilename(response: Response, fallback: string): string {
   const disposition = response.headers.get('content-disposition') || '';
   const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
@@ -104,24 +143,6 @@ async function parseError(response: Response): Promise<string> {
   } catch {
     return `Falha na exportação (${response.status})`;
   }
-}
-
-export function buildFeriasExportData(
-  filters: Partial<ExportFeriasFilters> = {},
-  rows: FeriasExportRowInput[] = [],
-): FeriasExportPayload {
-  return {
-    formato: (filters.formato as FeriasExportFormato) || 'docx',
-    mes: sanitizeMes(filters.mes),
-    ano: sanitizeAno(filters.ano),
-    categoria: asString(filters.categoria),
-    setor: asString(filters.setor),
-    status: asString(filters.status),
-    servidorCpf: asString(filters.servidorCpf),
-    servidorId: asString(filters.servidorId),
-    incluirInativos: Boolean(filters.incluirInativos),
-    rows: Array.isArray(rows) ? rows : [],
-  };
 }
 
 export async function exportarFerias(payload: FeriasExportPayload): Promise<void> {
@@ -154,9 +175,15 @@ export async function exportarFerias(payload: FeriasExportPayload): Promise<void
   URL.revokeObjectURL(url);
 }
 
+export async function exportFeriasFile(payload: FeriasExportPayload): Promise<void> {
+  return exportarFerias(payload);
+}
+
 const feriasExportService = {
   exportarFerias,
+  exportFeriasFile,
   buildFeriasExportData,
+  getDefaultFeriasExportFilters,
   feriasExportLabels,
 };
 
