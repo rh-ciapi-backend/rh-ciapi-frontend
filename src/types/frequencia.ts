@@ -20,6 +20,10 @@ export interface FrequenciaApiResponse<T = unknown> {
   data?: T;
   items?: T;
   results?: T;
+  rows?: T;
+  registros?: T;
+  servidores?: T;
+  frequencias?: T;
 }
 
 export interface FrequenciaFiltersState {
@@ -137,11 +141,22 @@ export interface FrequenciaServerListProps {
   loading?: boolean;
 }
 
+export type FrequenciaActionKey =
+  | 'lancar'
+  | 'editar'
+  | 'replicar'
+  | 'limpar'
+  | 'importar'
+  | 'previa'
+  | 'export-docx'
+  | 'export-pdf'
+  | 'export-csv';
+
 export interface FrequenciaActionBarProps {
   disabled?: boolean;
   exporting?: boolean;
   onRefresh: () => void;
-  onExport: (format: FrequenciaExportFormat) => void;
+  onAction: (action: FrequenciaActionKey) => void;
 }
 
 export interface FrequenciaLegendItem {
