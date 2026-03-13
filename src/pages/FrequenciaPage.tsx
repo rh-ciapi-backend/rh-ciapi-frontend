@@ -12,17 +12,18 @@ import FrequenciaMonthGrid from '../components/frequencia/FrequenciaMonthGrid';
 import FrequenciaServerList from '../components/frequencia/FrequenciaServerList';
 
 import frequenciaService, {
+  baixarCsvLocalFrequencia,
   baixarFrequenciaArquivo,
   getFrequenciaServiceErrorMessage,
 } from '../services/frequenciaService';
 
 import type {
+  FrequenciaActionKey,
   FrequenciaDayItem,
   FrequenciaDayStatus,
   FrequenciaFiltersState,
   FrequenciaKpisData,
   FrequenciaServidorItem,
-  FrequenciaExportFormat,
 } from '../types/frequencia';
 
 const MONTH_LABELS = [
@@ -56,46 +57,68 @@ function asString(value: unknown): string {
   return '';
 }
 
-function asNumber(value: unknown, fallback = 0): number {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : fallback;
-}
-
-function readPath(source: unknown, path: string): unknown {
-  const keys = path.split('.');
-  let current: unknown = source;
-
-  for (const key of keys) {
-    if (!current || typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-
-  return current;
-}
-
 function pickString(source: unknown, paths: string[], fallback = ''): string {
+  const record = asRecord(source);
+
   for (const path of paths) {
-    const value = readPath(source, path);
-    const text = asString(value);
+    const keys = path.split('.');
+    let current: unknown = record;
+
+    for (const key of keys) {
+      if (!current || typeof current !== 'object') {
+        current = undefined;
+        break;
+      }
+      current = (current as Record<string, unknown>)[key];
+    }
+
+    const text = asString(current);
     if (text) return text;
   }
+
   return fallback;
 }
 
 function pickNumber(source: unknown, paths: string[], fallback = 0): number {
+  const record = asRecord(source);
+
   for (const path of paths) {
-    const value = readPath(source, path);
-    const num = Number(value);
+    const keys = path.split('.');
+    let current: unknown = record;
+
+    for (const key of keys) {
+      if (!current || typeof current !== 'object') {
+        current = undefined;
+        break;
+      }
+      current = (current as Record<string, unknown>)[key];
+    }
+
+    const num = Number(current);
     if (Number.isFinite(num)) return num;
   }
+
   return fallback;
 }
 
 function pickArray(source: unknown, paths: string[]): unknown[] {
+  const record = asRecord(source);
+
   for (const path of paths) {
-    const value = readPath(source, path);
-    if (Array.isArray(value)) return value;
+    const keys = path.split('.');
+    let current: unknown = record;
+
+    for (const key of keys) {
+      if (!current || typeof current !== 'object') {
+        current = undefined;
+        break;
+      }
+      current = (current as Record<string, unknown>)[key];
+    }
+
+    if (Array.isArray(current)) return current;
   }
+
   return [];
 }
 
@@ -105,8 +128,7 @@ function normalizeCpf(value: string): string {
 
 function normalizeServerStatus(value: string): string {
   const text = value.trim().toUpperCase();
-  if (!text) return 'ATIVO';
-  return text;
+  return text || 'ATIVO';
 }
 
 function normalizeSearchText(value: string): string {
@@ -115,6 +137,42 @@ function normalizeSearchText(value: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toLowerCase();
+}
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function getWeekdayLabel(year: number, month: number, day: number): string {
+  return new Date(year, month - 1, day)
+    .toLocaleDateString('pt-BR', { weekday: 'short' })
+    .replace('.', '')
+    .toUpperCase();
+}
+
+function createFallbackDay(year: number, month: number, day: number): FrequenciaDayItem {
+  const date = new Date(year, month - 1, day);
+  const weekDay = date.getDay();
+  const isWeekend = weekDay === 0 || weekDay === 6;
+
+  const rubrica = weekDay === 0 ? 'DOMINGO' : weekDay === 6 ? 'SÁBADO' : '';
+
+  return {
+    dia: day,
+    dataIso: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+    weekdayLabel: getWeekdayLabel(year, month, day),
+    isWeekend,
+    status: isWeekend ? 'fim_de_semana' : 'sem_registro',
+    rubrica,
+    referencia: '',
+    ocorrenciaManha: '',
+    ocorrenciaTarde: '',
+    titulo: isWeekend ? rubrica : 'Sem registro',
+    descricao: isWeekend ? `Dia ${rubrica.toLowerCase()}.` : 'Nenhum lançamento informado para este dia.',
+    badges: rubrica ? [rubrica] : [],
+    avisos: [],
+    raw: null,
+  };
 }
 
 function inferStatus({
@@ -142,87 +200,58 @@ function inferStatus({
   if (haystack.includes('anivers')) return 'aniversario';
   if (haystack.includes('evento')) return 'evento';
   if (isWeekend) return 'fim_de_semana';
-  if (haystack.includes('presente') || haystack.includes('normal') || haystack.includes('expediente')) return 'presente';
+  if (haystack.includes('presente') || haystack.includes('expediente') || haystack.includes('normal')) return 'presente';
   if (haystack) return 'pendente';
 
   return 'sem_registro';
 }
 
-function getWeekdayLabel(year: number, month: number, day: number): string {
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
-}
+function normalizeDayItem(raw: unknown, year: number, month: number, fallbackDay: number): FrequenciaDayItem {
+  const dayNumber = pickNumber(raw, ['dia', 'day', 'numero', 'date', 'data_numero'], fallbackDay);
+  const total = getDaysInMonth(year, month);
+  const safeDay = Math.min(Math.max(dayNumber, 1), total);
 
-function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate();
-}
-
-function createFallbackDay(year: number, month: number, day: number): FrequenciaDayItem {
-  const date = new Date(year, month - 1, day);
-  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-  const defaultRubrica = date.getDay() === 0 ? 'DOMINGO' : date.getDay() === 6 ? 'SÁBADO' : '';
-
-  return {
-    dia: day,
-    dataIso: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-    weekdayLabel: getWeekdayLabel(year, month, day),
-    isWeekend,
-    status: isWeekend ? 'fim_de_semana' : 'sem_registro',
-    rubrica: defaultRubrica,
-    referencia: '',
-    ocorrenciaManha: '',
-    ocorrenciaTarde: '',
-    titulo: isWeekend ? defaultRubrica : 'Sem registro',
-    descricao: isWeekend ? `Dia ${defaultRubrica.toLowerCase()}.` : 'Nenhuma ocorrência informada para este dia.',
-    badges: isWeekend ? [defaultRubrica] : [],
-    avisos: [],
-    raw: null,
-  };
-}
-
-function normalizeDayItem(raw: unknown, year: number, month: number, fallbackDay?: number): FrequenciaDayItem {
-  const dayNumber = pickNumber(raw, ['dia', 'day', 'numero', 'date', 'data_numero'], fallbackDay || 1);
-  const safeDay = Math.min(Math.max(dayNumber, 1), getDaysInMonth(year, month));
   const base = createFallbackDay(year, month, safeDay);
 
-  const rubrica = pickString(raw, ['rubrica', 'statusLabel', 'observacao', 'observação', 'descricaoRubrica'], base.rubrica);
-  const referencia = pickString(raw, ['referencia', 'referência', 'turnoLabel', 'codigo', 'code'], '');
-  const ocorrenciaManha = pickString(raw, ['ocorrenciaManha', 'manha', 'manhaLabel', 'o1', 'o1Label', 'turno1'], '');
-  const ocorrenciaTarde = pickString(raw, ['ocorrenciaTarde', 'tarde', 'tardeLabel', 'o2', 'o2Label', 'turno2'], '');
+  const rubrica = pickString(
+    raw,
+    ['rubrica', 'statusLabel', 'observacao', 'observação', 'descricaoRubrica', 'rubrica_servidor'],
+    base.rubrica,
+  );
+  const referencia = pickString(raw, ['referencia', 'referência', 'codigo', 'code'], '');
+  const ocorrenciaManha = pickString(raw, ['ocorrenciaManha', 'manha', 'o1', 'o1Label', 'turno1'], '');
+  const ocorrenciaTarde = pickString(raw, ['ocorrenciaTarde', 'tarde', 'o2', 'o2Label', 'turno2'], '');
   const titulo = pickString(raw, ['titulo', 'title', 'finalStatus', 'status', 'label'], '');
   const descricao = pickString(raw, ['descricao', 'description', 'detalhes', 'observacao', 'observação'], '');
-  const badges = asArray<string>(readPath(raw, 'badges'))
-    .map(asString)
-    .filter(Boolean);
-  const avisos = asArray<string>(readPath(raw, 'avisos'))
-    .map(asString)
-    .filter(Boolean);
+
+  const badges = asArray<string>(asRecord(raw).badges).map(asString).filter(Boolean);
+  const avisos = asArray<string>(asRecord(raw).avisos).map(asString).filter(Boolean);
 
   const explicitStatus = pickString(raw, ['status', 'statusKey', 'tipo'], '').toLowerCase();
-  const status =
-    explicitStatus &&
-    [
-      'presente',
-      'falta',
-      'atestado',
-      'ferias',
-      'feriado',
-      'ponto_facultativo',
-      'fim_de_semana',
-      'aniversario',
-      'evento',
-      'pendente',
-      'sem_registro',
-    ].includes(explicitStatus)
-      ? (explicitStatus as FrequenciaDayStatus)
-      : inferStatus({
-          rubrica,
-          ocorrenciaManha,
-          ocorrenciaTarde,
-          titulo,
-          descricao,
-          isWeekend: base.isWeekend,
-        });
+  const allowedStatuses: FrequenciaDayStatus[] = [
+    'presente',
+    'falta',
+    'atestado',
+    'ferias',
+    'feriado',
+    'ponto_facultativo',
+    'fim_de_semana',
+    'aniversario',
+    'evento',
+    'pendente',
+    'sem_registro',
+  ];
+
+  const status = allowedStatuses.includes(explicitStatus as FrequenciaDayStatus)
+    ? (explicitStatus as FrequenciaDayStatus)
+    : inferStatus({
+        rubrica,
+        ocorrenciaManha,
+        ocorrenciaTarde,
+        titulo,
+        descricao,
+        isWeekend: base.isWeekend,
+      });
 
   return {
     ...base,
@@ -233,7 +262,7 @@ function normalizeDayItem(raw: unknown, year: number, month: number, fallbackDay
     ocorrenciaTarde,
     titulo: titulo || rubrica || base.titulo,
     descricao: descricao || rubrica || base.descricao,
-    badges: badges.length > 0 ? badges : base.badges,
+    badges: badges.length ? badges : base.badges,
     avisos,
     raw,
   };
@@ -241,18 +270,15 @@ function normalizeDayItem(raw: unknown, year: number, month: number, fallbackDay
 
 function fillMissingDays(days: FrequenciaDayItem[], year: number, month: number): FrequenciaDayItem[] {
   const total = getDaysInMonth(year, month);
-  const byDay = new Map<number, FrequenciaDayItem>();
+  const map = new Map<number, FrequenciaDayItem>();
 
-  for (const day of days) {
-    if (!byDay.has(day.dia)) {
-      byDay.set(day.dia, day);
-    }
+  for (const item of days) {
+    if (!map.has(item.dia)) map.set(item.dia, item);
   }
 
   const result: FrequenciaDayItem[] = [];
-
   for (let day = 1; day <= total; day += 1) {
-    result.push(byDay.get(day) || createFallbackDay(year, month, day));
+    result.push(map.get(day) || createFallbackDay(year, month, day));
   }
 
   return result;
@@ -319,9 +345,7 @@ function normalizeServidor(raw: unknown, year: number, month: number, index: num
     month,
   );
 
-  const warnings = asArray<string>(readPath(raw, 'warnings'))
-    .map(asString)
-    .filter(Boolean);
+  const warnings = asArray<string>(asRecord(raw).warnings).map(asString).filter(Boolean);
 
   return {
     id: servidorId || cpf || `tmp-${index}`,
@@ -383,6 +407,7 @@ export default function FrequenciaPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [exporting, setExporting] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [infoMessage, setInfoMessage] = useState<string>('');
   const [selectedCpf, setSelectedCpf] = useState<string>('');
   const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
@@ -392,6 +417,7 @@ export default function FrequenciaPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
+    setInfoMessage('');
 
     try {
       const payload = await frequenciaService.listarPorMes(filters.ano, filters.mes);
@@ -414,23 +440,15 @@ export default function FrequenciaPage() {
   }, [rawItems, filters.ano, filters.mes]);
 
   const categorias = useMemo(() => {
-    return Array.from(
-      new Set(
-        normalizedServidores
-          .map((item) => item.categoria)
-          .filter((value) => asString(value).trim().length > 0),
-      ),
-    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return Array.from(new Set(normalizedServidores.map((item) => item.categoria).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    );
   }, [normalizedServidores]);
 
   const setores = useMemo(() => {
-    return Array.from(
-      new Set(
-        normalizedServidores
-          .map((item) => item.setor)
-          .filter((value) => asString(value).trim().length > 0),
-      ),
-    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return Array.from(new Set(normalizedServidores.map((item) => item.setor).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    );
   }, [normalizedServidores]);
 
   const filteredServidores = useMemo(() => {
@@ -439,14 +457,7 @@ export default function FrequenciaPage() {
     return normalizedServidores.filter((item) => {
       const matchesSearch =
         !search ||
-        [
-          item.nome,
-          item.cpf,
-          item.matricula,
-          item.cargo,
-          item.categoria,
-          item.setor,
-        ]
+        [item.nome, item.cpf, item.matricula, item.cargo, item.categoria, item.setor]
           .map(normalizeSearchText)
           .some((value) => value.includes(search));
 
@@ -469,10 +480,16 @@ export default function FrequenciaPage() {
     const exists = filteredServidores.some((item) => item.cpf === selectedCpf);
 
     if (!exists) {
-      const preferred =
-        filteredServidores.find((item) => item.statusServidor === 'ATIVO') || filteredServidores[0];
+      const preferred = filteredServidores.find((item) => item.statusServidor === 'ATIVO') || filteredServidores[0];
       setSelectedCpf(preferred?.cpf || '');
-      setSelectedDayNumber(1);
+
+      const firstUsefulDay =
+        preferred?.dias.find((day) => !day.isWeekend && day.status !== 'sem_registro') ||
+        preferred?.dias.find((day) => !day.isWeekend) ||
+        preferred?.dias[0] ||
+        null;
+
+      setSelectedDayNumber(firstUsefulDay?.dia ?? 1);
     }
   }, [filteredServidores, selectedCpf]);
 
@@ -507,42 +524,105 @@ export default function FrequenciaPage() {
 
   const handleSelectServidor = useCallback((cpf: string) => {
     setSelectedCpf(cpf);
-    setSelectedDayNumber(1);
+    const servidor = filteredServidores.find((item) => item.cpf === cpf) || null;
+
+    const firstUsefulDay =
+      servidor?.dias.find((day) => !day.isWeekend && day.status !== 'sem_registro') ||
+      servidor?.dias.find((day) => !day.isWeekend) ||
+      servidor?.dias[0] ||
+      null;
+
+    setSelectedDayNumber(firstUsefulDay?.dia ?? 1);
     setDrawerOpen(false);
-  }, []);
+  }, [filteredServidores]);
 
   const handleSelectDay = useCallback((day: FrequenciaDayItem) => {
     setSelectedDayNumber(day.dia);
     setDrawerOpen(true);
   }, []);
 
-  const handleExport = useCallback(
-    async (formato: FrequenciaExportFormat) => {
-      if (!selectedServidor) {
-        setError('Selecione um servidor válido antes de exportar.');
+  const handleAction = useCallback(
+    async (action: FrequenciaActionKey) => {
+      setError('');
+      setInfoMessage('');
+
+      if (!selectedServidor && action !== 'importar') {
+        setError('Selecione um servidor válido para continuar.');
         return;
       }
 
-      setExporting(true);
-      setError('');
-
       try {
-        await baixarFrequenciaArquivo({
-          ano: filters.ano,
-          mes: filters.mes,
-          formato,
-          servidorCpf: selectedServidor.cpf,
-          servidorId: selectedServidor.servidorId,
-          categoria: selectedServidor.categoria,
-          setor: selectedServidor.setor,
-        });
+        switch (action) {
+          case 'export-csv':
+            if (selectedServidor) {
+              baixarCsvLocalFrequencia(selectedServidor, filters.ano, filters.mes);
+              setInfoMessage('CSV gerado localmente com sucesso.');
+            }
+            break;
+
+          case 'export-docx':
+            if (selectedServidor) {
+              setExporting(true);
+              await baixarFrequenciaArquivo({
+                ano: filters.ano,
+                mes: filters.mes,
+                formato: 'docx',
+                servidorCpf: selectedServidor.cpf,
+                servidorId: selectedServidor.servidorId,
+                categoria: selectedServidor.categoria,
+                setor: selectedServidor.setor,
+              });
+              setInfoMessage('Solicitação de exportação DOCX enviada com sucesso.');
+            }
+            break;
+
+          case 'export-pdf':
+            if (selectedServidor) {
+              setExporting(true);
+              await baixarFrequenciaArquivo({
+                ano: filters.ano,
+                mes: filters.mes,
+                formato: 'pdf',
+                servidorCpf: selectedServidor.cpf,
+                servidorId: selectedServidor.servidorId,
+                categoria: selectedServidor.categoria,
+                setor: selectedServidor.setor,
+              });
+              setInfoMessage('Solicitação de exportação PDF enviada com sucesso.');
+            }
+            break;
+
+          case 'previa':
+            if (selectedDay) {
+              setDrawerOpen(true);
+              setInfoMessage('Prévia do dia selecionado aberta no painel lateral.');
+            } else {
+              setInfoMessage('Nenhum dia disponível para pré-visualização.');
+            }
+            break;
+
+          case 'importar':
+            await loadData();
+            setInfoMessage('Dados do mês recarregados com sucesso.');
+            break;
+
+          case 'lancar':
+          case 'editar':
+          case 'replicar':
+          case 'limpar':
+            setInfoMessage('Ação preparada na interface. A integração operacional será ligada no próximo passo sem quebrar a página.');
+            break;
+
+          default:
+            break;
+        }
       } catch (err) {
         setError(getFrequenciaServiceErrorMessage(err));
       } finally {
         setExporting(false);
       }
     },
-    [filters.ano, filters.mes, selectedServidor],
+    [selectedServidor, selectedDay, filters.ano, filters.mes, loadData],
   );
 
   return (
@@ -561,10 +641,10 @@ export default function FrequenciaPage() {
         <FrequenciaKpis data={kpis} />
 
         <FrequenciaActionBar
-          disabled={loading || !selectedServidor}
+          disabled={loading || (!selectedServidor && filteredServidores.length === 0)}
           exporting={exporting}
           onRefresh={loadData}
-          onExport={handleExport}
+          onAction={handleAction}
         />
 
         {error && (
@@ -576,6 +656,12 @@ export default function FrequenciaPage() {
                 <div className="mt-1 text-rose-100/90">{error}</div>
               </div>
             </div>
+          </div>
+        )}
+
+        {infoMessage && !error && (
+          <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-4 text-sm text-cyan-100">
+            {infoMessage}
           </div>
         )}
 
