@@ -1,163 +1,139 @@
-const fs = require("fs");
-const path = require("path");
+import { API_BASE_URL } from '../config/api';
 
-function resolveBuilderExport(builderModule) {
-  if (!builderModule) return null;
+export type FeriasExportFormato = 'docx' | 'pdf' | 'csv';
 
-  if (typeof builderModule === "function") {
-    return builderModule;
+export interface FeriasExportRowInput {
+  nome?: string;
+  cpf?: string;
+  matricula?: string;
+  categoria?: string;
+  setor?: string;
+  status?: string;
+  periodo1_inicio?: string;
+  periodo1_fim?: string;
+  periodo2_inicio?: string;
+  periodo2_fim?: string;
+  periodo3_inicio?: string;
+  periodo3_fim?: string;
+}
+
+export interface FeriasExportServidorInput {
+  servidorCpf?: string;
+  servidorId?: string;
+  nome?: string;
+}
+
+export interface FeriasExportPayload {
+  formato: FeriasExportFormato;
+  mes?: number;
+  ano?: number;
+  categoria?: string;
+  setor?: string;
+  status?: string;
+  servidorCpf?: string;
+  servidorId?: string;
+  incluirInativos?: boolean;
+  rows?: FeriasExportRowInput[];
+}
+
+export const feriasExportLabels = {
+  formato: 'Formato',
+  mes: 'Mês',
+  ano: 'Ano',
+  categoria: 'Categoria',
+  setor: 'Setor',
+  status: 'Status',
+  servidorCpf: 'CPF do servidor',
+  servidorId: 'ID do servidor',
+  incluirInativos: 'Incluir inativos',
+};
+
+function normalizeBaseUrl(url: string): string {
+  return String(url || '').replace(/\/+$/, '');
+}
+
+const BASE_URL = normalizeBaseUrl(API_BASE_URL || '');
+const FERIAS_EXPORT_URL = `${BASE_URL}/api/ferias/exportar`;
+
+function sanitizeMes(mes?: number): number | undefined {
+  const value = Number(mes);
+  if (!Number.isFinite(value) || value < 1 || value > 12) return undefined;
+  return Math.trunc(value);
+}
+
+function sanitizeAno(ano?: number): number | undefined {
+  const value = Number(ano);
+  if (!Number.isFinite(value) || value < 2000 || value > 2100) return undefined;
+  return Math.trunc(value);
+}
+
+function resolveFilename(response: Response, fallback: string): string {
+  const disposition = response.headers.get('content-disposition') || '';
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
+
+  const raw = utf8Match?.[1] || asciiMatch?.[1] || fallback;
+
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
   }
+}
 
-  const candidates = [
-    builderModule.exportarFerias,
-    builderModule.exportarFeriasTemplate,
-    builderModule.buildFeriasDocument,
-    builderModule.buildFeriasDoc,
-    builderModule.buildFeriasDocx,
-    builderModule.gerarDocumentoFerias,
-    builderModule.gerarFeriasDoc,
-    builderModule.gerarFeriasDocx,
-    builderModule.default,
-  ];
+async function parseError(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
 
-  for (const candidate of candidates) {
-    if (typeof candidate === "function") {
-      return candidate;
+  try {
+    if (contentType.includes('application/json')) {
+      const json = await response.json();
+      return String(json?.error || json?.message || `Falha na exportação (${response.status})`);
     }
+
+    const text = await response.text();
+    return text?.trim() || `Falha na exportação (${response.status})`;
+  } catch {
+    return `Falha na exportação (${response.status})`;
   }
-
-  return null;
 }
 
-function getSafeFileName(result) {
-  const fallback = `ferias_export_${Date.now()}.doc`;
-
-  const raw =
-    result?.fileName ||
-    result?.filename ||
-    result?.name ||
-    fallback;
-
-  const fileName = String(raw).trim();
-  return fileName || fallback;
-}
-
-function getSafeContentType(result) {
-  return (
-    result?.contentType ||
-    "application/msword"
-  );
-}
-
-function normalizePayload(req) {
-  return {
-    body: req?.body || {},
-    query: req?.query || {},
-    params: req?.params || {},
-    headers: req?.headers || {},
-    method: req?.method || "POST",
-    originalUrl: req?.originalUrl || "",
+export async function exportarFerias(payload: FeriasExportPayload): Promise<void> {
+  const safePayload: FeriasExportPayload = {
+    ...payload,
+    mes: sanitizeMes(payload.mes),
+    ano: sanitizeAno(payload.ano),
   };
-}
 
-function sendBufferDownload(res, buffer, fileName, contentType) {
-  res.setHeader("Content-Type", contentType);
-  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-  res.setHeader("Content-Length", buffer.length);
-  return res.send(buffer);
-}
+  const fallbackName = `ferias_${safePayload.ano || 'geral'}_${String(safePayload.mes || '00')}.${safePayload.formato}`;
 
-async function exportarFerias(req, res) {
-  let builderModule;
-  let builderFn;
+  const response = await fetch(FERIAS_EXPORT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(safePayload),
+  });
 
-  try {
-    builderModule = require("../utils/feriasTemplateBuilder");
-  } catch (error) {
-    console.error(
-      "[feriasExportService] erro ao carregar ../utils/feriasTemplateBuilder:",
-      error
-    );
-
-    return res.status(500).json({
-      ok: false,
-      error: "Não foi possível carregar o gerador de template de férias",
-      details: error?.message || String(error),
-    });
+  if (!response.ok) {
+    throw new Error(await parseError(response));
   }
 
-  builderFn = resolveBuilderExport(builderModule);
+  const blob = await response.blob();
+  const filename = resolveFilename(response, fallbackName);
 
-  if (typeof builderFn !== "function") {
-    return res.status(500).json({
-      ok: false,
-      error: "O módulo feriasTemplateBuilder não exporta uma função válida",
-      details:
-        "Esperado: module.exports = exportarFeriasTemplate ou um objeto com função exportadora",
-    });
-  }
-
-  try {
-    const payload = normalizePayload(req);
-    const result = await builderFn(payload);
-
-    if (!result) {
-      return res.status(500).json({
-        ok: false,
-        error: "O gerador de férias não retornou nenhum resultado",
-      });
-    }
-
-    if (Buffer.isBuffer(result)) {
-      const fileName = `ferias_export_${Date.now()}.doc`;
-      const contentType = "application/msword";
-      return sendBufferDownload(res, result, fileName, contentType);
-    }
-
-    if (result.buffer && Buffer.isBuffer(result.buffer)) {
-      const fileName = getSafeFileName(result);
-      const contentType = getSafeContentType(result);
-      return sendBufferDownload(res, result.buffer, fileName, contentType);
-    }
-
-    if (result.filePath && typeof result.filePath === "string") {
-      const absolutePath = path.resolve(result.filePath);
-
-      if (!fs.existsSync(absolutePath)) {
-        return res.status(500).json({
-          ok: false,
-          error: "O arquivo exportado foi informado, mas não existe no disco",
-          details: absolutePath,
-        });
-      }
-
-      const fileName = getSafeFileName({
-        fileName: result.fileName || path.basename(absolutePath),
-      });
-
-      return res.download(absolutePath, fileName);
-    }
-
-    if (result.ok && result.downloadUrl) {
-      return res.status(200).json(result);
-    }
-
-    return res.status(500).json({
-      ok: false,
-      error: "Formato de retorno do builder não suportado",
-      details:
-        "Esperado: Buffer, { buffer, fileName, contentType }, { filePath }, ou objeto com downloadUrl",
-    });
-  } catch (error) {
-    console.error("[feriasExportService] erro na exportação:", error);
-
-    return res.status(500).json({
-      ok: false,
-      error: "Falha ao gerar exportação de férias",
-      details: error?.message || String(error),
-      stack: process.env.NODE_ENV === "production" ? undefined : error?.stack,
-    });
-  }
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
-module.exports = { exportarFerias };
+const feriasExportService = {
+  exportarFerias,
+  feriasExportLabels,
+};
+
+export default feriasExportService;
