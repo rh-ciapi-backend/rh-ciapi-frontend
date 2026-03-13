@@ -1,233 +1,236 @@
-import { API_BASE_URL } from '../config/api';
-import type {
-  FrequenciaApiResponse,
-  FrequenciaExportFormat,
-  FrequenciaExportPayload,
-  FrequenciaOcorrenciaPayload,
-} from '../types/frequencia';
+export type FrequenciaDayStatus =
+  | 'presente'
+  | 'falta'
+  | 'atestado'
+  | 'ferias'
+  | 'feriado'
+  | 'ponto_facultativo'
+  | 'fim_de_semana'
+  | 'aniversario'
+  | 'evento'
+  | 'pendente'
+  | 'sem_registro';
 
-type JsonValue = unknown;
+export type FrequenciaExportFormat = 'docx' | 'pdf' | 'csv';
 
-function normalizeBaseUrl(url: string): string {
-  return String(url || '').replace(/\/+$/, '');
+export interface FrequenciaApiResponse<T = unknown> {
+  ok?: boolean;
+  message?: string;
+  error?: string;
+  data?: T;
+  items?: T;
+  results?: T;
+  rows?: T;
+  registros?: T;
+  servidores?: T;
+  frequencias?: T;
 }
 
-const BASE_URL = normalizeBaseUrl(API_BASE_URL || '');
-const FREQUENCIA_URL = `${BASE_URL}/api/frequencia`;
-
-function toErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error.trim()) return error;
-  return fallback;
+export interface FrequenciaFiltersState {
+  mes: number;
+  ano: number;
+  busca: string;
+  categoria: string;
+  setor: string;
+  statusServidor: string;
 }
 
-async function parseResponse(response: Response): Promise<JsonValue> {
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    try {
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }
-
-  try {
-    return await response.text();
-  } catch {
-    return null;
-  }
+export interface FrequenciaDayItem {
+  dia: number;
+  dataIso: string;
+  weekdayLabel: string;
+  isWeekend: boolean;
+  status: FrequenciaDayStatus;
+  rubrica: string;
+  referencia: string;
+  ocorrenciaManha: string;
+  ocorrenciaTarde: string;
+  titulo: string;
+  descricao: string;
+  badges: string[];
+  avisos: string[];
+  raw?: unknown;
 }
 
-function extractArrayPayload(payload: JsonValue): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (!payload || typeof payload !== 'object') return [];
-
-  const record = payload as Record<string, unknown>;
-
-  const candidates = [
-    record.data,
-    record.items,
-    record.results,
-    record.rows,
-    record.registros,
-    record.servidores,
-    record.frequencias,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate;
-  }
-
-  return [];
+export interface FrequenciaResumo {
+  totalDiasMes: number;
+  presentes: number;
+  faltas: number;
+  atestados: number;
+  ferias: number;
+  feriados: number;
+  pontosFacultativos: number;
+  finsDeSemana: number;
+  semRegistro: number;
 }
 
-function sanitizeMes(mes: number): number {
-  const value = Number(mes);
-  if (!Number.isFinite(value) || value < 1 || value > 12) return new Date().getMonth() + 1;
-  return Math.trunc(value);
+export interface FrequenciaServidorItem {
+  id: string;
+  servidorId?: string;
+  cpf: string;
+  nome: string;
+  matricula: string;
+  cargo: string;
+  categoria: string;
+  setor: string;
+  statusServidor: string;
+  fotoUrl?: string;
+  resumo: FrequenciaResumo;
+  dias: FrequenciaDayItem[];
+  warnings: string[];
+  raw?: unknown;
 }
 
-function sanitizeAno(ano: number): number {
-  const value = Number(ano);
-  if (!Number.isFinite(value) || value < 2000 || value > 2100) return new Date().getFullYear();
-  return Math.trunc(value);
+export interface FrequenciaKpisData {
+  totalServidores: number;
+  servidoresAtivos: number;
+  totalFaltas: number;
+  totalAtestados: number;
+  totalFerias: number;
+  totalFeriados: number;
+  totalSemRegistro: number;
 }
 
-async function httpJson<T = unknown>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
-  });
-
-  const body = await parseResponse(response);
-
-  if (!response.ok) {
-    if (body && typeof body === 'object') {
-      const record = body as Record<string, unknown>;
-      throw new Error(
-        String(record.error || record.message || `Falha na requisição (${response.status})`),
-      );
-    }
-
-    if (typeof body === 'string' && body.trim()) {
-      throw new Error(body);
-    }
-
-    throw new Error(`Falha na requisição (${response.status})`);
-  }
-
-  return body as T;
+export interface FrequenciaExportPayload {
+  ano: number;
+  mes: number;
+  formato: FrequenciaExportFormat;
+  servidorCpf?: string;
+  servidorId?: string;
+  categoria?: string;
+  setor?: string;
 }
 
-export async function listarPorMes(ano: number, mes: number): Promise<unknown[]> {
-  const safeAno = sanitizeAno(ano);
-  const safeMes = sanitizeMes(mes);
-
-  const payload = await httpJson<FrequenciaApiResponse<unknown[]>>(
-    `${FREQUENCIA_URL}?ano=${safeAno}&mes=${safeMes}`,
-    { method: 'GET' },
-  );
-
-  return extractArrayPayload(payload);
+export interface FrequenciaOcorrenciaPayload {
+  id?: string;
+  servidorCpf: string;
+  ano: number;
+  mes: number;
+  dia: number;
+  turno?: 'MANHA' | 'TARDE' | 'INTEGRAL';
+  tipo:
+    | 'FALTA'
+    | 'ATESTADO'
+    | 'FERIAS'
+    | 'FERIADO'
+    | 'PONTO_FACULTATIVO'
+    | 'EVENTO'
+    | 'OBSERVACAO';
+  descricao?: string;
+  rubrica?: string;
 }
 
-export async function registrarOcorrencia(payload: FrequenciaOcorrenciaPayload): Promise<unknown> {
-  return httpJson(FREQUENCIA_URL, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+export interface FrequenciaMonthGridProps {
+  servidor: FrequenciaServidorItem | null;
+  selectedDay: number | null;
+  onSelectDay: (day: FrequenciaDayItem) => void;
+  loading?: boolean;
 }
 
-export async function editar(id: string, payload: Partial<FrequenciaOcorrenciaPayload>): Promise<unknown> {
-  return httpJson(`${FREQUENCIA_URL}/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
+export interface FrequenciaDayDrawerProps {
+  open: boolean;
+  servidor: FrequenciaServidorItem | null;
+  day: FrequenciaDayItem | null;
+  onClose: () => void;
 }
 
-export async function excluir(id: string): Promise<unknown> {
-  return httpJson(`${FREQUENCIA_URL}/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
+export interface FrequenciaServerListProps {
+  servidores: FrequenciaServidorItem[];
+  selectedCpf: string;
+  onSelect: (cpf: string) => void;
+  loading?: boolean;
 }
 
-async function tryExportEndpoint(
-  endpoint: string,
-  payload: FrequenciaExportPayload,
-): Promise<Response | null> {
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+export type FrequenciaActionKey =
+  | 'lancar'
+  | 'editar'
+  | 'replicar'
+  | 'limpar'
+  | 'importar'
+  | 'previa'
+  | 'export-docx'
+  | 'export-pdf'
+  | 'export-csv';
 
-    if (!response.ok) return null;
-    return response;
-  } catch {
-    return null;
-  }
+export interface FrequenciaActionBarProps {
+  disabled?: boolean;
+  exporting?: boolean;
+  onRefresh: () => void;
+  onAction: (action: FrequenciaActionKey) => void;
 }
 
-function resolveFilename(response: Response, fallback: string): string {
-  const disposition = response.headers.get('content-disposition') || '';
-  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-  const asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
-
-  const raw = utf8Match?.[1] || asciiMatch?.[1] || fallback;
-
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return raw;
-  }
+export interface FrequenciaLegendItem {
+  key: FrequenciaDayStatus;
+  label: string;
+  dotClassName: string;
+  chipClassName: string;
 }
 
-export async function baixarFrequenciaArquivo(payload: FrequenciaExportPayload): Promise<void> {
-  const safePayload: FrequenciaExportPayload = {
-    ...payload,
-    ano: sanitizeAno(payload.ano),
-    mes: sanitizeMes(payload.mes),
-    formato: payload.formato,
-  };
-
-  const fallbackName = `frequencia_${safePayload.ano}_${String(safePayload.mes).padStart(2, '0')}.${safePayload.formato}`;
-
-  const primaryEndpoint = `${FREQUENCIA_URL}/exportar`;
-  const fallbackEndpoint = `${FREQUENCIA_URL}/exportar/${safePayload.formato}`;
-
-  let response = await tryExportEndpoint(primaryEndpoint, safePayload);
-
-  if (!response) {
-    response = await tryExportEndpoint(fallbackEndpoint, safePayload);
-  }
-
-  if (!response) {
-    throw new Error('Não foi possível exportar a frequência neste momento.');
-  }
-
-  const blob = await response.blob();
-  const filename = resolveFilename(response, fallbackName);
-
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-export async function exportarDocx(payload: Omit<FrequenciaExportPayload, 'formato'>): Promise<void> {
-  return baixarFrequenciaArquivo({ ...payload, formato: 'docx' });
-}
-
-export async function exportarPdf(payload: Omit<FrequenciaExportPayload, 'formato'>): Promise<void> {
-  return baixarFrequenciaArquivo({ ...payload, formato: 'pdf' });
-}
-
-export async function exportarCsv(payload: Omit<FrequenciaExportPayload, 'formato'>): Promise<void> {
-  return baixarFrequenciaArquivo({ ...payload, formato: 'csv' });
-}
-
-const frequenciaService = {
-  listarPorMes,
-  registrarOcorrencia,
-  editar,
-  excluir,
-  baixarFrequenciaArquivo,
-  exportarDocx,
-  exportarPdf,
-  exportarCsv,
+export const FREQUENCIA_STATUS_META: Record<FrequenciaDayStatus, FrequenciaLegendItem> = {
+  presente: {
+    key: 'presente',
+    label: 'Presente',
+    dotClassName: 'bg-emerald-400',
+    chipClassName: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  },
+  falta: {
+    key: 'falta',
+    label: 'Falta',
+    dotClassName: 'bg-rose-400',
+    chipClassName: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+  },
+  atestado: {
+    key: 'atestado',
+    label: 'Atestado',
+    dotClassName: 'bg-amber-400',
+    chipClassName: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  },
+  ferias: {
+    key: 'ferias',
+    label: 'Férias',
+    dotClassName: 'bg-sky-400',
+    chipClassName: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+  },
+  feriado: {
+    key: 'feriado',
+    label: 'Feriado',
+    dotClassName: 'bg-fuchsia-400',
+    chipClassName: 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300',
+  },
+  ponto_facultativo: {
+    key: 'ponto_facultativo',
+    label: 'Ponto facultativo',
+    dotClassName: 'bg-violet-400',
+    chipClassName: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
+  },
+  fim_de_semana: {
+    key: 'fim_de_semana',
+    label: 'Fim de semana',
+    dotClassName: 'bg-slate-400',
+    chipClassName: 'border-slate-500/30 bg-slate-500/10 text-slate-300',
+  },
+  aniversario: {
+    key: 'aniversario',
+    label: 'Aniversário',
+    dotClassName: 'bg-pink-400',
+    chipClassName: 'border-pink-500/30 bg-pink-500/10 text-pink-300',
+  },
+  evento: {
+    key: 'evento',
+    label: 'Evento',
+    dotClassName: 'bg-cyan-400',
+    chipClassName: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
+  },
+  pendente: {
+    key: 'pendente',
+    label: 'Pendente',
+    dotClassName: 'bg-yellow-400',
+    chipClassName: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
+  },
+  sem_registro: {
+    key: 'sem_registro',
+    label: 'Sem registro',
+    dotClassName: 'bg-zinc-400',
+    chipClassName: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+  },
 };
-
-export default frequenciaService;
-
-export function getFrequenciaServiceErrorMessage(error: unknown): string {
-  return toErrorMessage(error, 'Falha ao processar a operação de frequência.');
-}
