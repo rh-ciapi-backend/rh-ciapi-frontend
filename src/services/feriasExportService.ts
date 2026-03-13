@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '../config/api';
 
 export type FeriasExportFormato = 'docx' | 'pdf' | 'csv';
+export type ExportCategoria = 'TODOS' | 'EFETIVO' | 'SELETIVADO' | 'FEDERAL' | 'COMISSIONADO';
 
 export interface FeriasExportRowInput {
   nome?: string;
@@ -23,7 +24,7 @@ export interface FeriasExportServidorInput {
   nome?: string;
 }
 
-export interface FeriasExportPayload {
+export interface ExportFeriasFilters {
   formato: FeriasExportFormato;
   mes?: number;
   ano?: number;
@@ -33,6 +34,9 @@ export interface FeriasExportPayload {
   servidorCpf?: string;
   servidorId?: string;
   incluirInativos?: boolean;
+}
+
+export interface FeriasExportPayload extends ExportFeriasFilters {
   rows?: FeriasExportRowInput[];
 }
 
@@ -55,6 +59,12 @@ function normalizeBaseUrl(url: string): string {
 const BASE_URL = normalizeBaseUrl(API_BASE_URL || '');
 const FERIAS_EXPORT_URL = `${BASE_URL}/api/ferias/exportar`;
 
+function asString(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
+  return '';
+}
+
 function sanitizeMes(mes?: number): number | undefined {
   const value = Number(mes);
   if (!Number.isFinite(value) || value < 1 || value > 12) return undefined;
@@ -71,7 +81,6 @@ function resolveFilename(response: Response, fallback: string): string {
   const disposition = response.headers.get('content-disposition') || '';
   const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
   const asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
-
   const raw = utf8Match?.[1] || asciiMatch?.[1] || fallback;
 
   try {
@@ -97,12 +106,26 @@ async function parseError(response: Response): Promise<string> {
   }
 }
 
-export async function exportarFerias(payload: FeriasExportPayload): Promise<void> {
-  const safePayload: FeriasExportPayload = {
-    ...payload,
-    mes: sanitizeMes(payload.mes),
-    ano: sanitizeAno(payload.ano),
+export function buildFeriasExportData(
+  filters: Partial<ExportFeriasFilters> = {},
+  rows: FeriasExportRowInput[] = [],
+): FeriasExportPayload {
+  return {
+    formato: (filters.formato as FeriasExportFormato) || 'docx',
+    mes: sanitizeMes(filters.mes),
+    ano: sanitizeAno(filters.ano),
+    categoria: asString(filters.categoria),
+    setor: asString(filters.setor),
+    status: asString(filters.status),
+    servidorCpf: asString(filters.servidorCpf),
+    servidorId: asString(filters.servidorId),
+    incluirInativos: Boolean(filters.incluirInativos),
+    rows: Array.isArray(rows) ? rows : [],
   };
+}
+
+export async function exportarFerias(payload: FeriasExportPayload): Promise<void> {
+  const safePayload = buildFeriasExportData(payload, payload.rows || []);
 
   const fallbackName = `ferias_${safePayload.ano || 'geral'}_${String(safePayload.mes || '00')}.${safePayload.formato}`;
 
@@ -133,6 +156,7 @@ export async function exportarFerias(payload: FeriasExportPayload): Promise<void
 
 const feriasExportService = {
   exportarFerias,
+  buildFeriasExportData,
   feriasExportLabels,
 };
 
