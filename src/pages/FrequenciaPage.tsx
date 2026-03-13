@@ -44,7 +44,9 @@ const MONTH_LABELS = [
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord {
-  return value && typeof value === 'object' ? (value as UnknownRecord) : {};
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as UnknownRecord)
+    : {};
 }
 
 function asArray<T = unknown>(value: unknown): T[] {
@@ -55,6 +57,10 @@ function asString(value: unknown): string {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
   return '';
+}
+
+function safeFind<T>(value: unknown, predicate: (item: T) => boolean): T | undefined {
+  return asArray<T>(value).find(predicate);
 }
 
 function pickString(source: unknown, paths: string[], fallback = ''): string {
@@ -154,7 +160,6 @@ function createFallbackDay(year: number, month: number, day: number): Frequencia
   const date = new Date(year, month - 1, day);
   const weekDay = date.getDay();
   const isWeekend = weekDay === 0 || weekDay === 6;
-
   const rubrica = weekDay === 0 ? 'DOMINGO' : weekDay === 6 ? 'SÁBADO' : '';
 
   return {
@@ -190,7 +195,9 @@ function inferStatus({
   descricao: string;
   isWeekend: boolean;
 }): FrequenciaDayStatus {
-  const haystack = normalizeSearchText([rubrica, ocorrenciaManha, ocorrenciaTarde, titulo, descricao].join(' '));
+  const haystack = normalizeSearchText(
+    [rubrica, ocorrenciaManha, ocorrenciaTarde, titulo, descricao].join(' '),
+  );
 
   if (haystack.includes('férias') || haystack.includes('ferias')) return 'ferias';
   if (haystack.includes('atestado')) return 'atestado';
@@ -200,13 +207,24 @@ function inferStatus({
   if (haystack.includes('anivers')) return 'aniversario';
   if (haystack.includes('evento')) return 'evento';
   if (isWeekend) return 'fim_de_semana';
-  if (haystack.includes('presente') || haystack.includes('expediente') || haystack.includes('normal')) return 'presente';
+  if (
+    haystack.includes('presente') ||
+    haystack.includes('expediente') ||
+    haystack.includes('normal')
+  ) {
+    return 'presente';
+  }
   if (haystack) return 'pendente';
 
   return 'sem_registro';
 }
 
-function normalizeDayItem(raw: unknown, year: number, month: number, fallbackDay: number): FrequenciaDayItem {
+function normalizeDayItem(
+  raw: unknown,
+  year: number,
+  month: number,
+  fallbackDay: number,
+): FrequenciaDayItem {
   const dayNumber = pickNumber(raw, ['dia', 'day', 'numero', 'date', 'data_numero'], fallbackDay);
   const total = getDaysInMonth(year, month);
   const safeDay = Math.min(Math.max(dayNumber, 1), total);
@@ -272,7 +290,7 @@ function fillMissingDays(days: FrequenciaDayItem[], year: number, month: number)
   const total = getDaysInMonth(year, month);
   const map = new Map<number, FrequenciaDayItem>();
 
-  for (const item of days) {
+  for (const item of asArray<FrequenciaDayItem>(days)) {
     if (!map.has(item.dia)) map.set(item.dia, item);
   }
 
@@ -285,7 +303,7 @@ function fillMissingDays(days: FrequenciaDayItem[], year: number, month: number)
 }
 
 function calculateResumo(days: FrequenciaDayItem[]) {
-  return days.reduce(
+  return asArray<FrequenciaDayItem>(days).reduce(
     (acc, day) => {
       acc.totalDiasMes += 1;
       if (day.status === 'presente') acc.presentes += 1;
@@ -317,7 +335,11 @@ function normalizeServidor(raw: unknown, year: number, month: number, index: num
     pickString(raw, ['cpf', 'servidor.cpf', 'employee.cpf', 'servidorCpf', 'documento'], `tmp-${index}`),
   );
 
-  const nome = pickString(raw, ['nome', 'servidor.nome', 'employee.nome', 'nomeCompleto', 'servidorNome'], 'Servidor sem nome');
+  const nome = pickString(
+    raw,
+    ['nome', 'servidor.nome', 'employee.nome', 'nomeCompleto', 'servidorNome'],
+    'Servidor sem nome',
+  );
   const matricula = pickString(raw, ['matricula', 'servidor.matricula', 'employee.matricula', 'registro'], '');
   const cargo = pickString(raw, ['cargo', 'servidor.cargo', 'employee.cargo', 'funcao', 'função'], '');
   const categoria = pickString(raw, ['categoria', 'servidor.categoria', 'categoriaCanonica', 'categoria_canonica'], '');
@@ -340,7 +362,7 @@ function normalizeServidor(raw: unknown, year: number, month: number, index: num
   ]);
 
   const normalizedDays = fillMissingDays(
-    rawDays.map((day, idx) => normalizeDayItem(day, year, month, idx + 1)),
+    asArray(rawDays).map((day, idx) => normalizeDayItem(day, year, month, idx + 1)),
     year,
     month,
   );
@@ -359,14 +381,14 @@ function normalizeServidor(raw: unknown, year: number, month: number, index: num
     statusServidor,
     fotoUrl: fotoUrl || undefined,
     resumo: calculateResumo(normalizedDays),
-    dias: normalizedDays,
+    dias: asArray<FrequenciaDayItem>(normalizedDays),
     warnings,
     raw,
   };
 }
 
 function calculateKpis(servidores: FrequenciaServidorItem[]): FrequenciaKpisData {
-  return servidores.reduce(
+  return asArray<FrequenciaServidorItem>(servidores).reduce(
     (acc, servidor) => {
       acc.totalServidores += 1;
       if (servidor.statusServidor === 'ATIVO') acc.servidoresAtivos += 1;
@@ -421,7 +443,7 @@ export default function FrequenciaPage() {
 
     try {
       const payload = await frequenciaService.listarPorMes(filters.ano, filters.mes);
-      setRawItems(Array.isArray(payload) ? payload : []);
+      setRawItems(asArray(payload));
     } catch (err) {
       setRawItems([]);
       setError(getFrequenciaServiceErrorMessage(err));
@@ -435,26 +457,25 @@ export default function FrequenciaPage() {
   }, [loadData]);
 
   const normalizedServidores = useMemo(() => {
-    const items = Array.isArray(rawItems) ? rawItems : [];
-    return items.map((item, index) => normalizeServidor(item, filters.ano, filters.mes, index));
+    return asArray(rawItems).map((item, index) => normalizeServidor(item, filters.ano, filters.mes, index));
   }, [rawItems, filters.ano, filters.mes]);
 
   const categorias = useMemo(() => {
-    return Array.from(new Set(normalizedServidores.map((item) => item.categoria).filter(Boolean))).sort((a, b) =>
-      a.localeCompare(b, 'pt-BR'),
-    );
+    return Array.from(
+      new Set(asArray(normalizedServidores).map((item) => item.categoria).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [normalizedServidores]);
 
   const setores = useMemo(() => {
-    return Array.from(new Set(normalizedServidores.map((item) => item.setor).filter(Boolean))).sort((a, b) =>
-      a.localeCompare(b, 'pt-BR'),
-    );
+    return Array.from(
+      new Set(asArray(normalizedServidores).map((item) => item.setor).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [normalizedServidores]);
 
   const filteredServidores = useMemo(() => {
     const search = normalizeSearchText(filters.busca);
 
-    return normalizedServidores.filter((item) => {
+    return asArray(normalizedServidores).filter((item) => {
       const matchesSearch =
         !search ||
         [item.nome, item.cpf, item.matricula, item.cargo, item.categoria, item.setor]
@@ -470,40 +491,49 @@ export default function FrequenciaPage() {
   }, [normalizedServidores, filters]);
 
   useEffect(() => {
-    if (!filteredServidores.length) {
+    const servidores = asArray<FrequenciaServidorItem>(filteredServidores);
+
+    if (!servidores.length) {
       setSelectedCpf('');
       setSelectedDayNumber(null);
       setDrawerOpen(false);
       return;
     }
 
-    const exists = filteredServidores.some((item) => item.cpf === selectedCpf);
+    const exists = servidores.some((item) => item.cpf === selectedCpf);
 
     if (!exists) {
-      const preferred = filteredServidores.find((item) => item.statusServidor === 'ATIVO') || filteredServidores[0];
-      setSelectedCpf(preferred?.cpf || '');
-
-      const firstUsefulDay =
-        preferred?.dias.find((day) => !day.isWeekend && day.status !== 'sem_registro') ||
-        preferred?.dias.find((day) => !day.isWeekend) ||
-        preferred?.dias[0] ||
+      const preferred =
+        safeFind<FrequenciaServidorItem>(servidores, (item) => item.statusServidor === 'ATIVO') ||
+        servidores[0] ||
         null;
 
+      const preferredDias = asArray<FrequenciaDayItem>(preferred?.dias);
+
+      const firstUsefulDay =
+        preferredDias.find((day) => !day.isWeekend && day.status !== 'sem_registro') ||
+        preferredDias.find((day) => !day.isWeekend) ||
+        preferredDias[0] ||
+        null;
+
+      setSelectedCpf(preferred?.cpf || '');
       setSelectedDayNumber(firstUsefulDay?.dia ?? 1);
     }
   }, [filteredServidores, selectedCpf]);
 
   const selectedServidor = useMemo(() => {
-    if (!filteredServidores.length) return null;
-    return filteredServidores.find((item) => item.cpf === selectedCpf) || filteredServidores[0] || null;
+    const servidores = asArray<FrequenciaServidorItem>(filteredServidores);
+    if (!servidores.length) return null;
+    return safeFind<FrequenciaServidorItem>(servidores, (item) => item.cpf === selectedCpf) || servidores[0] || null;
   }, [filteredServidores, selectedCpf]);
 
   const selectedDay = useMemo(() => {
     if (!selectedServidor || selectedDayNumber == null) return null;
-    return selectedServidor.dias.find((item) => item.dia === selectedDayNumber) || null;
+    const dias = asArray<FrequenciaDayItem>(selectedServidor.dias);
+    return dias.find((item) => item.dia === selectedDayNumber) || null;
   }, [selectedServidor, selectedDayNumber]);
 
-  const kpis = useMemo(() => calculateKpis(filteredServidores), [filteredServidores]);
+  const kpis = useMemo(() => calculateKpis(asArray(filteredServidores)), [filteredServidores]);
 
   const handleFilterChange = useCallback(
     <K extends keyof FrequenciaFiltersState>(key: K, value: FrequenciaFiltersState[K]) => {
@@ -522,19 +552,26 @@ export default function FrequenciaPage() {
     }));
   }, []);
 
-  const handleSelectServidor = useCallback((cpf: string) => {
-    setSelectedCpf(cpf);
-    const servidor = filteredServidores.find((item) => item.cpf === cpf) || null;
+  const handleSelectServidor = useCallback(
+    (cpf: string) => {
+      setSelectedCpf(cpf);
 
-    const firstUsefulDay =
-      servidor?.dias.find((day) => !day.isWeekend && day.status !== 'sem_registro') ||
-      servidor?.dias.find((day) => !day.isWeekend) ||
-      servidor?.dias[0] ||
-      null;
+      const servidor =
+        safeFind<FrequenciaServidorItem>(filteredServidores, (item) => item.cpf === cpf) || null;
 
-    setSelectedDayNumber(firstUsefulDay?.dia ?? 1);
-    setDrawerOpen(false);
-  }, [filteredServidores]);
+      const dias = asArray<FrequenciaDayItem>(servidor?.dias);
+
+      const firstUsefulDay =
+        dias.find((day) => !day.isWeekend && day.status !== 'sem_registro') ||
+        dias.find((day) => !day.isWeekend) ||
+        dias[0] ||
+        null;
+
+      setSelectedDayNumber(firstUsefulDay?.dia ?? 1);
+      setDrawerOpen(false);
+    },
+    [filteredServidores],
+  );
 
   const handleSelectDay = useCallback((day: FrequenciaDayItem) => {
     setSelectedDayNumber(day.dia);
@@ -610,7 +647,9 @@ export default function FrequenciaPage() {
           case 'editar':
           case 'replicar':
           case 'limpar':
-            setInfoMessage('Ação preparada na interface. A integração operacional será ligada no próximo passo sem quebrar a página.');
+            setInfoMessage(
+              'Ação preparada na interface. A integração operacional será ligada no próximo passo sem quebrar a página.',
+            );
             break;
 
           default:
@@ -628,12 +667,12 @@ export default function FrequenciaPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_25%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_28%),#020617]">
       <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
-        <FrequenciaHero mesLabel={mesLabel} totalServidores={filteredServidores.length} />
+        <FrequenciaHero mesLabel={mesLabel} totalServidores={asArray(filteredServidores).length} />
 
         <FrequenciaFilters
           filters={filters}
-          categorias={categorias}
-          setores={setores}
+          categorias={asArray(categorias)}
+          setores={asArray(setores)}
           onChange={handleFilterChange}
           onReset={handleResetFilters}
         />
@@ -641,7 +680,7 @@ export default function FrequenciaPage() {
         <FrequenciaKpis data={kpis} />
 
         <FrequenciaActionBar
-          disabled={loading || (!selectedServidor && filteredServidores.length === 0)}
+          disabled={loading || (!selectedServidor && asArray(filteredServidores).length === 0)}
           exporting={exporting}
           onRefresh={loadData}
           onAction={handleAction}
@@ -667,14 +706,14 @@ export default function FrequenciaPage() {
 
         <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
           <FrequenciaServerList
-            servidores={filteredServidores}
+            servidores={asArray(filteredServidores)}
             selectedCpf={selectedCpf}
             onSelect={handleSelectServidor}
             loading={loading}
           />
 
           <div className="space-y-6">
-            {!loading && filteredServidores.length === 0 ? (
+            {!loading && asArray(filteredServidores).length === 0 ? (
               <FrequenciaEmptyState />
             ) : (
               <>
