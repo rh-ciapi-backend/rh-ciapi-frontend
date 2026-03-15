@@ -104,47 +104,91 @@ function statusColor(status: string) {
   return 'bg-slate-500/15 text-slate-300 border-slate-400/20';
 }
 
-function dayBadge(day: FrequenciaDay) {
+function resolveDayTone(day: FrequenciaDay) {
   const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
-  if (text.includes('feriado')) return 'border-violet-400/20 bg-violet-500/10';
-  if (text.includes('ponto')) return 'border-sky-400/20 bg-sky-500/10';
-  if (text.includes('atestado')) return 'border-amber-400/20 bg-amber-500/10';
-  if (text.includes('falta')) return 'border-rose-400/20 bg-rose-500/10';
-  if (text.includes('ferias') || text.includes('férias')) return 'border-emerald-400/20 bg-emerald-500/10';
-  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
-    return 'border-slate-500/20 bg-slate-500/10';
+
+  if (text.includes('feriado')) {
+    return {
+      card: 'border-violet-400/20 bg-[linear-gradient(180deg,rgba(139,92,246,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-violet-200',
+      muted: 'text-violet-300/80',
+      pill: 'border-violet-400/20 bg-violet-500/12 text-violet-200',
+      dot: 'bg-violet-300',
+    };
   }
-  if (text) return 'border-cyan-400/20 bg-cyan-500/10';
-  return 'border-white/10 bg-[#101927]';
-}
 
-function dayAccentText(day: FrequenciaDay) {
-  const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
-  if (text.includes('feriado')) return 'text-violet-200';
-  if (text.includes('ponto')) return 'text-sky-200';
-  if (text.includes('atestado')) return 'text-amber-200';
-  if (text.includes('falta')) return 'text-rose-200';
-  if (text.includes('ferias') || text.includes('férias')) return 'text-emerald-200';
-  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) return 'text-slate-300';
-  if (text) return 'text-cyan-200';
-  return 'text-white';
-}
+  if (text.includes('ponto')) {
+    return {
+      card: 'border-sky-400/20 bg-[linear-gradient(180deg,rgba(14,165,233,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-sky-200',
+      muted: 'text-sky-300/80',
+      pill: 'border-sky-400/20 bg-sky-500/12 text-sky-200',
+      dot: 'bg-sky-300',
+    };
+  }
 
-function dayWeekText(day: FrequenciaDay) {
-  const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
-  if (text.includes('feriado')) return 'text-violet-300';
-  if (text.includes('ponto')) return 'text-sky-300';
-  if (text.includes('atestado')) return 'text-amber-300';
-  if (text.includes('falta')) return 'text-rose-300';
-  if (text.includes('ferias') || text.includes('férias')) return 'text-emerald-300';
-  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) return 'text-slate-400';
-  if (text) return 'text-cyan-300';
-  return 'text-slate-400';
+  if (text.includes('atestado')) {
+    return {
+      card: 'border-amber-400/20 bg-[linear-gradient(180deg,rgba(245,158,11,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-amber-200',
+      muted: 'text-amber-300/80',
+      pill: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
+      dot: 'bg-amber-300',
+    };
+  }
+
+  if (text.includes('falta')) {
+    return {
+      card: 'border-rose-400/20 bg-[linear-gradient(180deg,rgba(244,63,94,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-rose-200',
+      muted: 'text-rose-300/80',
+      pill: 'border-rose-400/20 bg-rose-500/12 text-rose-200',
+      dot: 'bg-rose-300',
+    };
+  }
+
+  if (text.includes('ferias') || text.includes('férias')) {
+    return {
+      card: 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-emerald-200',
+      muted: 'text-emerald-300/80',
+      pill: 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200',
+      dot: 'bg-emerald-300',
+    };
+  }
+
+  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
+    return {
+      card: 'border-slate-500/20 bg-[linear-gradient(180deg,rgba(100,116,139,0.10),rgba(15,23,42,0.92))]',
+      accent: 'text-slate-200',
+      muted: 'text-slate-400',
+      pill: 'border-slate-500/20 bg-slate-500/12 text-slate-300',
+      dot: 'bg-slate-400',
+    };
+  }
+
+  if (text) {
+    return {
+      card: 'border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.10),rgba(15,23,42,0.92))]',
+      accent: 'text-cyan-200',
+      muted: 'text-cyan-300/80',
+      pill: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
+      dot: 'bg-cyan-300',
+    };
+  }
+
+  return {
+    card: 'border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(15,23,42,0.94))]',
+    accent: 'text-white',
+    muted: 'text-slate-400',
+    pill: 'border-white/10 bg-white/[0.04] text-slate-400',
+    dot: 'bg-slate-500',
+  };
 }
 
 function buildStatusPill(day: FrequenciaDay) {
   const value = compactDisplay(day.statusFinal !== day.rubrica ? day.statusFinal : '');
-  const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
+  const tone = resolveDayTone(day);
 
   if (value === '—') {
     return {
@@ -153,26 +197,25 @@ function buildStatusPill(day: FrequenciaDay) {
     };
   }
 
-  if (text.includes('feriado')) {
-    return { label: value, className: 'border-violet-400/20 bg-violet-500/10 text-violet-200' };
-  }
-  if (text.includes('ponto')) {
-    return { label: value, className: 'border-sky-400/20 bg-sky-500/10 text-sky-200' };
-  }
-  if (text.includes('atestado')) {
-    return { label: value, className: 'border-amber-400/20 bg-amber-500/10 text-amber-200' };
-  }
-  if (text.includes('falta')) {
-    return { label: value, className: 'border-rose-400/20 bg-rose-500/10 text-rose-200' };
-  }
-  if (text.includes('ferias') || text.includes('férias')) {
-    return { label: value, className: 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200' };
-  }
-
   return {
     label: value,
-    className: 'border-cyan-400/20 bg-cyan-500/10 text-cyan-200',
+    className: tone.pill,
   };
+}
+
+function CalendarMiniField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-[13px] font-medium text-slate-100">{value}</p>
+    </div>
+  );
 }
 
 export default function FrequenciaPage() {
@@ -690,7 +733,7 @@ export default function FrequenciaPage() {
                     Calendário mensal · {MONTHS[mes - 1]} / {ano}
                   </h3>
                   <p className="mt-1 text-xs text-slate-400">
-                    Visualização diária compacta da rubrica e das ocorrências do servidor selecionado.
+                    Visualização diária premium da rubrica e das ocorrências do servidor selecionado.
                   </p>
                 </div>
 
@@ -708,87 +751,83 @@ export default function FrequenciaPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {selectedServidor.dias.map((day) => {
+                    const tone = resolveDayTone(day);
                     const pill = buildStatusPill(day);
 
                     return (
                       <div
                         key={`${selectedServidor.id}-${day.dia}-${day.dataISO}`}
-                        className={`rounded-2xl border p-3 transition hover:border-white/15 ${dayBadge(day)}`}
+                        className={[
+                          'group rounded-[22px] border p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition duration-200',
+                          'hover:-translate-y-[1px] hover:border-white/15 hover:shadow-[0_14px_30px_rgba(0,0,0,0.26)]',
+                          tone.card,
+                        ].join(' ')}
                       >
                         <div className="mb-3 flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-end gap-2">
-                              <span className={`text-lg font-semibold leading-none ${dayAccentText(day)}`}>
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/15 shadow-inner">
+                              <span className={`text-lg font-semibold leading-none ${tone.accent}`}>
                                 {String(day.dia).padStart(2, '0')}
                               </span>
-                              <span className={`text-xs font-medium uppercase tracking-[0.14em] ${dayWeekText(day)}`}>
-                                {compactDisplay(day.weekdayLabel)}
-                              </span>
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${tone.muted}`}>
+                                  {compactDisplay(day.weekdayLabel)}
+                                </span>
+                                <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+                              </div>
+                              <p className="mt-1 text-[11px] text-slate-400">{day.dataISO}</p>
                             </div>
                           </div>
 
-                          <div className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1 text-[10px] text-slate-400">
-                            {day.dataISO}
-                          </div>
+                          <span
+                            className={`max-w-[45%] truncate rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${pill.className}`}
+                            title={pill.label}
+                          >
+                            {pill.label}
+                          </span>
                         </div>
 
-                        <div className="space-y-2">
-                          <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+                        <div className="rounded-2xl border border-white/8 bg-black/10 px-3 py-3">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
                             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Rubrica</p>
-                            <p className="mt-1 truncate text-sm font-medium text-slate-100">
-                              {compactDisplay(day.rubrica)}
-                            </p>
                           </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
-                              <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">O1</p>
-                              <p className="mt-1 truncate text-sm text-slate-200">
-                                {compactDisplay(day.ocorrencia1)}
-                              </p>
-                            </div>
-
-                            <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
-                              <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">O2</p>
-                              <p className="mt-1 truncate text-sm text-slate-200">
-                                {compactDisplay(day.ocorrencia2)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 pt-1">
-                            <span className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                              Status final
-                            </span>
-                            <span
-                              className={`max-w-[70%] truncate rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${pill.className}`}
-                              title={pill.label}
-                            >
-                              {pill.label}
-                            </span>
-                          </div>
-
-                          {day.observacoes?.length ? (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {day.observacoes.slice(0, 2).map((obs, index) => (
-                                <span
-                                  key={`${day.dia}-obs-${index}`}
-                                  className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-300"
-                                  title={obs}
-                                >
-                                  {obs}
-                                </span>
-                              ))}
-                              {day.observacoes.length > 2 ? (
-                                <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-400">
-                                  +{day.observacoes.length - 2}
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : null}
+                          <p
+                            className={`truncate text-sm font-semibold ${compactDisplay(day.rubrica) === '—' ? 'text-slate-400' : tone.accent}`}
+                            title={compactDisplay(day.rubrica)}
+                          >
+                            {compactDisplay(day.rubrica)}
+                          </p>
                         </div>
+
+                        <div className="mt-2.5 grid grid-cols-2 gap-2">
+                          <CalendarMiniField label="O1" value={compactDisplay(day.ocorrencia1)} />
+                          <CalendarMiniField label="O2" value={compactDisplay(day.ocorrencia2)} />
+                        </div>
+
+                        {day.observacoes?.length ? (
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {day.observacoes.slice(0, 2).map((obs, index) => (
+                              <span
+                                key={`${day.dia}-obs-${index}`}
+                                className="truncate rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-[10px] text-slate-300"
+                                title={obs}
+                              >
+                                {obs}
+                              </span>
+                            ))}
+                            {day.observacoes.length > 2 ? (
+                              <span className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-[10px] text-slate-400">
+                                +{day.observacoes.length - 2}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
