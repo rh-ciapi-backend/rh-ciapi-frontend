@@ -79,6 +79,11 @@ function safeDisplay(value?: string, fallback = 'Não informado') {
   return text || fallback;
 }
 
+function compactDisplay(value?: string) {
+  const text = String(value || '').trim();
+  return text || '—';
+}
+
 function countDiasComRegistro(dias: FrequenciaDay[]) {
   return dias.filter((day) => day.rubrica || day.ocorrencia1 || day.ocorrencia2 || day.statusFinal).length;
 }
@@ -101,16 +106,73 @@ function statusColor(status: string) {
 
 function dayBadge(day: FrequenciaDay) {
   const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
-  if (text.includes('feriado')) return 'border-violet-400/25 bg-violet-500/15 text-violet-200';
-  if (text.includes('ponto')) return 'border-sky-400/25 bg-sky-500/15 text-sky-200';
-  if (text.includes('atestado')) return 'border-amber-400/25 bg-amber-500/15 text-amber-200';
-  if (text.includes('falta')) return 'border-rose-400/25 bg-rose-500/15 text-rose-200';
-  if (text.includes('ferias') || text.includes('férias')) return 'border-emerald-400/25 bg-emerald-500/15 text-emerald-200';
+  if (text.includes('feriado')) return 'border-violet-400/20 bg-violet-500/10';
+  if (text.includes('ponto')) return 'border-sky-400/20 bg-sky-500/10';
+  if (text.includes('atestado')) return 'border-amber-400/20 bg-amber-500/10';
+  if (text.includes('falta')) return 'border-rose-400/20 bg-rose-500/10';
+  if (text.includes('ferias') || text.includes('férias')) return 'border-emerald-400/20 bg-emerald-500/10';
   if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
-    return 'border-slate-500/25 bg-slate-500/15 text-slate-300';
+    return 'border-slate-500/20 bg-slate-500/10';
   }
-  if (text) return 'border-cyan-400/25 bg-cyan-500/15 text-cyan-200';
-  return 'border-white/8 bg-white/5 text-slate-400';
+  if (text) return 'border-cyan-400/20 bg-cyan-500/10';
+  return 'border-white/10 bg-[#101927]';
+}
+
+function dayAccentText(day: FrequenciaDay) {
+  const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
+  if (text.includes('feriado')) return 'text-violet-200';
+  if (text.includes('ponto')) return 'text-sky-200';
+  if (text.includes('atestado')) return 'text-amber-200';
+  if (text.includes('falta')) return 'text-rose-200';
+  if (text.includes('ferias') || text.includes('férias')) return 'text-emerald-200';
+  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) return 'text-slate-300';
+  if (text) return 'text-cyan-200';
+  return 'text-white';
+}
+
+function dayWeekText(day: FrequenciaDay) {
+  const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
+  if (text.includes('feriado')) return 'text-violet-300';
+  if (text.includes('ponto')) return 'text-sky-300';
+  if (text.includes('atestado')) return 'text-amber-300';
+  if (text.includes('falta')) return 'text-rose-300';
+  if (text.includes('ferias') || text.includes('férias')) return 'text-emerald-300';
+  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) return 'text-slate-400';
+  if (text) return 'text-cyan-300';
+  return 'text-slate-400';
+}
+
+function buildStatusPill(day: FrequenciaDay) {
+  const value = compactDisplay(day.statusFinal !== day.rubrica ? day.statusFinal : '');
+  const text = normalizeText(day.statusFinal || day.rubrica || day.ocorrencia1 || day.ocorrencia2);
+
+  if (value === '—') {
+    return {
+      label: 'Sem status',
+      className: 'border-white/10 bg-white/[0.04] text-slate-400',
+    };
+  }
+
+  if (text.includes('feriado')) {
+    return { label: value, className: 'border-violet-400/20 bg-violet-500/10 text-violet-200' };
+  }
+  if (text.includes('ponto')) {
+    return { label: value, className: 'border-sky-400/20 bg-sky-500/10 text-sky-200' };
+  }
+  if (text.includes('atestado')) {
+    return { label: value, className: 'border-amber-400/20 bg-amber-500/10 text-amber-200' };
+  }
+  if (text.includes('falta')) {
+    return { label: value, className: 'border-rose-400/20 bg-rose-500/10 text-rose-200' };
+  }
+  if (text.includes('ferias') || text.includes('férias')) {
+    return { label: value, className: 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200' };
+  }
+
+  return {
+    label: value,
+    className: 'border-cyan-400/20 bg-cyan-500/10 text-cyan-200',
+  };
 }
 
 export default function FrequenciaPage() {
@@ -621,18 +683,18 @@ export default function FrequenciaPage() {
               )}
             </div>
 
-            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
-              <div className="mb-5 flex items-center justify-between gap-4">
+            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-base font-semibold text-white">
                     Calendário mensal · {MONTHS[mes - 1]} / {ano}
                   </h3>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Visualização diária da rubrica e das ocorrências do servidor selecionado.
+                  <p className="mt-1 text-xs text-slate-400">
+                    Visualização diária compacta da rubrica e das ocorrências do servidor selecionado.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-[#09111d] px-4 py-2 text-sm text-slate-300">
+                <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
                   {selectedServidor?.dias?.length || 0} dia(s) carregado(s)
                 </div>
               </div>
@@ -646,67 +708,90 @@ export default function FrequenciaPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                  {selectedServidor.dias.map((day) => (
-                    <div
-                      key={`${selectedServidor.id}-${day.dia}-${day.dataISO}`}
-                      className={`rounded-2xl border p-4 ${dayBadge(day)}`}
-                    >
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.16em] opacity-80">
-                            Dia {day.dia}
-                          </p>
-                          <h4 className="mt-1 text-lg font-semibold">
-                            {day.weekdayLabel}
-                          </h4>
-                        </div>
-                        <div className="rounded-xl border border-white/10 bg-black/10 px-3 py-1 text-xs">
-                          {day.dataISO}
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {selectedServidor.dias.map((day) => {
+                    const pill = buildStatusPill(day);
 
-                      <div className="space-y-3 text-sm">
-                        <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                          <p className="mb-1 text-[11px] uppercase tracking-[0.14em] opacity-70">Rubrica</p>
-                          <p className="font-medium">{safeDisplay(day.rubrica)}</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                            <p className="mb-1 text-[11px] uppercase tracking-[0.14em] opacity-70">Ocorrência 1</p>
-                            <p className="font-medium">{safeDisplay(day.ocorrencia1)}</p>
+                    return (
+                      <div
+                        key={`${selectedServidor.id}-${day.dia}-${day.dataISO}`}
+                        className={`rounded-2xl border p-3 transition hover:border-white/15 ${dayBadge(day)}`}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-end gap-2">
+                              <span className={`text-lg font-semibold leading-none ${dayAccentText(day)}`}>
+                                {String(day.dia).padStart(2, '0')}
+                              </span>
+                              <span className={`text-xs font-medium uppercase tracking-[0.14em] ${dayWeekText(day)}`}>
+                                {compactDisplay(day.weekdayLabel)}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                            <p className="mb-1 text-[11px] uppercase tracking-[0.14em] opacity-70">Ocorrência 2</p>
-                            <p className="font-medium">{safeDisplay(day.ocorrencia2)}</p>
+                          <div className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1 text-[10px] text-slate-400">
+                            {day.dataISO}
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                          <p className="mb-1 text-[11px] uppercase tracking-[0.14em] opacity-70">Status final</p>
-                          <p className="font-medium">{safeDisplay(day.statusFinal)}</p>
-                        </div>
+                        <div className="space-y-2">
+                          <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+                            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Rubrica</p>
+                            <p className="mt-1 truncate text-sm font-medium text-slate-100">
+                              {compactDisplay(day.rubrica)}
+                            </p>
+                          </div>
 
-                        {day.observacoes?.length ? (
-                          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                            <p className="mb-2 text-[11px] uppercase tracking-[0.14em] opacity-70">Observações</p>
-                            <div className="flex flex-wrap gap-2">
-                              {day.observacoes.map((obs, index) => (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">O1</p>
+                              <p className="mt-1 truncate text-sm text-slate-200">
+                                {compactDisplay(day.ocorrencia1)}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">O2</p>
+                              <p className="mt-1 truncate text-sm text-slate-200">
+                                {compactDisplay(day.ocorrencia2)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <span className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                              Status final
+                            </span>
+                            <span
+                              className={`max-w-[70%] truncate rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${pill.className}`}
+                              title={pill.label}
+                            >
+                              {pill.label}
+                            </span>
+                          </div>
+
+                          {day.observacoes?.length ? (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {day.observacoes.slice(0, 2).map((obs, index) => (
                                 <span
                                   key={`${day.dia}-obs-${index}`}
-                                  className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-xs"
+                                  className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-300"
+                                  title={obs}
                                 >
                                   {obs}
                                 </span>
                               ))}
+                              {day.observacoes.length > 2 ? (
+                                <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-slate-400">
+                                  +{day.observacoes.length - 2}
+                                </span>
+                              ) : null}
                             </div>
-                          </div>
-                        ) : null}
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
