@@ -1,593 +1,899 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  BadgeCheck,
+  Building2,
   CalendarDays,
   Download,
   FileSpreadsheet,
   FileText,
+  Filter,
+  Hash,
   Loader2,
-  RefreshCw,
   Search,
-  User,
+  ShieldCheck,
+  UserRound,
+  Users,
 } from 'lucide-react';
 import {
   baixarFrequenciaArquivo,
-  buildResumoFrequencia,
-  getCompetenciaLabel,
   listarFrequenciaMensal,
   type FrequenciaDayItem,
   type FrequenciaMensalItem,
+  type FrequenciaServidor,
 } from '../services/frequenciaService';
 
-type ExportFormat = 'docx' | 'pdf' | 'csv';
+type StatsCardProps = {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: React.ReactNode;
+};
 
 const MONTHS = [
-  { value: 1, label: 'Janeiro' },
-  { value: 2, label: 'Fevereiro' },
-  { value: 3, label: 'Março' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Maio' },
-  { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Setembro' },
-  { value: 10, label: 'Outubro' },
-  { value: 11, label: 'Novembro' },
-  { value: 12, label: 'Dezembro' },
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'ATIVO', label: 'Ativo' },
-  { value: 'INATIVO', label: 'Inativo' },
-  { value: '', label: 'Todos' },
-];
-
-function getCurrentMonth() {
-  const now = new Date();
-  return now.getMonth() + 1;
+function StatsCard({ title, value, subtitle, icon }: StatsCardProps) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#101826] p-5 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
+          <h3 className="mt-2 text-2xl font-semibold text-white">{value}</h3>
+        </div>
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-cyan-300">
+          {icon}
+        </div>
+      </div>
+      <p className="text-sm text-slate-400">{subtitle}</p>
+    </div>
+  );
 }
 
-function getCurrentYear() {
-  return new Date().getFullYear();
+function normalizeText(value: string) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
-function safeString(value: unknown, fallback = '') {
-  if (value === null || value === undefined) return fallback;
-  return String(value).trim();
+function formatCpf(cpf?: string) {
+  const digits = String(cpf || '').replace(/\D/g, '');
+  if (digits.length !== 11) return cpf || 'Não informado';
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
-function getDayBadgeClass(day: FrequenciaDayItem) {
-  if (day.sourceFlags?.isFerias) {
-    return 'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20';
+function safeDisplay(value?: string, fallback = 'Não informado') {
+  const text = String(value || '').trim();
+  return text || fallback;
+}
+
+function compactDisplay(value?: string) {
+  const text = String(value || '').trim();
+  return text || '—';
+}
+
+function getWeekdayLabel(dateIso?: string) {
+  if (!dateIso) return 'Dia';
+  const date = new Date(`${dateIso}T12:00:00`);
+  const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  return labels[date.getDay()] || 'Dia';
+}
+
+function countDiasComRegistro(dias: FrequenciaDayItem[]) {
+  return dias.filter(
+    (day) =>
+      day.turno1?.rubrica ||
+      day.turno2?.rubrica ||
+      day.turno1?.ocorrencia ||
+      day.turno2?.ocorrencia ||
+      day.statusFinal
+  ).length;
+}
+
+function countDiasComOcorrencia(dias: FrequenciaDayItem[]) {
+  return dias.filter(
+    (day) => day.turno1?.ocorrencia || day.turno2?.ocorrencia
+  ).length;
+}
+
+function countDiasComRubrica(dias: FrequenciaDayItem[]) {
+  return dias.filter(
+    (day) => day.turno1?.rubrica || day.turno2?.rubrica
+  ).length;
+}
+
+function statusColor(status: string) {
+  const s = normalizeText(status);
+  if (s.includes('ativo')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
+  if (s.includes('inativo')) return 'bg-rose-500/15 text-rose-300 border-rose-400/20';
+  if (s.includes('afast')) return 'bg-amber-500/15 text-amber-300 border-amber-400/20';
+  return 'bg-slate-500/15 text-slate-300 border-slate-400/20';
+}
+
+function resolveDayTone(day: FrequenciaDayItem) {
+  const text = normalizeText(
+    day.statusFinal ||
+      day.turno1?.rubrica ||
+      day.turno2?.rubrica ||
+      day.turno1?.ocorrencia ||
+      day.turno2?.ocorrencia
+  );
+
+  if (text.includes('feriado')) {
+    return {
+      card: 'border-violet-400/20 bg-[linear-gradient(180deg,rgba(139,92,246,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-violet-200',
+      muted: 'text-violet-300/80',
+      pill: 'border-violet-400/20 bg-violet-500/12 text-violet-200',
+      dot: 'bg-violet-300',
+    };
   }
-  if (day.sourceFlags?.isHoliday) {
-    return 'bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/20';
+
+  if (text.includes('ponto') || text.includes('facultativo')) {
+    return {
+      card: 'border-sky-400/20 bg-[linear-gradient(180deg,rgba(14,165,233,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-sky-200',
+      muted: 'text-sky-300/80',
+      pill: 'border-sky-400/20 bg-sky-500/12 text-sky-200',
+      dot: 'bg-sky-300',
+    };
   }
-  if (day.sourceFlags?.isFacultativo) {
-    return 'bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/20';
+
+  if (text.includes('atestado')) {
+    return {
+      card: 'border-amber-400/20 bg-[linear-gradient(180deg,rgba(245,158,11,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-amber-200',
+      muted: 'text-amber-300/80',
+      pill: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
+      dot: 'bg-amber-300',
+    };
   }
-  if (day.sourceFlags?.hasFalta) {
-    return 'bg-red-500/10 text-red-300 ring-1 ring-red-500/20';
+
+  if (text.includes('falta')) {
+    return {
+      card: 'border-rose-400/20 bg-[linear-gradient(180deg,rgba(244,63,94,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-rose-200',
+      muted: 'text-rose-300/80',
+      pill: 'border-rose-400/20 bg-rose-500/12 text-rose-200',
+      dot: 'bg-rose-300',
+    };
   }
-  if (day.sourceFlags?.hasAtestado) {
-    return 'bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/20';
+
+  if (text.includes('ferias') || text.includes('férias')) {
+    return {
+      card: 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.12),rgba(15,23,42,0.92))]',
+      accent: 'text-emerald-200',
+      muted: 'text-emerald-300/80',
+      pill: 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200',
+      dot: 'bg-emerald-300',
+    };
   }
-  if (day.sourceFlags?.isWeekend) {
-    return 'bg-slate-700/70 text-slate-300 ring-1 ring-slate-600';
+
+  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
+    return {
+      card: 'border-slate-500/20 bg-[linear-gradient(180deg,rgba(100,116,139,0.10),rgba(15,23,42,0.92))]',
+      accent: 'text-slate-200',
+      muted: 'text-slate-400',
+      pill: 'border-slate-500/20 bg-slate-500/12 text-slate-300',
+      dot: 'bg-slate-400',
+    };
   }
-  return 'bg-slate-800 text-slate-200 ring-1 ring-slate-700';
+
+  if (text) {
+    return {
+      card: 'border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.10),rgba(15,23,42,0.92))]',
+      accent: 'text-cyan-200',
+      muted: 'text-cyan-300/80',
+      pill: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
+      dot: 'bg-cyan-300',
+    };
+  }
+
+  return {
+    card: 'border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(15,23,42,0.94))]',
+    accent: 'text-white',
+    muted: 'text-slate-400',
+    pill: 'border-white/10 bg-white/[0.04] text-slate-400',
+    dot: 'bg-slate-500',
+  };
+}
+
+function buildStatusPill(day: FrequenciaDayItem) {
+  const source =
+    day.statusFinal ||
+    day.turno1?.rubrica ||
+    day.turno2?.rubrica ||
+    day.turno1?.ocorrencia ||
+    day.turno2?.ocorrencia;
+
+  const value = compactDisplay(source);
+  const tone = resolveDayTone(day);
+
+  if (value === '—') {
+    return {
+      label: 'Sem status',
+      className: 'border-white/10 bg-white/[0.04] text-slate-400',
+    };
+  }
+
+  return {
+    label: value,
+    className: tone.pill,
+  };
+}
+
+function CalendarMiniField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-[13px] font-medium text-slate-100">{value}</p>
+    </div>
+  );
 }
 
 export default function FrequenciaPage() {
-  const [ano, setAno] = useState<number>(getCurrentYear());
-  const [mes, setMes] = useState<number>(getCurrentMonth());
-  const [setor, setSetor] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [status, setStatus] = useState('ATIVO');
-  const [busca, setBusca] = useState('');
+  const today = new Date();
+  const [ano, setAno] = useState<number>(today.getFullYear());
+  const [mes, setMes] = useState<number>(today.getMonth() + 1);
+  const [search, setSearch] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('TODAS');
+  const [filterSetor, setFilterSetor] = useState('TODOS');
+  const [filterStatus, setFilterStatus] = useState('TODOS');
 
-  const [rows, setRows] = useState<FrequenciaMensalItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [items, setItems] = useState<FrequenciaMensalItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [exporting, setExporting] = useState<string>('');
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError('');
+
+        const result = await listarFrequenciaMensal({
+          ano,
+          mes,
+          categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
+          setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
+          status: filterStatus !== 'TODOS' ? filterStatus : undefined,
+        });
+
+        if (!active) return;
+
+        const safeItems = Array.isArray(result?.data) ? result.data : [];
+        setItems(safeItems);
+
+        setSelectedId((current) => {
+          if (!safeItems.length) return '';
+          const exists = safeItems.some(
+            (item) => String(item.servidor?.id ?? '') === String(current)
+          );
+          return exists
+            ? current
+            : String(safeItems[0].servidor?.id ?? '');
+        });
+      } catch (err: any) {
+        if (!active) return;
+        setItems([]);
+        setSelectedId('');
+        setError(err?.message || 'Falha ao carregar os dados da frequência.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, [ano, mes, filterCategoria, filterSetor, filterStatus]);
+
+  const categorias = useMemo(() => {
+    return Array.from(
+      new Set(
+        items
+          .map((item) => safeDisplay(item.servidor?.categoria, 'NÃO INFORMADA'))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [items]);
+
+  const setores = useMemo(() => {
+    return Array.from(
+      new Set(
+        items
+          .map((item) => safeDisplay(item.servidor?.setor, 'NÃO INFORMADO'))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    const term = normalizeText(search);
+
+    return items.filter((item) => {
+      const servidor = item.servidor || ({} as FrequenciaServidor);
+
+      const matchesSearch =
+        !term ||
+        normalizeText(servidor.nome || '').includes(term) ||
+        normalizeText(servidor.cpf || '').includes(term) ||
+        normalizeText(servidor.matricula || '').includes(term) ||
+        normalizeText(servidor.setor || '').includes(term) ||
+        normalizeText(servidor.categoria || '').includes(term);
+
+      const matchesCategoria =
+        filterCategoria === 'TODAS' ||
+        safeDisplay(servidor.categoria, 'NÃO INFORMADA') === filterCategoria;
+
+      const matchesSetor =
+        filterSetor === 'TODOS' ||
+        safeDisplay(servidor.setor, 'NÃO INFORMADO') === filterSetor;
+
+      const matchesStatus =
+        filterStatus === 'TODOS' ||
+        safeDisplay(servidor.status, 'NÃO INFORMADO') === filterStatus;
+
+      return matchesSearch && matchesCategoria && matchesSetor && matchesStatus;
+    });
+  }, [items, search, filterCategoria, filterSetor, filterStatus]);
+
+  useEffect(() => {
+    if (!filteredItems.length) {
+      setSelectedId('');
+      return;
+    }
+
+    const exists = filteredItems.some(
+      (item) => String(item.servidor?.id ?? '') === String(selectedId)
+    );
+
+    if (!exists) {
+      setSelectedId(String(filteredItems[0].servidor?.id ?? ''));
+    }
+  }, [filteredItems, selectedId]);
 
   const selectedItem = useMemo(() => {
     return (
-      rows.find((item) => String(item.servidor?.id ?? '') === String(selectedId)) ||
-      rows[0] ||
+      filteredItems.find(
+        (item) => String(item.servidor?.id ?? '') === String(selectedId)
+      ) ||
+      filteredItems[0] ||
       null
     );
-  }, [rows, selectedId]);
+  }, [filteredItems, selectedId]);
 
-  const filteredRows = useMemo(() => {
-    const term = busca.trim().toLowerCase();
-    if (!term) return rows;
+  const selectedServidor = selectedItem?.servidor || null;
+  const selectedDias = selectedItem?.dayItems || [];
 
-    return rows.filter((item) => {
-      const nome = safeString(item.servidor?.nome).toLowerCase();
-      const cpf = safeString(item.servidor?.cpf).toLowerCase();
-      const matricula = safeString(item.servidor?.matricula).toLowerCase();
-      const setorServidor = safeString(item.servidor?.setor).toLowerCase();
-      return (
-        nome.includes(term) ||
-        cpf.includes(term) ||
-        matricula.includes(term) ||
-        setorServidor.includes(term)
-      );
-    });
-  }, [rows, busca]);
+  const stats = useMemo(() => {
+    const totalServidores = filteredItems.length;
+    const ativos = filteredItems.filter((item) =>
+      normalizeText(item.servidor?.status || '').includes('ativo')
+    ).length;
+    const totalDiasComRegistro = filteredItems.reduce(
+      (sum, item) => sum + countDiasComRegistro(item.dayItems || []),
+      0
+    );
+    const totalOcorrencias = filteredItems.reduce(
+      (sum, item) => sum + countDiasComOcorrencia(item.dayItems || []),
+      0
+    );
 
-  const resumo = useMemo(() => {
-    return selectedItem ? buildResumoFrequencia(selectedItem) : null;
-  }, [selectedItem]);
+    return {
+      totalServidores,
+      ativos,
+      totalDiasComRegistro,
+      totalOcorrencias,
+    };
+  }, [filteredItems]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError('');
-
+  async function handleExport(formato: 'docx' | 'pdf' | 'csv') {
     try {
-      const result = await listarFrequenciaMensal({
-        ano,
-        mes,
-        categoria: categoria || undefined,
-        setor: setor || undefined,
-        status: status || undefined,
-      });
-
-      setRows(result.data || []);
-
-      if (result.data?.length) {
-        const hasCurrent = result.data.some(
-          (item) => String(item.servidor?.id ?? '') === String(selectedId)
-        );
-
-        if (!hasCurrent) {
-          setSelectedId(String(result.data[0].servidor?.id ?? ''));
-        }
-      } else {
-        setSelectedId('');
-      }
-    } catch (err) {
-      setRows([]);
-      setSelectedId('');
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Não foi possível carregar os dados da frequência.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [ano, mes, categoria, setor, status, selectedId]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleExport = useCallback(
-    async (formato: ExportFormat) => {
-      if (!selectedItem) {
+      if (!selectedServidor) {
         setError('Selecione um servidor antes de exportar.');
         return;
       }
 
-      setExporting(formato);
       setError('');
+      setExporting(formato);
 
-      try {
-        await baixarFrequenciaArquivo(
-          {
-            ano,
-            mes,
-            servidorId: selectedItem.servidor?.id,
-            servidorCpf: selectedItem.servidor?.cpf,
-            categoria: categoria || undefined,
-            setor: setor || undefined,
-            status: status || undefined,
-            formato,
-          },
-          selectedItem.servidor
-        );
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : `Não foi possível exportar a frequência em ${formato.toUpperCase()}.`
-        );
-      } finally {
-        setExporting(null);
-      }
-    },
-    [ano, mes, selectedItem, categoria, setor, status]
-  );
+      await baixarFrequenciaArquivo(
+        {
+          ano,
+          mes,
+          formato,
+          servidorId: selectedServidor?.id,
+          servidorCpf: selectedServidor?.cpf,
+          categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
+          setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
+          status: filterStatus !== 'TODOS' ? filterStatus : undefined,
+        },
+        selectedServidor
+      );
+    } catch (err: any) {
+      setError(err?.message || `Falha ao exportar ${formato.toUpperCase()}.`);
+    } finally {
+      setExporting('');
+    }
+  }
 
   return (
-    <div className="min-h-full w-full bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 lg:px-6">
-        <header className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-black/20">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
-                <CalendarDays size={14} />
+    <div className="min-h-screen bg-[#07111f] text-slate-100">
+      <div className="mx-auto max-w-[1700px] p-4 md:p-6 xl:p-8">
+        <div className="mb-6 rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_34%),linear-gradient(135deg,#0b1320_0%,#0f1d31_55%,#12243c_100%)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
+                <ShieldCheck className="h-4 w-4" />
                 Dashboard Executivo
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white">
-                Frequência Mensal
+
+              <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                Gestão de Frequência
               </h1>
-              <p className="max-w-3xl text-sm text-slate-400">
-                Consolidação mensal da frequência com férias, atestados, faltas,
-                feriados, pontos facultativos e exportação oficial em DOCX, PDF
-                e CSV.
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+                Painel consolidado para análise mensal da frequência dos servidores, com filtros,
+                estatísticas, calendário individual e exportações integradas.
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <button
-                type="button"
                 onClick={() => handleExport('docx')}
-                disabled={!selectedItem || exporting !== null}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-blue-500/50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!!exporting || !selectedServidor}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {exporting === 'docx' ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <FileText size={16} />
-                )}
+                {exporting === 'docx' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 Exportar DOCX
               </button>
 
               <button
-                type="button"
                 onClick={() => handleExport('pdf')}
-                disabled={!selectedItem || exporting !== null}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-emerald-500/50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!!exporting || !selectedServidor}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {exporting === 'pdf' ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Download size={16} />
-                )}
+                {exporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar PDF
               </button>
 
               <button
-                type="button"
                 onClick={() => handleExport('csv')}
-                disabled={!selectedItem || exporting !== null}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-amber-500/50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!!exporting || !selectedServidor}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {exporting === 'csv' ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <FileSpreadsheet size={16} />
-                )}
+                {exporting === 'csv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
                 Exportar CSV
               </button>
             </div>
           </div>
-        </header>
+        </div>
 
         {error ? (
-          <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            <AlertCircle size={18} className="mt-0.5 shrink-0" />
-            <span>{error}</span>
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-100">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-medium">Falha ao carregar ou exportar frequência</p>
+              <p className="mt-1 text-sm text-rose-200/90">{error}</p>
+            </div>
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-          <aside className="space-y-5 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/10">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-white">Filtros</h2>
-              <button
-                type="button"
-                onClick={loadData}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700 disabled:opacity-50"
-              >
-                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                Atualizar
-              </button>
-            </div>
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatsCard
+            title="Servidores"
+            value={stats.totalServidores}
+            subtitle="Registros após filtros aplicados"
+            icon={<Users className="h-5 w-5" />}
+          />
+          <StatsCard
+            title="Ativos"
+            value={stats.ativos}
+            subtitle="Servidores com status ativo"
+            icon={<BadgeCheck className="h-5 w-5" />}
+          />
+          <StatsCard
+            title="Dias com registro"
+            value={stats.totalDiasComRegistro}
+            subtitle="Rubricas e ocorrências consolidadas"
+            icon={<CalendarDays className="h-5 w-5" />}
+          />
+          <StatsCard
+            title="Ocorrências"
+            value={stats.totalOcorrencias}
+            subtitle="Turnos com marcações detectadas"
+            icon={<Hash className="h-5 w-5" />}
+          />
+        </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Ano
-                </label>
-                <input
-                  value={ano}
-                  onChange={(e) => setAno(Number(e.target.value || getCurrentYear()))}
-                  type="number"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none ring-0 transition focus:border-blue-500"
-                />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="space-y-6">
+            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+              <div className="mb-5 flex items-center gap-2 text-sm font-medium text-white">
+                <Filter className="h-4 w-4 text-cyan-300" />
+                Filtros
               </div>
 
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Mês
-                </label>
-                <select
-                  value={mes}
-                  onChange={(e) => setMes(Number(e.target.value))}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
-                >
-                  {MONTHS.map((month) => (
-                    <option key={month.value} value={month.value}>
-                      {month.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Categoria
-                </label>
-                <input
-                  value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
-                  placeholder="Filtrar por categoria"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Setor
-                </label>
-                <input
-                  value={setor}
-                  onChange={(e) => setSetor(e.target.value)}
-                  placeholder="Filtrar por setor"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Status
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
-                >
-                  {STATUS_OPTIONS.map((item) => (
-                    <option key={item.label} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-3 border-t border-slate-800 pt-5">
-              <label className="block text-xs font-medium uppercase tracking-wide text-slate-400">
-                Buscar servidor
-              </label>
-              <div className="relative">
-                <Search
-                  size={16}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                />
-                <input
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Nome, CPF, matrícula..."
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3 border-t border-slate-800 pt-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">Servidores</h3>
-                <span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
-                  {filteredRows.length}
-                </span>
-              </div>
-
-              <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
-                {loading ? (
-                  <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-4 text-sm text-slate-400">
-                    <Loader2 size={16} className="animate-spin" />
-                    Carregando servidores...
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Busca
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Nome, CPF, matrícula..."
+                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/40"
+                    />
                   </div>
-                ) : filteredRows.length ? (
-                  filteredRows.map((item) => {
-                    const isActive =
-                      String(item.servidor?.id ?? '') === String(selectedItem?.servidor?.id ?? '');
+                </div>
 
-                    return (
-                      <button
-                        key={String(item.servidor?.id ?? item.servidor?.cpf ?? item.servidor?.nome)}
-                        type="button"
-                        onClick={() => setSelectedId(String(item.servidor?.id ?? ''))}
-                        className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-                          isActive
-                            ? 'border-blue-500/40 bg-blue-500/10'
-                            : 'border-slate-800 bg-slate-950 hover:border-slate-700 hover:bg-slate-900'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="rounded-2xl bg-slate-800 p-2 text-slate-300">
-                            <User size={16} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-white">
-                              {item.servidor?.nome || 'Servidor sem nome'}
-                            </p>
-                            <p className="mt-1 truncate text-xs text-slate-400">
-                              {item.servidor?.matricula || 'Sem matrícula'} •{' '}
-                              {item.servidor?.cpf || 'Sem CPF'}
-                            </p>
-                            <p className="mt-1 truncate text-xs text-slate-500">
-                              {item.servidor?.setor || 'Sem setor'}
-                            </p>
-                          </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      Mês
+                    </label>
+                    <select
+                      value={mes}
+                      onChange={(e) => setMes(Number(e.target.value))}
+                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    >
+                      {MONTHS.map((label, index) => (
+                        <option key={label} value={index + 1}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      Ano
+                    </label>
+                    <input
+                      type="number"
+                      min={2020}
+                      max={2100}
+                      value={ano}
+                      onChange={(e) => setAno(Number(e.target.value) || today.getFullYear())}
+                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Categoria
+                  </label>
+                  <select
+                    value={filterCategoria}
+                    onChange={(e) => setFilterCategoria(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  >
+                    <option value="TODAS">Todas</option>
+                    {categorias.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Setor
+                  </label>
+                  <select
+                    value={filterSetor}
+                    onChange={(e) => setFilterSetor(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  >
+                    <option value="TODOS">Todos</option>
+                    {setores.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  >
+                    <option value="TODOS">Todos</option>
+                    <option value="ATIVO">ATIVO</option>
+                    <option value="INATIVO">INATIVO</option>
+                    <option value="AFASTADO">AFASTADO</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Servidores</h2>
+                  <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
+                </div>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : null}
+              </div>
+
+              <div className="max-h-[620px] space-y-3 overflow-y-auto pr-1">
+                {!loading && !filteredItems.length ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
+                    <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Ajuste os filtros ou confira o retorno da API.
+                    </p>
+                  </div>
+                ) : null}
+
+                {filteredItems.map((item) => {
+                  const servidor = item.servidor || ({} as FrequenciaServidor);
+                  const active = String(servidor.id ?? '') === String(selectedId);
+
+                  return (
+                    <button
+                      key={String(servidor.id ?? servidor.cpf ?? servidor.nome)}
+                      onClick={() => setSelectedId(String(servidor.id ?? ''))}
+                      className={[
+                        'w-full rounded-2xl border p-4 text-left transition',
+                        active
+                          ? 'border-cyan-400/30 bg-cyan-500/10'
+                          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
+                      ].join(' ')}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">{servidor.nome}</p>
+                          <p className="mt-1 truncate text-xs text-slate-400">
+                            {safeDisplay(servidor.categoria, 'NÃO INFORMADA')}
+                          </p>
                         </div>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-4 text-sm text-slate-400">
-                    Nenhum servidor encontrado para os filtros atuais.
-                  </div>
-                )}
+                        <span
+                          className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${statusColor(
+                            servidor.status || ''
+                          )}`}
+                        >
+                          {safeDisplay(servidor.status, 'NÃO INFORMADO')}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
+                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">CPF</span>
+                          <span className="mt-1 block text-slate-200">{formatCpf(servidor.cpf)}</span>
+                        </div>
+                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">Matrícula</span>
+                          <span className="mt-1 block text-slate-200">{safeDisplay(servidor.matricula)}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </aside>
 
           <section className="space-y-6">
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/10">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
-                    Competência
-                  </div>
-                  <h2 className="text-2xl font-semibold text-white">
-                    {getCompetenciaLabel(ano, mes)}
-                  </h2>
+            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+              {selectedServidor ? (
+                <>
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 text-cyan-200">
+                        <UserRound className="h-8 w-8" />
+                      </div>
 
-                  <div className="space-y-1">
-                    <p className="text-lg font-medium text-slate-100">
-                      {selectedItem?.servidor?.nome || 'Nenhum servidor selecionado'}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      Matrícula: {selectedItem?.servidor?.matricula || '—'} • CPF:{' '}
-                      {selectedItem?.servidor?.cpf || '—'}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {selectedItem?.servidor?.cargo || 'Sem cargo'} •{' '}
-                      {selectedItem?.servidor?.categoria || 'Sem categoria'} •{' '}
-                      {selectedItem?.servidor?.setor || 'Sem setor'}
-                    </p>
-                  </div>
-                </div>
+                      <div>
+                        <h2 className="text-2xl font-semibold text-white">{selectedServidor.nome}</h2>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${statusColor(
+                              selectedServidor.status || ''
+                            )}`}
+                          >
+                            {safeDisplay(selectedServidor.status, 'NÃO INFORMADO')}
+                          </span>
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-300">
+                            {safeDisplay(selectedServidor.categoria, 'NÃO INFORMADA')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-500">
-                      Dias do mês
-                    </div>
-                    <div className="mt-2 text-xl font-semibold text-white">
-                      {selectedItem?.totalDiasMes || 0}
-                    </div>
-                  </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                          <Hash className="h-4 w-4" />
+                          <span className="text-xs uppercase tracking-[0.16em]">Matrícula</span>
+                        </div>
+                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.matricula)}</p>
+                      </div>
 
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-500">
-                      C.H. diária
-                    </div>
-                    <div className="mt-2 text-xl font-semibold text-white">
-                      {selectedItem?.servidor?.chDiaria || '—'}
-                    </div>
-                  </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                          <ShieldCheck className="h-4 w-4" />
+                          <span className="text-xs uppercase tracking-[0.16em]">CPF</span>
+                        </div>
+                        <p className="text-sm font-medium text-white">{formatCpf(selectedServidor.cpf)}</p>
+                      </div>
 
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-500">
-                      C.H. semanal
-                    </div>
-                    <div className="mt-2 text-xl font-semibold text-white">
-                      {selectedItem?.servidor?.chSemanal || '—'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                          <Building2 className="h-4 w-4" />
+                          <span className="text-xs uppercase tracking-[0.16em]">Setor</span>
+                        </div>
+                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.setor)}</p>
+                      </div>
 
-            {resumo ? (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-                {[
-                  ['Fins de semana', resumo.finsDeSemana],
-                  ['Feriados', resumo.feriados],
-                  ['Facultativos', resumo.facultativos],
-                  ['Férias', resumo.ferias],
-                  ['Atestados', resumo.atestados],
-                  ['Faltas', resumo.faltas],
-                ].map(([label, value]) => (
-                  <div
-                    key={String(label)}
-                    className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4"
-                  >
-                    <div className="text-xs uppercase tracking-wide text-slate-500">
-                      {label}
-                    </div>
-                    <div className="mt-2 text-2xl font-semibold text-white">
-                      {value as number}
+                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-xs uppercase tracking-[0.16em]">Cargo</span>
+                        </div>
+                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.cargo)}</p>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : null}
 
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/10">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Calendário mensal</h3>
-                  <p className="text-sm text-slate-400">
-                    Visualização consolidada por dia com rubrica e ocorrências.
+                  <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Dias com registro</p>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        {countDiasComRegistro(selectedDias)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Dias com rubrica</p>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        {countDiasComRubrica(selectedDias)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Ocorrências de turno</p>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        {countDiasComOcorrencia(selectedDias)}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
+                  <p className="text-base font-medium text-white">Nenhum servidor selecionado</p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Ajuste os filtros ou aguarde o carregamento da lista.
                   </p>
                 </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-white">
+                    Calendário mensal · {MONTHS[mes - 1]} / {ano}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Visualização diária premium da rubrica e das ocorrências do servidor selecionado.
+                  </p>
+                </div>
+
+                <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
+                  {selectedDias.length} dia(s) carregado(s)
+                </div>
               </div>
 
-              {selectedItem?.dayItems?.length ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                  {selectedItem.dayItems.map((day) => (
-                    <article
-                      key={`${day.data}-${day.dia}`}
-                      className={`rounded-2xl px-4 py-4 ${getDayBadgeClass(day)}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-xs uppercase tracking-wide opacity-70">
-                            Dia
-                          </div>
-                          <div className="mt-1 text-xl font-semibold">{day.dia}</div>
-                        </div>
-                        <div className="text-right text-xs opacity-70">{day.data}</div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-1 gap-3">
-                        <div className="rounded-xl bg-black/10 px-3 py-3">
-                          <div className="text-[11px] uppercase tracking-wide opacity-70">
-                            1º Turno
-                          </div>
-                          <div className="mt-2 space-y-1 text-sm">
-                            <p>
-                              <span className="opacity-70">Rubrica:</span>{' '}
-                              {day.turno1?.rubrica || '—'}
-                            </p>
-                            <p>
-                              <span className="opacity-70">Ocorrência:</span>{' '}
-                              {day.turno1?.ocorrencia || '—'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="rounded-xl bg-black/10 px-3 py-3">
-                          <div className="text-[11px] uppercase tracking-wide opacity-70">
-                            2º Turno
-                          </div>
-                          <div className="mt-2 space-y-1 text-sm">
-                            <p>
-                              <span className="opacity-70">Rubrica:</span>{' '}
-                              {day.turno2?.rubrica || '—'}
-                            </p>
-                            <p>
-                              <span className="opacity-70">Ocorrência:</span>{' '}
-                              {day.turno2?.ocorrencia || '—'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+              {!selectedDias.length ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
+                  <CalendarDays className="mx-auto h-10 w-10 text-slate-600" />
+                  <p className="mt-4 text-base font-medium text-white">Sem dias carregados</p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    O servidor selecionado não trouxe registros de dias nesse retorno da API.
+                  </p>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-8 text-center text-sm text-slate-400">
-                  Selecione um servidor para visualizar a consolidação mensal.
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {selectedDias.map((day) => {
+                    const tone = resolveDayTone(day);
+                    const pill = buildStatusPill(day);
+
+                    return (
+                      <div
+                        key={`${selectedServidor?.id}-${day.dia}-${day.data}`}
+                        className={[
+                          'group rounded-[22px] border p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition duration-200',
+                          'hover:-translate-y-[1px] hover:border-white/15 hover:shadow-[0_14px_30px_rgba(0,0,0,0.26)]',
+                          tone.card,
+                        ].join(' ')}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/15 shadow-inner">
+                              <span className={`text-lg font-semibold leading-none ${tone.accent}`}>
+                                {String(day.dia).padStart(2, '0')}
+                              </span>
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${tone.muted}`}>
+                                  {getWeekdayLabel(day.data)}
+                                </span>
+                                <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+                              </div>
+                              <p className="mt-1 text-[11px] text-slate-400">{day.data}</p>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`max-w-[45%] truncate rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${pill.className}`}
+                            title={pill.label}
+                          >
+                            {pill.label}
+                          </span>
+                        </div>
+
+                        <div className="rounded-2xl border border-white/8 bg-black/10 px-3 py-3">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+                            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Rubrica</p>
+                          </div>
+                          <p
+                            className={`truncate text-sm font-semibold ${
+                              compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica) === '—'
+                                ? 'text-slate-400'
+                                : tone.accent
+                            }`}
+                            title={compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica)}
+                          >
+                            {compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica)}
+                          </p>
+                        </div>
+
+                        <div className="mt-2.5 grid grid-cols-2 gap-2">
+                          <CalendarMiniField label="O1" value={compactDisplay(day.turno1?.ocorrencia)} />
+                          <CalendarMiniField label="O2" value={compactDisplay(day.turno2?.ocorrencia)} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
