@@ -106,6 +106,7 @@ function extractArrayPayload(payload: unknown): any[] {
     if (Array.isArray(obj.data)) return obj.data as any[];
     if (Array.isArray(obj.items)) return obj.items as any[];
     if (Array.isArray(obj.rows)) return obj.rows as any[];
+
     if (obj.data && typeof obj.data === 'object') {
       const data = obj.data as Record<string, unknown>;
       if (Array.isArray(data.items)) return data.items as any[];
@@ -275,7 +276,10 @@ function triggerBrowserDownload(blob: Blob, fileName: string): void {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 function buildCsvContent(item: FrequenciaMensalItem): string {
@@ -314,6 +318,32 @@ function buildCsvContent(item: FrequenciaMensalItem): string {
   return `\uFEFF${csv}`;
 }
 
+function findMatchingItem(
+  data: FrequenciaMensalItem[],
+  payload: {
+    servidorId?: string | number;
+    servidorCpf?: string;
+  }
+): FrequenciaMensalItem | null {
+  if (!Array.isArray(data) || !data.length) return null;
+
+  const cpf = onlyDigits(payload.servidorCpf);
+
+  const found =
+    data.find((row) => {
+      const sameCpf =
+        cpf && onlyDigits(row.servidor?.cpf) === cpf;
+
+      const sameId =
+        payload.servidorId !== undefined &&
+        String(row.servidor?.id ?? '') === String(payload.servidorId);
+
+      return Boolean(sameCpf || sameId);
+    }) || null;
+
+  return found || data[0] || null;
+}
+
 export async function listarFrequenciaMensal(
   filtros: FrequenciaFiltros
 ): Promise<FrequenciaMensalResponse> {
@@ -338,7 +368,7 @@ export async function listarFrequenciaMensal(
 
   if (!response.ok) {
     throw new Error(
-      parseErrorMessage(payload, 'Não foi possível carregar a frequência')
+      parseErrorMessage(payload, 'Não foi possível carregar a frequência.')
     );
   }
 
@@ -382,18 +412,10 @@ export async function baixarFrequenciaArquivo(
       status: payload.status,
     });
 
-    const item =
-      result.data.find((row) => {
-        const sameCpf =
-          payload.servidorCpf &&
-          onlyDigits(row.servidor?.cpf) === onlyDigits(payload.servidorCpf);
-
-        const sameId =
-          payload.servidorId !== undefined &&
-          String(row.servidor?.id ?? '') === String(payload.servidorId);
-
-        return Boolean(sameCpf || sameId);
-      }) || result.data[0];
+    const item = findMatchingItem(result.data, {
+      servidorId: payload.servidorId,
+      servidorCpf: payload.servidorCpf,
+    });
 
     if (!item) {
       throw new Error('Não foi possível gerar o CSV da frequência.');
@@ -494,3 +516,12 @@ export function buildResumoFrequencia(item: FrequenciaMensalItem) {
 export function getCompetenciaLabel(ano: number, mes: number): string {
   return `${monthLabel(mes)} de ${ano}`;
 }
+
+export const frequenciaService = {
+  listarFrequenciaMensal,
+  baixarFrequenciaArquivo,
+  buildResumoFrequencia,
+  getCompetenciaLabel,
+};
+
+export default frequenciaService;
