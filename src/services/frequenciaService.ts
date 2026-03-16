@@ -109,8 +109,18 @@ function extractArrayPayload(payload: unknown): any[] {
 
     if (obj.data && typeof obj.data === 'object') {
       const data = obj.data as Record<string, unknown>;
+
+      if (Array.isArray(data.data)) return data.data as any[];
       if (Array.isArray(data.items)) return data.items as any[];
       if (Array.isArray(data.rows)) return data.rows as any[];
+
+      if (data.data && typeof data.data === 'object') {
+        const inner = data.data as Record<string, unknown>;
+
+        if (Array.isArray(inner.data)) return inner.data as any[];
+        if (Array.isArray(inner.items)) return inner.items as any[];
+        if (Array.isArray(inner.rows)) return inner.rows as any[];
+      }
     }
   }
 
@@ -380,6 +390,8 @@ export async function listarFrequenciaMensal(
     meta:
       payload?.meta && typeof payload.meta === 'object'
         ? payload.meta
+        : payload?.data?.meta && typeof payload.data.meta === 'object'
+        ? payload.data.meta
         : {
             ano: filtros.ano,
             mes: filtros.mes,
