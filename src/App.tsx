@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Sidebar } from './components/Sidebar';
@@ -38,25 +38,44 @@ type AppTab =
   | 'admin-logs'
   | 'diagnostico';
 
+const VALID_TABS: AppTab[] = [
+  'dashboard',
+  'servidores',
+  'atestados',
+  'ferias',
+  'frequencia',
+  'mapas',
+  'admin',
+  'admin-usuarios',
+  'admin-categorias',
+  'admin-setores',
+  'admin-logs',
+  'diagnostico',
+];
+
+function isValidTab(tab: string): tab is AppTab {
+  return VALID_TABS.includes(tab as AppTab);
+}
+
 export default function App() {
   const { signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [initialAction, setInitialAction] = useState<string | null>(null);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await signOut();
     } catch (error) {
       console.error('Erro ao sair da sessão:', error);
     }
-  };
+  }, [signOut]);
 
-  const navigateWithAction = (tab: string, action?: string) => {
-    const safeTab = (tab || 'dashboard') as AppTab;
+  const navigateWithAction = useCallback((tab: string, action?: string) => {
+    const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setActiveTab(safeTab);
     setInitialAction(action ?? null);
-  };
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
