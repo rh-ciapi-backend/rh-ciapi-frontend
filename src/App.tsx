@@ -16,11 +16,11 @@ import { ServidoresPage } from './pages/ServidoresPage';
 import FeriasPage from './pages/FeriasPage';
 import FrequenciaPage from './pages/FrequenciaPage';
 import { MapasPage } from './pages/MapasPage';
-import { AdminPage } from './pages/AdminPage';
-import { AdminUsuariosPage } from './pages/AdminUsuariosPage';
-import { AdminCategoriasPage } from './pages/AdminCategoriasPage';
-import { AdminSetoresPage } from './pages/AdminSetoresPage';
-import { AdminLogsPage } from './pages/AdminLogsPage';
+import AdminPage from './pages/AdminPage';
+import AdminUsuariosPage from './pages/AdminUsuariosPage';
+import AdminCategoriasPage from './pages/AdminCategoriasPage';
+import AdminSetoresPage from './pages/AdminSetoresPage';
+import AdminLogsPage from './pages/AdminLogsPage';
 import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
 
