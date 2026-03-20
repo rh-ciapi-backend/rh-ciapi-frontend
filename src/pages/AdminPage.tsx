@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Layers,
-  MapPin,
-  Calendar,
   Shield,
+  Users,
   Activity,
-  Plus,
-  Edit2,
-  Trash2,
-  X,
+  Lock,
   ChevronRight,
+  AlertTriangle,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { eventosService } from '../services/eventosService';
-import { CATEGORIAS, SETORES } from '../data/servidores';
-import { EventoCalendario } from '../types';
+import { adminAccessService } from '../services/adminAccessService';
+import type { AdminUsersStats } from '../types/adminAccess';
 
 type AdminPageProps = {
   onNavigate: (tab: string) => void;
@@ -25,313 +22,256 @@ type AdminCardProps = {
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   count: string | number;
-  onClick: () => void;
+  tone?: 'primary' | 'emerald' | 'amber' | 'rose' | 'slate';
+  onClick?: () => void;
 };
 
-const AdminCard = ({ title, description, icon: Icon, count, onClick }: AdminCardProps) => (
-  <button
-    onClick={onClick}
-    className="bg-card-dark p-6 rounded-2xl border border-border-dark hover:border-primary/50 hover:bg-slate-800 transition-all text-left group flex items-center justify-between w-full"
-  >
-    <div className="flex items-center gap-4">
-      <div className="p-3 bg-slate-800 rounded-xl group-hover:bg-primary group-hover:text-white transition-colors">
-        <Icon size={24} />
+const toneMap: Record<NonNullable<AdminCardProps['tone']>, string> = {
+  primary: 'from-blue-500/10 to-cyan-500/5 border-blue-500/20 text-blue-300',
+  emerald: 'from-emerald-500/10 to-emerald-400/5 border-emerald-500/20 text-emerald-300',
+  amber: 'from-amber-500/10 to-amber-400/5 border-amber-500/20 text-amber-300',
+  rose: 'from-rose-500/10 to-rose-400/5 border-rose-500/20 text-rose-300',
+  slate: 'from-slate-500/10 to-slate-400/5 border-slate-500/20 text-slate-300',
+};
+
+const AdminCard = ({
+  title,
+  description,
+  icon: Icon,
+  count,
+  onClick,
+  tone = 'primary',
+}: AdminCardProps) => {
+  const clickable = typeof onClick === 'function';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-2xl border bg-gradient-to-br ${toneMap[tone]} p-5 text-left transition-all ${
+        clickable ? 'hover:scale-[1.01] hover:border-primary/40' : 'cursor-default'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-slate-900/60 p-3">
+            <Icon size={22} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white">{title}</h3>
+            <p className="text-xs text-slate-400">{description}</p>
+          </div>
+        </div>
+
+        {clickable && <ChevronRight size={18} className="text-slate-500" />}
       </div>
-      <div>
-        <h3 className="text-white font-bold">{title}</h3>
-        <p className="text-xs text-slate-500">{description}</p>
-      </div>
-    </div>
-    <div className="flex items-center gap-3">
-      <span className="text-sm font-bold text-slate-400">{count}</span>
-      <ChevronRight size={18} className="text-slate-600 group-hover:text-primary transition-colors" />
-    </div>
-  </button>
-);
+
+      <div className="mt-5 text-3xl font-extrabold tracking-tight text-white">{count}</div>
+    </button>
+  );
+};
+
+const emptyStats: AdminUsersStats = {
+  totalUsuarios: 0,
+  ativos: 0,
+  inativos: 0,
+  bloqueados: 0,
+  masters: 0,
+  administradores: 0,
+  logsHoje: 0,
+};
 
 const AdminPage = ({ onNavigate }: AdminPageProps) => {
-  const [eventos, setEventos] = useState<EventoCalendario[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [stats, setStats] = useState<AdminUsersStats>(emptyStats);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const fetchEventos = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await eventosService.listar();
-      setEventos(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      setError('Erro ao carregar eventos. Verifique a conexão com o servidor.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const summaryCards = useMemo(
+    () => [
+      {
+        title: 'Usuários do Sistema',
+        description: 'Contas cadastradas no painel',
+        icon: Users,
+        count: stats.totalUsuarios,
+        tone: 'primary' as const,
+        onClick: () => onNavigate('admin-usuarios'),
+      },
+      {
+        title: 'Usuários Ativos',
+        description: 'Com acesso liberado',
+        icon: UserCheck,
+        count: stats.ativos,
+        tone: 'emerald' as const,
+        onClick: () => onNavigate('admin-usuarios'),
+      },
+      {
+        title: 'Bloqueados/Inativos',
+        description: 'Contas restritas',
+        icon: UserX,
+        count: stats.bloqueados + stats.inativos,
+        tone: 'amber' as const,
+        onClick: () => onNavigate('admin-usuarios'),
+      },
+      {
+        title: 'Logs Hoje',
+        description: 'Ações auditadas nas últimas horas',
+        icon: Activity,
+        count: stats.logsHoje,
+        tone: 'rose' as const,
+        onClick: () => onNavigate('admin-logs'),
+      },
+    ],
+    [onNavigate, stats],
+  );
 
   useEffect(() => {
-    fetchEventos();
-  }, []);
-
-  useEffect(() => {
-    if (!successMessage) return;
-    const timer = window.setTimeout(() => setSuccessMessage(null), 3000);
-    return () => window.clearTimeout(timer);
-  }, [successMessage]);
-
-  const handleSaveEvento = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const formData = new FormData(e.currentTarget);
-    const dados = {
-      data: String(formData.get('data') || ''),
-      tipo: formData.get('tipo') as any,
-      titulo: String(formData.get('titulo') || ''),
-      descricao: String(formData.get('descricao') || ''),
+    const loadStats = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await adminAccessService.listUsers();
+        setStats(response?.stats || emptyStats);
+      } catch (err: any) {
+        setError(err?.message || 'Não foi possível carregar os indicadores da administração.');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    try {
-      setIsLoading(true);
-      await eventosService.adicionar(dados);
-      setSuccessMessage('Evento salvo com sucesso!');
-      setIsModalOpen(false);
-      await fetchEventos();
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao salvar evento.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    loadStats();
+  }, []);
 
   return (
     <div className="space-y-8">
+      <div className="rounded-3xl border border-primary/20 bg-gradient-to-r from-blue-950/70 via-slate-900 to-slate-950 p-6 shadow-2xl">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+              <Shield size={14} />
+              Administração de Sistemas
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">
+              Controle de acessos, segurança e auditoria
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm text-slate-400">
+              Gerencie usuários, perfis, permissões por módulo e acompanhe o histórico de ações do sistema
+              CIAPI RH.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <button
+              onClick={() => onNavigate('admin-usuarios')}
+              className="rounded-2xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-white transition hover:border-primary/40"
+            >
+              Usuários
+            </button>
+            <button
+              onClick={() => onNavigate('admin-logs')}
+              className="rounded-2xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-white transition hover:border-primary/40"
+            >
+              Auditoria
+            </button>
+            <button
+              onClick={() => onNavigate('admin-setores')}
+              className="rounded-2xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-white transition hover:border-primary/40"
+            >
+              Setores
+            </button>
+            <button
+              onClick={() => onNavigate('admin-categorias')}
+              className="rounded-2xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-white transition hover:border-primary/40"
+            >
+              Categorias
+            </button>
+          </div>
+        </div>
+      </div>
+
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl flex items-center gap-3 text-rose-400 text-sm"
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300"
           >
-            <X size={18} className="cursor-pointer" onClick={() => setError(null)} />
+            <AlertTriangle size={18} />
             {error}
           </motion.div>
         )}
-        {successMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center gap-3 text-emerald-400 text-sm"
-          >
-            <Calendar size={18} />
-            {successMessage}
-          </motion.div>
-        )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <AdminCard
-          title="Usuários do Sistema"
-          description="Gerenciar acessos e permissões"
-          icon={Shield}
-          count="05"
-          onClick={() => onNavigate('admin-usuarios')}
-        />
-        <AdminCard
-          title="Categorias"
-          description="Configurar tipos de contratação"
-          icon={Layers}
-          count={CATEGORIAS.length}
-          onClick={() => onNavigate('admin-categorias')}
-        />
-        <AdminCard
-          title="Setores"
-          description="Gerenciar lotações e departamentos"
-          icon={MapPin}
-          count={SETORES.length}
-          onClick={() => onNavigate('admin-setores')}
-        />
-        <AdminCard
-          title="Logs de Atividade"
-          description="Histórico de ações no sistema"
-          icon={Activity}
-          count="1.2k"
-          onClick={() => onNavigate('admin-logs')}
-        />
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {summaryCards.map((card) => (
+          <AdminCard key={card.title} {...card} />
+        ))}
       </div>
 
-      <div className="bg-card-dark rounded-2xl border border-border-dark overflow-hidden shadow-xl relative min-h-[200px]">
-        {isLoading && (
-          <div className="absolute inset-0 bg-card-dark/50 backdrop-blur-[2px] z-10 flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="rounded-2xl border border-border-dark bg-card-dark p-6 xl:col-span-2">
+          <h2 className="text-lg font-bold text-white">Visão Geral de Segurança</h2>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border-dark bg-slate-900/40 p-5">
+              <div className="mb-3 flex items-center gap-2 text-emerald-300">
+                <UserCheck size={18} />
+                <span className="text-sm font-bold">Contas ativas</span>
+              </div>
+              <p className="text-3xl font-extrabold text-white">{stats.ativos}</p>
+              <p className="mt-1 text-xs text-slate-400">Usuários aptos a acessar os módulos liberados.</p>
+            </div>
 
-        <div className="p-6 border-b border-border-dark flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Calendar className="text-primary" size={24} />
-            <h2 className="text-lg font-bold text-white">Eventos e Feriados</h2>
-          </div>
+            <div className="rounded-2xl border border-border-dark bg-slate-900/40 p-5">
+              <div className="mb-3 flex items-center gap-2 text-amber-300">
+                <Lock size={18} />
+                <span className="text-sm font-bold">Restrições ativas</span>
+              </div>
+              <p className="text-3xl font-extrabold text-white">{stats.bloqueados + stats.inativos}</p>
+              <p className="mt-1 text-xs text-slate-400">Perfis bloqueados ou inativos no ambiente.</p>
+            </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all"
-          >
-            <Plus size={18} />
-            Adicionar Evento
-          </button>
+            <div className="rounded-2xl border border-border-dark bg-slate-900/40 p-5">
+              <div className="mb-3 flex items-center gap-2 text-blue-300">
+                <Shield size={18} />
+                <span className="text-sm font-bold">Perfis Master</span>
+              </div>
+              <p className="text-3xl font-extrabold text-white">{stats.masters}</p>
+              <p className="mt-1 text-xs text-slate-400">Contas com proteção total e governança máxima.</p>
+            </div>
+
+            <div className="rounded-2xl border border-border-dark bg-slate-900/40 p-5">
+              <div className="mb-3 flex items-center gap-2 text-rose-300">
+                <Activity size={18} />
+                <span className="text-sm font-bold">Auditoria do dia</span>
+              </div>
+              <p className="text-3xl font-extrabold text-white">{stats.logsHoje}</p>
+              <p className="mt-1 text-xs text-slate-400">Eventos de administração e rastreabilidade.</p>
+            </div>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-800/50 border-b border-border-dark">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Data</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Título</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Descrição</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Ações</th>
-              </tr>
-            </thead>
+        <div className="rounded-2xl border border-border-dark bg-card-dark p-6">
+          <h2 className="text-lg font-bold text-white">Governança</h2>
+          <ul className="mt-5 space-y-4 text-sm text-slate-300">
+            <li className="rounded-xl border border-border-dark bg-slate-900/40 p-4">
+              O usuário master possui proteção contra exclusão, bloqueio e rebaixamento de perfil.
+            </li>
+            <li className="rounded-xl border border-border-dark bg-slate-900/40 p-4">
+              As permissões são controladas por módulo e ação, com rastreio no log de auditoria.
+            </li>
+            <li className="rounded-xl border border-border-dark bg-slate-900/40 p-4">
+              Toda criação, edição, exclusão e redefinição de senha deve passar pelo backend administrativo.
+            </li>
+          </ul>
 
-            <tbody className="divide-y divide-border-dark">
-              {eventos.length === 0 && !isLoading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                    Nenhum evento ou feriado cadastrado.
-                  </td>
-                </tr>
-              ) : (
-                eventos.map((event) => (
-                  <tr key={event.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4 text-sm text-white font-medium">
-                      {new Date(event.data).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 rounded-full text-[10px] font-bold border ${
-                          event.tipo === 'FERIADO'
-                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                            : event.tipo === 'PONTO'
-                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                              : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                        }`}
-                      >
-                        {event.tipo}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-200">{event.titulo}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{event.descricao}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
-                          <Edit2 size={16} />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          {isLoading && (
+            <div className="mt-5 flex items-center gap-3 text-sm text-slate-400">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Atualizando indicadores...
+            </div>
+          )}
         </div>
       </div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-card-dark border border-border-dark rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-            >
-              <div className="p-6 border-b border-border-dark flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white">Novo Evento / Feriado</h2>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <form id="evento-form" onSubmit={handleSaveEvento} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase">Data</label>
-                    <input
-                      name="data"
-                      type="date"
-                      required
-                      className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase">Tipo</label>
-                    <select
-                      name="tipo"
-                      className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="FERIADO">FERIADO</option>
-                      <option value="PONTO">PONTO</option>
-                      <option value="EVENTO">EVENTO</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase">Título</label>
-                    <input
-                      name="titulo"
-                      type="text"
-                      required
-                      className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="Ex: Dia do Servidor"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase">Descrição</label>
-                    <textarea
-                      name="descricao"
-                      className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary h-24 resize-none"
-                      placeholder="Detalhes adicionais..."
-                    />
-                  </div>
-                </form>
-              </div>
-
-              <div className="p-6 border-t border-border-dark flex justify-end gap-3 bg-slate-800/20">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  form="evento-form"
-                  type="submit"
-                  className="bg-primary hover:bg-primary-hover text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all"
-                >
-                  Salvar Evento
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
