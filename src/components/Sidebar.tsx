@@ -1,106 +1,291 @@
-import React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  Clock, 
-  Map, 
-  Settings, 
-  LogOut,
+import React, { useMemo, useState } from 'react';
+import {
+  LayoutDashboard,
+  Users,
+  FileCheck2,
+  CalendarDays,
+  Clock3,
+  Map,
+  Settings,
+  Activity,
   ChevronLeft,
   ChevronRight,
-  FileHeart,
-  Activity
+  LogOut,
+  Shield,
+  Layers3,
+  Building2,
+  FileText,
+  Stethoscope,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 
-interface SidebarProps {
+type AppTab =
+  | 'dashboard'
+  | 'servidores'
+  | 'atestados'
+  | 'ferias'
+  | 'frequencia'
+  | 'mapas'
+  | 'admin'
+  | 'admin-usuarios'
+  | 'admin-categorias'
+  | 'admin-setores'
+  | 'admin-logs'
+  | 'diagnostico';
+
+type SidebarProps = {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onLogout: () => void;
-}
+};
 
-const menuItems = [
+type NavItem = {
+  id: AppTab;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  exact?: boolean;
+};
+
+const mainItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'servidores', label: 'Servidores', icon: Users },
-  { id: 'atestados', label: 'Atestados', icon: FileHeart },
-  { id: 'ferias', label: 'Férias', icon: Calendar },
-  { id: 'frequencia', label: 'Frequência', icon: Clock },
+  { id: 'atestados', label: 'Atestados', icon: Stethoscope },
+  { id: 'ferias', label: 'Férias', icon: CalendarDays },
+  { id: 'frequencia', label: 'Frequência', icon: Clock3 },
   { id: 'mapas', label: 'Mapas', icon: Map },
-  { id: 'admin', label: 'Administração', icon: Settings },
+];
+
+const adminItems: NavItem[] = [
+  { id: 'admin', label: 'Visão Geral', icon: Shield },
+  { id: 'admin-usuarios', label: 'Usuários', icon: Users },
+  { id: 'admin-categorias', label: 'Categorias', icon: Layers3 },
+  { id: 'admin-setores', label: 'Setores', icon: Building2 },
+  { id: 'admin-logs', label: 'Logs', icon: FileText },
+];
+
+const utilityItems: NavItem[] = [
   { id: 'diagnostico', label: 'Diagnóstico', icon: Activity },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) => {
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+function isAdminTab(tab: string) {
+  return (
+    tab === 'admin' ||
+    tab === 'admin-usuarios' ||
+    tab === 'admin-categorias' ||
+    tab === 'admin-setores' ||
+    tab === 'admin-logs'
+  );
+}
+
+function SidebarButton({
+  item,
+  active,
+  collapsed,
+  onClick,
+  nested = false,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+  nested?: boolean;
+}) {
+  const Icon = item.icon;
 
   return (
-    <motion.aside 
-      initial={false}
-      animate={{ width: isCollapsed ? 80 : 260 }}
-      className="h-screen bg-card-dark border-r border-border-dark flex flex-col sticky top-0 z-50"
+    <button
+      type="button"
+      onClick={onClick}
+      title={collapsed ? item.label : undefined}
+      className={[
+        'group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all duration-200',
+        nested ? 'ml-2' : '',
+        active
+          ? 'border-primary/30 bg-primary text-white shadow-lg shadow-primary/20'
+          : 'border-transparent bg-transparent text-slate-300 hover:border-border-dark hover:bg-slate-800/60 hover:text-white',
+        collapsed ? 'justify-center px-2' : '',
+      ].join(' ')}
     >
-      <div className="p-6 flex items-center justify-between">
-        {!isCollapsed && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-3"
-          >
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center font-bold text-white text-xl shadow-lg shadow-primary/20">
-              C
-            </div>
-            <span className="font-bold text-xl tracking-tight text-white">CIAPI RH</span>
-          </motion.div>
-        )}
-        {isCollapsed && (
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center font-bold text-white text-xl mx-auto">
-            C
+      <Icon
+        size={18}
+        className={active ? 'text-white' : 'text-slate-400 group-hover:text-white'}
+      />
+
+      {!collapsed && (
+        <span className="truncate text-sm font-semibold">{item.label}</span>
+      )}
+    </button>
+  );
+}
+
+export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(isAdminTab(activeTab));
+
+  const shouldShowAdminOpen = useMemo(() => {
+    if (collapsed) return false;
+    if (isAdminTab(activeTab)) return true;
+    return adminOpen;
+  }, [collapsed, activeTab, adminOpen]);
+
+  const handleAdminRootClick = () => {
+    if (collapsed) {
+      setCollapsed(false);
+      setAdminOpen(true);
+      setActiveTab('admin');
+      return;
+    }
+
+    setAdminOpen((prev) => !prev);
+
+    if (!isAdminTab(activeTab)) {
+      setActiveTab('admin');
+    }
+  };
+
+  return (
+    <aside
+      className={[
+        'flex min-h-screen flex-col border-r border-border-dark bg-[#16233a] transition-all duration-300',
+        collapsed ? 'w-[88px]' : 'w-[280px]',
+      ].join(' ')}
+    >
+      <div className="flex items-center justify-between border-b border-border-dark px-4 py-5">
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
+            <span className="text-sm font-extrabold">C</span>
           </div>
+
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-lg font-extrabold tracking-tight text-white">
+                CIAPI RH
+              </div>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                Painel Administrativo
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-400 transition hover:text-white"
+            title="Recolher menu"
+          >
+            <ChevronLeft size={16} />
+          </button>
         )}
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto scrollbar-hide">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          
-          return (
-            <button
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        <nav className="space-y-2">
+          {mainItems.map((item) => (
+            <SidebarButton
               key={item.id}
+              item={item}
+              active={activeTab === item.id}
+              collapsed={collapsed}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                isActive 
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-              }`}
+            />
+          ))}
+
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={handleAdminRootClick}
+              title={collapsed ? 'Administração' : undefined}
+              className={[
+                'group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all duration-200',
+                isAdminTab(activeTab)
+                  ? 'border-primary/30 bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'border-transparent bg-transparent text-slate-300 hover:border-border-dark hover:bg-slate-800/60 hover:text-white',
+                collapsed ? 'justify-center px-2' : '',
+              ].join(' ')}
             >
-              <Icon size={22} className={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
-              {!isCollapsed && (
-                <span className="font-medium whitespace-nowrap">{item.label}</span>
+              <Settings
+                size={18}
+                className={isAdminTab(activeTab) ? 'text-white' : 'text-slate-400 group-hover:text-white'}
+              />
+
+              {!collapsed && (
+                <>
+                  <span className="flex-1 truncate text-sm font-semibold">Administração</span>
+                  <ChevronRight
+                    size={16}
+                    className={`transition-transform ${shouldShowAdminOpen ? 'rotate-90' : ''}`}
+                  />
+                </>
               )}
             </button>
-          );
-        })}
-      </nav>
 
-      <div className="p-4 border-t border-border-dark space-y-2">
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-all"
-        >
-          {isCollapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
-          {!isCollapsed && <span className="font-medium">Recolher</span>}
-        </button>
-        
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all"
-        >
-          <LogOut size={22} />
-          {!isCollapsed && <span className="font-medium">Sair</span>}
-        </button>
+            {shouldShowAdminOpen && (
+              <div className="mt-2 space-y-2">
+                {adminItems.map((item) => (
+                  <SidebarButton
+                    key={item.id}
+                    item={item}
+                    nested
+                    active={activeTab === item.id}
+                    collapsed={collapsed}
+                    onClick={() => setActiveTab(item.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3">
+            {utilityItems.map((item) => (
+              <SidebarButton
+                key={item.id}
+                item={item}
+                active={activeTab === item.id}
+                collapsed={collapsed}
+                onClick={() => setActiveTab(item.id)}
+              />
+            ))}
+          </div>
+        </nav>
       </div>
-    </motion.aside>
+
+      <div className="border-t border-border-dark px-3 py-4">
+        <div className="space-y-2">
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className="flex w-full items-center justify-center rounded-2xl border border-border-dark bg-slate-800/60 p-3 text-slate-300 transition hover:text-white"
+              title="Expandir menu"
+            >
+              <ChevronRight size={18} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-border-dark bg-slate-800/40 px-3 py-3 text-slate-300 transition hover:text-white"
+            >
+              <ChevronLeft size={18} />
+              <span className="text-sm font-semibold">Recolher</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onLogout}
+            title={collapsed ? 'Sair' : undefined}
+            className={[
+              'flex w-full items-center gap-3 rounded-2xl border border-rose-500/10 bg-transparent px-3 py-3 text-rose-400 transition hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300',
+              collapsed ? 'justify-center px-2' : '',
+            ].join(' ')}
+          >
+            <LogOut size={18} />
+            {!collapsed && <span className="text-sm font-semibold">Sair</span>}
+          </button>
+        </div>
+      </div>
+    </aside>
   );
-};
+}
