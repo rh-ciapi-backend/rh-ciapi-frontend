@@ -14,6 +14,7 @@ import {
   Trash2,
   UserCog,
   X,
+  Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -55,6 +56,11 @@ const actionLabels: Record<string, string> = {
   gerenciar_usuarios: 'Gerenciar usuários',
 };
 
+type AdminUserCreateFormData = AdminUserFormData & {
+  senha_inicial?: string;
+  confirmar_senha?: string;
+};
+
 const defaultPermissions = (): AdminPermission[] =>
   ADMIN_PERMISSION_MODULES.map((module) => ({
     module,
@@ -62,13 +68,15 @@ const defaultPermissions = (): AdminPermission[] =>
     actions: [],
   }));
 
-function buildFormFromUser(user?: AdminManagedUser): AdminUserFormData {
+function buildFormFromUser(user?: AdminManagedUser): AdminUserCreateFormData {
   return {
     nome_completo: user?.nome_completo || '',
     email: user?.email || '',
     perfil: user?.perfil || 'CONSULTA',
     status: user?.status || 'ATIVO',
     setor_nome: user?.setor_nome || '',
+    senha_inicial: '',
+    confirmar_senha: '',
     permissions:
       user?.permissions?.length
         ? ADMIN_PERMISSION_MODULES.map((module) => {
@@ -128,7 +136,7 @@ const AdminUsuariosPage = () => {
   const [setorFiltro, setSetorFiltro] = useState('');
 
   const [selectedUser, setSelectedUser] = useState<AdminManagedUser | null>(null);
-  const [formData, setFormData] = useState<AdminUserFormData>(buildFormFromUser());
+  const [formData, setFormData] = useState<AdminUserCreateFormData>(buildFormFromUser());
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetPasswordValue, setResetPasswordValue] = useState('');
@@ -236,11 +244,42 @@ const AdminUsuariosPage = () => {
       setIsSaving(true);
       setError(null);
 
+      if (!isEditing) {
+        const senha = String(formData.senha_inicial || '').trim();
+        const confirmar = String(formData.confirmar_senha || '').trim();
+
+        if (senha.length < 6) {
+          throw new Error('Informe uma senha inicial com pelo menos 6 caracteres.');
+        }
+
+        if (senha !== confirmar) {
+          throw new Error('A confirmação da senha inicial não confere.');
+        }
+      }
+
       if (isEditing && selectedUser) {
-        await adminAccessService.updateUser(selectedUser.id, formData);
+        const payload: AdminUserFormData = {
+          nome_completo: formData.nome_completo,
+          email: formData.email,
+          perfil: formData.perfil,
+          status: formData.status,
+          setor_nome: formData.setor_nome,
+          permissions: formData.permissions,
+        };
+
+        await adminAccessService.updateUser(selectedUser.id, payload);
         setSuccess('Usuário atualizado com sucesso.');
       } else {
-        await adminAccessService.createUser(formData);
+        await adminAccessService.createUser({
+          nome_completo: formData.nome_completo,
+          email: formData.email,
+          perfil: formData.perfil,
+          status: formData.status,
+          setor_nome: formData.setor_nome,
+          permissions: formData.permissions,
+          senha_inicial: formData.senha_inicial,
+        } as any);
+
         setSuccess('Usuário criado com sucesso.');
       }
 
@@ -681,6 +720,46 @@ const AdminUsuariosPage = () => {
                         className="w-full rounded-xl border border-border-dark bg-slate-900/40 px-3 py-3 text-sm text-white outline-none"
                       />
                     </div>
+
+                    {!isEditing && (
+                      <>
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-400">
+                            Senha inicial
+                          </label>
+                          <div className="flex items-center gap-2 rounded-xl border border-border-dark bg-slate-900/40 px-3">
+                            <Lock size={16} className="text-slate-500" />
+                            <input
+                              type="password"
+                              value={formData.senha_inicial || ''}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, senha_inicial: e.target.value }))}
+                              required={!isEditing}
+                              minLength={6}
+                              placeholder="Mínimo de 6 caracteres"
+                              className="w-full bg-transparent py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-400">
+                            Confirmar senha
+                          </label>
+                          <div className="flex items-center gap-2 rounded-xl border border-border-dark bg-slate-900/40 px-3">
+                            <Lock size={16} className="text-slate-500" />
+                            <input
+                              type="password"
+                              value={formData.confirmar_senha || ''}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, confirmar_senha: e.target.value }))}
+                              required={!isEditing}
+                              minLength={6}
+                              placeholder="Repita a senha inicial"
+                              className="w-full bg-transparent py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-400">
