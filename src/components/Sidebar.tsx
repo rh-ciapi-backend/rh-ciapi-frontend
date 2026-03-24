@@ -17,6 +17,7 @@ import {
   FileText,
   Stethoscope,
 } from 'lucide-react';
+import ciapiLogo from '../assets/ciapi_logo.png';
 
 type AppTab =
   | 'dashboard'
@@ -149,33 +150,49 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
         collapsed ? 'w-[88px]' : 'w-[280px]',
       ].join(' ')}
     >
-      <div className="flex items-center justify-between border-b border-border-dark px-4 py-5">
-        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
-            <span className="text-sm font-extrabold">C</span>
+      <div className="flex items-center justify-between border-b border-border-dark px-4 py-4">
+        {collapsed ? (
+          <div className="flex w-full items-center justify-center">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
+              <img
+                src={ciapiLogo}
+                alt="CIAPI"
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
+                  <img
+                    src={ciapiLogo}
+                    alt="Logo institucional CIAPI"
+                    className="h-full w-full object-contain p-1"
+                  />
+                </div>
 
-          {!collapsed && (
-            <div className="min-w-0">
-              <div className="truncate text-lg font-extrabold tracking-tight text-white">
-                CIAPI RH
-              </div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                Painel Administrativo
+                <div className="min-w-0">
+                  <div className="truncate text-base font-extrabold tracking-tight text-white">
+                    CIAPI RH
+                  </div>
+                  <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                    Painel Administrativo
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
 
-        {!collapsed && (
-          <button
-            type="button"
-            onClick={() => setCollapsed(true)}
-            className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-400 transition hover:text-white"
-            title="Recolher menu"
-          >
-            <ChevronLeft size={16} />
-          </button>
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="ml-3 rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-400 transition hover:text-white"
+              title="Recolher menu"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </>
         )}
       </div>
 
@@ -289,3 +306,5 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
     </aside>
   );
 }
+
+export default Sidebar;
