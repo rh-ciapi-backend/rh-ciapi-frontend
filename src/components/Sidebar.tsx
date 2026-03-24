@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   Users,
-  FileCheck2,
   CalendarDays,
   Clock3,
   Map,
@@ -17,6 +16,7 @@ import {
   FileText,
   Stethoscope,
 } from 'lucide-react';
+import ciapiLogo from './layout/ciapi_logo.png';
 
 type AppTab =
   | 'dashboard'
@@ -62,9 +62,7 @@ const adminItems: NavItem[] = [
   { id: 'admin-logs', label: 'Logs', icon: FileText },
 ];
 
-const utilityItems: NavItem[] = [
-  { id: 'diagnostico', label: 'Diagnóstico', icon: Activity },
-];
+const utilityItems: NavItem[] = [{ id: 'diagnostico', label: 'Diagnóstico', icon: Activity }];
 
 function isAdminTab(tab: string) {
   return (
@@ -109,10 +107,7 @@ function SidebarButton({
         size={18}
         className={active ? 'text-white' : 'text-slate-400 group-hover:text-white'}
       />
-
-      {!collapsed && (
-        <span className="truncate text-sm font-semibold">{item.label}</span>
-      )}
+      {!collapsed && <span className="truncate text-sm font-semibold">{item.label}</span>}
     </button>
   );
 }
@@ -151,8 +146,17 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
     >
       <div className="flex items-center justify-between border-b border-border-dark px-4 py-5">
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
-            <span className="text-sm font-extrabold">C</span>
+          <div
+            className={[
+              'overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg shadow-black/20',
+              collapsed ? 'h-10 w-10' : 'h-12 w-12',
+            ].join(' ')}
+          >
+            <img
+              src={ciapiLogo}
+              alt="Logo institucional CIAPI"
+              className="h-full w-full object-contain p-1"
+            />
           </div>
 
           {!collapsed && (
@@ -206,7 +210,9 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
             >
               <Settings
                 size={18}
-                className={isAdminTab(activeTab) ? 'text-white' : 'text-slate-400 group-hover:text-white'}
+                className={
+                  isAdminTab(activeTab) ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                }
               />
 
               {!collapsed && (
@@ -289,3 +295,5 @@ export function Sidebar({ activeTab, setActiveTab, onLogout }: SidebarProps) {
     </aside>
   );
 }
+
+export default Sidebar;
