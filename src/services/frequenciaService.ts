@@ -1,6 +1,14 @@
 import { API_BASE_URL } from '../config/api';
+import type {
+  FrequenciaExportFormat,
+  FrequenciaExportMode,
+  FrequenciaExportPayload as FrequenciaExportPayloadType,
+  FrequenciaExportScope,
+} from '../types/frequencia';
 
-export type FrequenciaFormatoExportacao = 'docx' | 'pdf' | 'csv';
+export type FrequenciaFormatoExportacao = FrequenciaExportFormat;
+export type ModoExportacaoFrequencia = FrequenciaExportMode;
+export type EscopoExportacaoFrequencia = FrequenciaExportScope;
 
 export type FrequenciaSourceFlags = {
   isWeekend?: boolean;
@@ -73,16 +81,7 @@ export type FrequenciaFiltros = {
   status?: string;
 };
 
-export type FrequenciaExportPayload = {
-  ano: number;
-  mes: number;
-  servidorId?: string | number;
-  servidorCpf?: string;
-  categoria?: string;
-  setor?: string;
-  status?: string;
-  formato: FrequenciaFormatoExportacao;
-};
+export type FrequenciaExportPayload = FrequenciaExportPayloadType;
 
 function getBaseUrl(): string {
   return String(API_BASE_URL || '').replace(/\/+$/, '');
@@ -94,7 +93,8 @@ function onlyDigits(value: unknown): string {
 
 function safeString(value: unknown, fallback = ''): string {
   if (value === null || value === undefined) return fallback;
-  return String(value).trim();
+  const text = String(value).trim();
+  return text || fallback;
 }
 
 function extractArrayPayload(payload: unknown): any[] {
@@ -106,6 +106,9 @@ function extractArrayPayload(payload: unknown): any[] {
     if (Array.isArray(obj.data)) return obj.data as any[];
     if (Array.isArray(obj.items)) return obj.items as any[];
     if (Array.isArray(obj.rows)) return obj.rows as any[];
+    if (Array.isArray(obj.registros)) return obj.registros as any[];
+    if (Array.isArray(obj.servidores)) return obj.servidores as any[];
+    if (Array.isArray(obj.frequencias)) return obj.frequencias as any[];
 
     if (obj.data && typeof obj.data === 'object') {
       const data = obj.data as Record<string, unknown>;
@@ -113,14 +116,7 @@ function extractArrayPayload(payload: unknown): any[] {
       if (Array.isArray(data.data)) return data.data as any[];
       if (Array.isArray(data.items)) return data.items as any[];
       if (Array.isArray(data.rows)) return data.rows as any[];
-
-      if (data.data && typeof data.data === 'object') {
-        const inner = data.data as Record<string, unknown>;
-
-        if (Array.isArray(inner.data)) return inner.data as any[];
-        if (Array.isArray(inner.items)) return inner.items as any[];
-        if (Array.isArray(inner.rows)) return inner.rows as any[];
-      }
+      if (Array.isArray(data.registros)) return data.registros as any[];
     }
   }
 
@@ -140,22 +136,17 @@ function normalizeTurno(raw: any): FrequenciaTurno {
 function normalizeDayItem(raw: any): FrequenciaDayItem {
   return {
     dia: Number(raw?.dia || 0),
-    data: safeString(raw?.data),
+    data: safeString(raw?.data || raw?.dataIso),
     turno1: normalizeTurno(raw?.turno1),
     turno2: normalizeTurno(raw?.turno2),
-    statusFinal: safeString(raw?.statusFinal),
+    statusFinal: safeString(raw?.statusFinal ?? raw?.finalStatus),
     sourceFlags: raw?.sourceFlags || {},
     sourceMeta: raw?.sourceMeta || {},
   };
 }
 
 function normalizeServidor(raw: any): FrequenciaServidor {
-  const cpf = onlyDigits(
-    raw?.cpf ??
-      raw?.servidor_cpf ??
-      raw?.cpf_servidor ??
-      raw?.documento
-  );
+  const cpf = onlyDigits(raw?.cpf ?? raw?.servidor_cpf ?? raw?.cpf_servidor ?? raw?.documento);
 
   const id =
     raw?.id ??
@@ -170,18 +161,12 @@ function normalizeServidor(raw: any): FrequenciaServidor {
   return {
     id,
     nome: safeString(
-      raw?.nome ??
-        raw?.nome_completo ??
-        raw?.servidor_nome ??
-        raw?.full_name ??
-        raw?.name,
+      raw?.nome ?? raw?.nome_completo ?? raw?.servidor_nome ?? raw?.full_name ?? raw?.name,
       'Servidor sem nome'
     ),
     cpf,
     matricula: safeString(raw?.matricula ?? raw?.registro ?? raw?.mat),
-    categoria: safeString(
-      raw?.categoria ?? raw?.categoria_canonica ?? raw?.categoria_canonic
-    ),
+    categoria: safeString(raw?.categoria ?? raw?.categoria_canonica ?? raw?.categoria_canonic),
     cargo: safeString(raw?.cargo ?? raw?.funcao ?? raw?.role),
     setor: safeString(raw?.setor ?? raw?.departamento),
     unidade: safeString(raw?.unidade ?? raw?.orgao ?? raw?.secretaria),
@@ -249,10 +234,7 @@ function getFriendlyFileName(
 }
 
 function parseErrorMessage(payload: any, fallback: string): string {
-  return safeString(
-    payload?.details ?? payload?.error ?? payload?.message,
-    fallback
-  );
+  return safeString(payload?.details ?? payload?.error ?? payload?.message, fallback);
 }
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -318,11 +300,7 @@ function buildCsvContent(item: FrequenciaMensalItem): string {
   });
 
   const csv = lines
-    .map((row) =>
-      row
-        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-        .join(';')
-    )
+    .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(';'))
     .join('\r\n');
 
   return `\uFEFF${csv}`;
@@ -341,17 +319,31 @@ function findMatchingItem(
 
   const found =
     data.find((row) => {
-      const sameCpf =
-        cpf && onlyDigits(row.servidor?.cpf) === cpf;
-
+      const sameCpf = cpf && onlyDigits(row.servidor?.cpf) === cpf;
       const sameId =
         payload.servidorId !== undefined &&
         String(row.servidor?.id ?? '') === String(payload.servidorId);
-
       return Boolean(sameCpf || sameId);
     }) || null;
 
   return found || data[0] || null;
+}
+
+function normalizeExportPayload(payload: FrequenciaExportPayload): FrequenciaExportPayload {
+  return {
+    ...payload,
+    modoExportacao: payload.modoExportacao || 'individual',
+    escopoExportacao:
+      payload.escopoExportacao ||
+      (payload.modoExportacao === 'lote' ? 'filtros_atuais' : 'servidor_selecionado'),
+    servidorCpf: payload.servidorCpf ? onlyDigits(payload.servidorCpf) : undefined,
+    servidoresCpf: Array.isArray(payload.servidoresCpf)
+      ? payload.servidoresCpf.map(onlyDigits).filter(Boolean)
+      : undefined,
+    servidoresIds: Array.isArray(payload.servidoresIds)
+      ? payload.servidoresIds.filter((item) => item !== undefined && item !== null && `${item}` !== '')
+      : undefined,
+  };
 }
 
 export async function listarFrequenciaMensal(
@@ -377,9 +369,7 @@ export async function listarFrequenciaMensal(
   const payload = await safeJson(response);
 
   if (!response.ok) {
-    throw new Error(
-      parseErrorMessage(payload, 'Não foi possível carregar a frequência.')
-    );
+    throw new Error(parseErrorMessage(payload, 'Não foi possível carregar a frequência.'));
   }
 
   const rows = extractArrayPayload(payload).map(normalizeItem);
@@ -401,20 +391,21 @@ export async function listarFrequenciaMensal(
 }
 
 export async function baixarFrequenciaArquivo(
-  payload: FrequenciaExportPayload,
+  rawPayload: FrequenciaExportPayload,
   servidor?: FrequenciaServidor
 ): Promise<void> {
+  const payload = normalizeExportPayload(rawPayload);
   const baseUrl = getBaseUrl();
 
   if (!payload.ano || !payload.mes) {
     throw new Error('Ano e mês são obrigatórios para exportar a frequência.');
   }
 
-  if (!payload.servidorId && !payload.servidorCpf) {
-    throw new Error('Selecione um servidor antes de exportar.');
-  }
-
   if (payload.formato === 'csv') {
+    if (!payload.servidorId && !payload.servidorCpf) {
+      throw new Error('Selecione um servidor antes de exportar o CSV.');
+    }
+
     const result = await listarFrequenciaMensal({
       ano: payload.ano,
       mes: payload.mes,
@@ -446,14 +437,24 @@ export async function baixarFrequenciaArquivo(
     return;
   }
 
+  if (
+    payload.modoExportacao !== 'lote' &&
+    !payload.servidorId &&
+    !payload.servidorCpf
+  ) {
+    throw new Error('Selecione um servidor antes de exportar.');
+  }
+
+  const acceptHeader =
+    payload.formato === 'pdf'
+      ? 'application/pdf,application/zip,application/json'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/json';
+
   const response = await fetch(`${baseUrl}/api/frequencia/exportar`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Accept:
-        payload.formato === 'pdf'
-          ? 'application/pdf,application/json'
-          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/json',
+      Accept: acceptHeader,
     },
     body: JSON.stringify({
       ano: payload.ano,
@@ -464,6 +465,12 @@ export async function baixarFrequenciaArquivo(
       setor: payload.setor,
       status: payload.status,
       formato: payload.formato,
+      modoExportacao: payload.modoExportacao,
+      escopoExportacao: payload.escopoExportacao,
+      apenasAtivos: payload.apenasAtivos,
+      usarFiltrosAtuais: payload.usarFiltrosAtuais,
+      servidoresCpf: payload.servidoresCpf,
+      servidoresIds: payload.servidoresIds,
     }),
   });
 
@@ -479,10 +486,7 @@ export async function baixarFrequenciaArquivo(
 
   const blob = await response.blob();
 
-  const fallbackServidor = servidor || {
-    nome: 'servidor',
-  };
-
+  const fallbackServidor = servidor || { nome: 'servidor' };
   let fileName = getFriendlyFileName(
     fallbackServidor,
     payload.ano,
@@ -497,6 +501,8 @@ export async function baixarFrequenciaArquivo(
 
   if (match?.[1]) {
     fileName = decodeURIComponent(match[1]);
+  } else if (response.headers.get('Content-Type')?.includes('application/zip')) {
+    fileName = `frequencias_${payload.ano}_${String(payload.mes).padStart(2, '0')}.zip`;
   }
 
   triggerBrowserDownload(blob, fileName);
