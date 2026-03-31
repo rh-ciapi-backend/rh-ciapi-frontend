@@ -5,10 +5,12 @@ import {
   Building2,
   CalendarDays,
   Download,
+  FileArchive,
   FileSpreadsheet,
   FileText,
   Filter,
   Hash,
+  Layers3,
   Loader2,
   Search,
   ShieldCheck,
@@ -21,6 +23,7 @@ import {
   type FrequenciaDayItem,
   type FrequenciaMensalItem,
   type FrequenciaServidor,
+  type FrequenciaExportPayload,
 } from '../services/frequenciaService';
 
 type StatsCardProps = {
@@ -29,6 +32,16 @@ type StatsCardProps = {
   subtitle: string;
   icon: React.ReactNode;
 };
+
+type ExportMode = 'individual' | 'lote';
+type ExportScope =
+  | 'servidor_selecionado'
+  | 'todos_ativos'
+  | 'todos_inativos'
+  | 'todos'
+  | 'categoria'
+  | 'setor'
+  | 'filtros_atuais';
 
 const MONTHS = [
   'Janeiro',
@@ -43,6 +56,16 @@ const MONTHS = [
   'Outubro',
   'Novembro',
   'Dezembro',
+];
+
+const EXPORT_SCOPE_OPTIONS: Array<{ value: ExportScope; label: string }> = [
+  { value: 'servidor_selecionado', label: 'Servidor selecionado' },
+  { value: 'todos_ativos', label: 'Todos os ativos' },
+  { value: 'todos_inativos', label: 'Todos os inativos' },
+  { value: 'todos', label: 'Todos' },
+  { value: 'categoria', label: 'Por categoria' },
+  { value: 'setor', label: 'Por setor' },
+  { value: 'filtros_atuais', label: 'Pelos filtros atuais' },
 ];
 
 function StatsCard({ title, value, subtitle, icon }: StatsCardProps) {
@@ -105,15 +128,11 @@ function countDiasComRegistro(dias: FrequenciaDayItem[]) {
 }
 
 function countDiasComOcorrencia(dias: FrequenciaDayItem[]) {
-  return dias.filter(
-    (day) => day.turno1?.ocorrencia || day.turno2?.ocorrencia
-  ).length;
+  return dias.filter((day) => day.turno1?.ocorrencia || day.turno2?.ocorrencia).length;
 }
 
 function countDiasComRubrica(dias: FrequenciaDayItem[]) {
-  return dias.filter(
-    (day) => day.turno1?.rubrica || day.turno2?.rubrica
-  ).length;
+  return dias.filter((day) => day.turno1?.rubrica || day.turno2?.rubrica).length;
 }
 
 function statusColor(status: string) {
@@ -236,13 +255,7 @@ function buildStatusPill(day: FrequenciaDayItem) {
   };
 }
 
-function CalendarMiniField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function CalendarMiniField({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
       <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
@@ -259,6 +272,8 @@ export default function FrequenciaPage() {
   const [filterCategoria, setFilterCategoria] = useState('TODAS');
   const [filterSetor, setFilterSetor] = useState('TODOS');
   const [filterStatus, setFilterStatus] = useState('TODOS');
+  const [exportMode, setExportMode] = useState<ExportMode>('individual');
+  const [exportScope, setExportScope] = useState<ExportScope>('servidor_selecionado');
 
   const [items, setItems] = useState<FrequenciaMensalItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
@@ -292,9 +307,7 @@ export default function FrequenciaPage() {
           const exists = safeItems.some(
             (item) => String(item.servidor?.id ?? '') === String(current)
           );
-          return exists
-            ? current
-            : String(safeItems[0].servidor?.id ?? '');
+          return exists ? current : String(safeItems[0].servidor?.id ?? '');
         });
       } catch (err: any) {
         if (!active) return;
@@ -314,23 +327,19 @@ export default function FrequenciaPage() {
   }, [ano, mes, filterCategoria, filterSetor, filterStatus]);
 
   const categorias = useMemo(() => {
-    return Array.from(
-      new Set(
-        items
-          .map((item) => safeDisplay(item.servidor?.categoria, 'NÃO INFORMADA'))
-          .filter(Boolean)
-      )
-    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const values = items
+      .map((item) => safeDisplay(item.servidor?.categoria, 'NÃO INFORMADA'))
+      .filter(Boolean) as string[];
+
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [items]);
 
   const setores = useMemo(() => {
-    return Array.from(
-      new Set(
-        items
-          .map((item) => safeDisplay(item.servidor?.setor, 'NÃO INFORMADO'))
-          .filter(Boolean)
-      )
-    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const values = items
+      .map((item) => safeDisplay(item.servidor?.setor, 'NÃO INFORMADO'))
+      .filter(Boolean) as string[];
+
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [items]);
 
   const filteredItems = useMemo(() => {
@@ -378,11 +387,17 @@ export default function FrequenciaPage() {
     }
   }, [filteredItems, selectedId]);
 
+  useEffect(() => {
+    if (exportMode === 'individual') {
+      setExportScope('servidor_selecionado');
+    } else if (exportScope === 'servidor_selecionado') {
+      setExportScope('filtros_atuais');
+    }
+  }, [exportMode, exportScope]);
+
   const selectedItem = useMemo(() => {
     return (
-      filteredItems.find(
-        (item) => String(item.servidor?.id ?? '') === String(selectedId)
-      ) ||
+      filteredItems.find((item) => String(item.servidor?.id ?? '') === String(selectedId)) ||
       filteredItems[0] ||
       null
     );
@@ -413,29 +428,142 @@ export default function FrequenciaPage() {
     };
   }, [filteredItems]);
 
+  const exportPreviewLabel = useMemo(() => {
+    if (exportMode === 'individual') {
+      return selectedServidor ? `1 servidor selecionado` : 'Selecione um servidor';
+    }
+
+    switch (exportScope) {
+      case 'todos_ativos':
+        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '').includes('ativo')).length} servidor(es) ativos visíveis`;
+      case 'todos_inativos':
+        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '').includes('inativo')).length} servidor(es) inativos visíveis`;
+      case 'todos':
+        return `${items.length} servidor(es) retornados pela competência`;
+      case 'categoria':
+        return `${filteredItems.length} servidor(es) da categoria atual`;
+      case 'setor':
+        return `${filteredItems.length} servidor(es) do setor atual`;
+      case 'filtros_atuais':
+      default:
+        return `${filteredItems.length} servidor(es) conforme filtros atuais`;
+    }
+  }, [exportMode, exportScope, filteredItems, items.length, selectedServidor]);
+
+  function buildExportPayload(formato: 'docx' | 'pdf' | 'csv'): FrequenciaExportPayload {
+    if (formato === 'csv') {
+      return {
+        ano,
+        mes,
+        formato,
+        modoExportacao: 'individual',
+        escopoExportacao: 'servidor_selecionado',
+        servidorId: selectedServidor?.id,
+        servidorCpf: selectedServidor?.cpf,
+        categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
+        setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
+        status: filterStatus !== 'TODOS' ? filterStatus : undefined,
+      };
+    }
+
+    if (exportMode === 'individual') {
+      return {
+        ano,
+        mes,
+        formato,
+        modoExportacao: 'individual',
+        escopoExportacao: 'servidor_selecionado',
+        servidorId: selectedServidor?.id,
+        servidorCpf: selectedServidor?.cpf,
+        categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
+        setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
+        status: filterStatus !== 'TODOS' ? filterStatus : undefined,
+      };
+    }
+
+    const basePayload: FrequenciaExportPayload = {
+      ano,
+      mes,
+      formato,
+      modoExportacao: 'lote',
+      escopoExportacao: exportScope,
+      categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
+      setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
+      status: filterStatus !== 'TODOS' ? filterStatus : undefined,
+      usarFiltrosAtuais: exportScope === 'filtros_atuais',
+      apenasAtivos: exportScope === 'todos_ativos',
+    };
+
+    if (exportScope === 'todos_ativos') {
+      basePayload.status = 'ATIVO';
+    }
+
+    if (exportScope === 'todos_inativos') {
+      basePayload.status = 'INATIVO';
+    }
+
+    if (exportScope === 'todos') {
+      basePayload.status = undefined;
+      basePayload.categoria = undefined;
+      basePayload.setor = undefined;
+    }
+
+    if (exportScope === 'categoria' && !basePayload.categoria) {
+      basePayload.categoria = selectedServidor?.categoria;
+    }
+
+    if (exportScope === 'setor' && !basePayload.setor) {
+      basePayload.setor = selectedServidor?.setor;
+    }
+
+    if (exportScope === 'filtros_atuais') {
+      basePayload.servidoresCpf = filteredItems
+        .map((item) => item.servidor?.cpf || '')
+        .filter(Boolean);
+      basePayload.servidoresIds = filteredItems
+        .map((item) => item.servidor?.id)
+        .filter((value) => value !== undefined && value !== null && `${value}` !== '');
+    }
+
+    return basePayload;
+  }
+
   async function handleExport(formato: 'docx' | 'pdf' | 'csv') {
     try {
-      if (!selectedServidor) {
+      if (formato === 'csv' && !selectedServidor) {
         setError('Selecione um servidor antes de exportar.');
         return;
       }
 
-      setError('');
-      setExporting(formato);
+      if (exportMode === 'individual' && formato !== 'csv' && !selectedServidor) {
+        setError('Selecione um servidor antes de exportar.');
+        return;
+      }
 
-      await baixarFrequenciaArquivo(
-        {
-          ano,
-          mes,
-          formato,
-          servidorId: selectedServidor?.id,
-          servidorCpf: selectedServidor?.cpf,
-          categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
-          setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
-          status: filterStatus !== 'TODOS' ? filterStatus : undefined,
-        },
-        selectedServidor
-      );
+      if (exportMode === 'lote' && formato === 'csv') {
+        setError('O CSV permanece individual. Para lote, use DOCX ou PDF.');
+        return;
+      }
+
+      if (exportMode === 'lote' && exportScope === 'categoria' && !(filterCategoria !== 'TODAS' || selectedServidor?.categoria)) {
+        setError('Selecione uma categoria ou escolha um servidor com categoria preenchida.');
+        return;
+      }
+
+      if (exportMode === 'lote' && exportScope === 'setor' && !(filterSetor !== 'TODOS' || selectedServidor?.setor)) {
+        setError('Selecione um setor ou escolha um servidor com setor preenchido.');
+        return;
+      }
+
+      if (exportMode === 'lote' && exportScope === 'filtros_atuais' && !filteredItems.length) {
+        setError('Nenhum servidor encontrado nos filtros atuais para exportação em lote.');
+        return;
+      }
+
+      setError('');
+      setExporting(`${exportMode}-${formato}`);
+
+      await baixarFrequenciaArquivo(buildExportPayload(formato), selectedServidor || undefined);
     } catch (err: any) {
       setError(err?.message || `Falha ao exportar ${formato.toUpperCase()}.`);
     } finally {
@@ -447,49 +575,104 @@ export default function FrequenciaPage() {
     <div className="min-h-screen bg-[#07111f] text-slate-100">
       <div className="mx-auto max-w-[1700px] p-4 md:p-6 xl:p-8">
         <div className="mb-6 rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_34%),linear-gradient(135deg,#0b1320_0%,#0f1d31_55%,#12243c_100%)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
-                <ShieldCheck className="h-4 w-4" />
-                Dashboard Executivo
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
+                  <ShieldCheck className="h-4 w-4" />
+                  Dashboard Executivo
+                </div>
+
+                <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                  Gestão de Frequência
+                </h1>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+                  Painel consolidado para análise mensal da frequência dos servidores, com filtros,
+                  estatísticas, calendário individual e exportações integradas.
+                </p>
               </div>
 
-              <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-                Gestão de Frequência
-              </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                Painel consolidado para análise mensal da frequência dos servidores, com filtros,
-                estatísticas, calendário individual e exportações integradas.
-              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <button
+                  onClick={() => handleExport('docx')}
+                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting === `${exportMode}-docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : exportMode === 'lote' ? <FileArchive className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                  {exportMode === 'lote' ? 'Exportar lote DOCX' : 'Exportar DOCX'}
+                </button>
+
+                <button
+                  onClick={() => handleExport('pdf')}
+                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting === `${exportMode}-pdf` ? <Loader2 className="h-4 w-4 animate-spin" /> : exportMode === 'lote' ? <Layers3 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                  {exportMode === 'lote' ? 'Exportar lote PDF' : 'Exportar PDF'}
+                </button>
+
+                <button
+                  onClick={() => handleExport('csv')}
+                  disabled={!!exporting || !selectedServidor || exportMode === 'lote'}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting === 'individual-csv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                  Exportar CSV
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <button
-                onClick={() => handleExport('docx')}
-                disabled={!!exporting || !selectedServidor}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {exporting === 'docx' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                Exportar DOCX
-              </button>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
+                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em] text-slate-400">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-cyan-200">
+                    <Layers3 className="h-3.5 w-3.5" />
+                    Exportação inteligente
+                  </span>
+                  <span>{exportPreviewLabel}</span>
+                </div>
+                <p className="mt-3 text-sm text-slate-300">
+                  A exportação individual continua ativa. No modo lote, o backend prioriza estabilidade e retorna ZIP quando houver múltiplos arquivos.
+                </p>
+              </div>
 
-              <button
-                onClick={() => handleExport('pdf')}
-                disabled={!!exporting || !selectedServidor}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {exporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Exportar PDF
-              </button>
+              <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      Tipo de exportação
+                    </label>
+                    <select
+                      value={exportMode}
+                      onChange={(e) => setExportMode(e.target.value as ExportMode)}
+                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    >
+                      <option value="individual">Individual</option>
+                      <option value="lote">Lote</option>
+                    </select>
+                  </div>
 
-              <button
-                onClick={() => handleExport('csv')}
-                disabled={!!exporting || !selectedServidor}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {exporting === 'csv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
-                Exportar CSV
-              </button>
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      Escopo
+                    </label>
+                    <select
+                      value={exportMode === 'individual' ? 'servidor_selecionado' : exportScope}
+                      onChange={(e) => setExportScope(e.target.value as ExportScope)}
+                      disabled={exportMode === 'individual'}
+                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {EXPORT_SCOPE_OPTIONS.filter((option) =>
+                        exportMode === 'individual' ? option.value === 'servidor_selecionado' : option.value !== 'servidor_selecionado'
+                      ).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
