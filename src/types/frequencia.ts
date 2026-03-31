@@ -12,11 +12,21 @@ export type FrequenciaDayStatus =
   | 'sem_registro';
 
 export type FrequenciaExportFormat = 'docx' | 'pdf' | 'csv';
+export type FrequenciaExportMode = 'individual' | 'lote';
+export type FrequenciaExportScope =
+  | 'servidor_selecionado'
+  | 'todos_ativos'
+  | 'todos_inativos'
+  | 'todos'
+  | 'categoria'
+  | 'setor'
+  | 'filtros_atuais';
 
 export interface FrequenciaApiResponse<T = unknown> {
   ok?: boolean;
   message?: string;
   error?: string;
+  details?: string;
   data?: T;
   items?: T;
   results?: T;
@@ -95,10 +105,17 @@ export interface FrequenciaExportPayload {
   ano: number;
   mes: number;
   formato: FrequenciaExportFormat;
+  modoExportacao?: FrequenciaExportMode;
+  escopoExportacao?: FrequenciaExportScope;
   servidorCpf?: string;
-  servidorId?: string;
+  servidorId?: string | number;
   categoria?: string;
   setor?: string;
+  status?: string;
+  apenasAtivos?: boolean;
+  usarFiltrosAtuais?: boolean;
+  servidoresCpf?: string[];
+  servidoresIds?: Array<string | number>;
 }
 
 export interface FrequenciaOcorrenciaPayload {
@@ -165,6 +182,16 @@ export interface FrequenciaLegendItem {
   dotClassName: string;
   chipClassName: string;
 }
+
+export const FREQUENCIA_EXPORT_SCOPE_LABELS: Record<FrequenciaExportScope, string> = {
+  servidor_selecionado: 'Servidor selecionado',
+  todos_ativos: 'Todos os ativos',
+  todos_inativos: 'Todos os inativos',
+  todos: 'Todos',
+  categoria: 'Por categoria',
+  setor: 'Por setor',
+  filtros_atuais: 'Pelos filtros atuais',
+};
 
 export const FREQUENCIA_STATUS_META: Record<FrequenciaDayStatus, FrequenciaLegendItem> = {
   presente: {
