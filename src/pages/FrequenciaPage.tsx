@@ -25,6 +25,7 @@ import {
   type FrequenciaServidor,
   type FrequenciaExportPayload,
 } from '../services/frequenciaService';
+import type { FrequenciaBatchStrategy } from '../types/frequencia';
 
 type StatsCardProps = {
   title: string;
@@ -66,6 +67,11 @@ const EXPORT_SCOPE_OPTIONS: Array<{ value: ExportScope; label: string }> = [
   { value: 'categoria', label: 'Por categoria' },
   { value: 'setor', label: 'Por setor' },
   { value: 'filtros_atuais', label: 'Pelos filtros atuais' },
+];
+
+const BATCH_STRATEGY_OPTIONS: Array<{ value: FrequenciaBatchStrategy; label: string }> = [
+  { value: 'documento_unico', label: 'Documento único' },
+  { value: 'zip', label: 'Arquivos separados (ZIP)' },
 ];
 
 function StatsCard({ title, value, subtitle, icon }: StatsCardProps) {
@@ -274,6 +280,8 @@ export default function FrequenciaPage() {
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [exportMode, setExportMode] = useState<ExportMode>('individual');
   const [exportScope, setExportScope] = useState<ExportScope>('servidor_selecionado');
+  const [batchStrategy, setBatchStrategy] =
+    useState<FrequenciaBatchStrategy>('documento_unico');
 
   const [items, setItems] = useState<FrequenciaMensalItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
@@ -450,6 +458,14 @@ export default function FrequenciaPage() {
     }
   }, [exportMode, exportScope, filteredItems, items.length, selectedServidor]);
 
+  const exportStrategyHint = useMemo(() => {
+    if (exportMode !== 'lote') return 'Exportação individual do servidor selecionado.';
+    if (batchStrategy === 'documento_unico') {
+      return 'Lote em um único arquivo Word, ideal para impressão direta.';
+    }
+    return 'Lote em arquivos separados compactados em ZIP.';
+  }, [exportMode, batchStrategy]);
+
   function buildExportPayload(formato: 'docx' | 'pdf' | 'csv'): FrequenciaExportPayload {
     if (formato === 'csv') {
       return {
@@ -487,6 +503,7 @@ export default function FrequenciaPage() {
       formato,
       modoExportacao: 'lote',
       escopoExportacao: exportScope,
+      estrategiaLote: formato === 'pdf' ? 'zip' : batchStrategy,
       categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
       setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
       status: filterStatus !== 'TODOS' ? filterStatus : undefined,
@@ -545,12 +562,20 @@ export default function FrequenciaPage() {
         return;
       }
 
-      if (exportMode === 'lote' && exportScope === 'categoria' && !(filterCategoria !== 'TODAS' || selectedServidor?.categoria)) {
+      if (
+        exportMode === 'lote' &&
+        exportScope === 'categoria' &&
+        !(filterCategoria !== 'TODAS' || selectedServidor?.categoria)
+      ) {
         setError('Selecione uma categoria ou escolha um servidor com categoria preenchida.');
         return;
       }
 
-      if (exportMode === 'lote' && exportScope === 'setor' && !(filterSetor !== 'TODOS' || selectedServidor?.setor)) {
+      if (
+        exportMode === 'lote' &&
+        exportScope === 'setor' &&
+        !(filterSetor !== 'TODOS' || selectedServidor?.setor)
+      ) {
         setError('Selecione um setor ou escolha um servidor com setor preenchido.');
         return;
       }
@@ -598,8 +623,18 @@ export default function FrequenciaPage() {
                   disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {exporting === `${exportMode}-docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : exportMode === 'lote' ? <FileArchive className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                  {exportMode === 'lote' ? 'Exportar lote DOCX' : 'Exportar DOCX'}
+                  {exporting === `${exportMode}-docx` ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : exportMode === 'lote' && batchStrategy === 'zip' ? (
+                    <FileArchive className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                  {exportMode === 'lote'
+                    ? batchStrategy === 'documento_unico'
+                      ? 'Exportar DOCX único'
+                      : 'Exportar lote DOCX'
+                    : 'Exportar DOCX'}
                 </button>
 
                 <button
@@ -607,7 +642,13 @@ export default function FrequenciaPage() {
                   disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {exporting === `${exportMode}-pdf` ? <Loader2 className="h-4 w-4 animate-spin" /> : exportMode === 'lote' ? <Layers3 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                  {exporting === `${exportMode}-pdf` ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : exportMode === 'lote' ? (
+                    <Layers3 className="h-4 w-4" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                   {exportMode === 'lote' ? 'Exportar lote PDF' : 'Exportar PDF'}
                 </button>
 
@@ -616,13 +657,17 @@ export default function FrequenciaPage() {
                   disabled={!!exporting || !selectedServidor || exportMode === 'lote'}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {exporting === 'individual-csv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                  {exporting === 'individual-csv' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4" />
+                  )}
                   Exportar CSV
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_520px]">
               <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
                 <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em] text-slate-400">
                   <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-cyan-200">
@@ -631,13 +676,11 @@ export default function FrequenciaPage() {
                   </span>
                   <span>{exportPreviewLabel}</span>
                 </div>
-                <p className="mt-3 text-sm text-slate-300">
-                  A exportação individual continua ativa. No modo lote, o backend prioriza estabilidade e retorna ZIP quando houver múltiplos arquivos.
-                </p>
+                <p className="mt-3 text-sm text-slate-300">{exportStrategyHint}</p>
               </div>
 
               <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className={`grid grid-cols-1 gap-3 ${exportMode === 'lote' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
                       Tipo de exportação
@@ -663,7 +706,9 @@ export default function FrequenciaPage() {
                       className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {EXPORT_SCOPE_OPTIONS.filter((option) =>
-                        exportMode === 'individual' ? option.value === 'servidor_selecionado' : option.value !== 'servidor_selecionado'
+                        exportMode === 'individual'
+                          ? option.value === 'servidor_selecionado'
+                          : option.value !== 'servidor_selecionado'
                       ).map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
@@ -671,6 +716,25 @@ export default function FrequenciaPage() {
                       ))}
                     </select>
                   </div>
+
+                  {exportMode === 'lote' ? (
+                    <div>
+                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                        Saída do lote
+                      </label>
+                      <select
+                        value={batchStrategy}
+                        onChange={(e) => setBatchStrategy(e.target.value as FrequenciaBatchStrategy)}
+                        className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                      >
+                        {BATCH_STRATEGY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
