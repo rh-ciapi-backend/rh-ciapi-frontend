@@ -22,6 +22,8 @@ export type FrequenciaExportScope =
   | 'setor'
   | 'filtros_atuais';
 
+export type FrequenciaBatchStrategy = 'documento_unico' | 'zip';
+
 export interface FrequenciaApiResponse<T = unknown> {
   ok?: boolean;
   message?: string;
@@ -107,6 +109,7 @@ export interface FrequenciaExportPayload {
   formato: FrequenciaExportFormat;
   modoExportacao?: FrequenciaExportMode;
   escopoExportacao?: FrequenciaExportScope;
+  estrategiaLote?: FrequenciaBatchStrategy;
   servidorCpf?: string;
   servidorId?: string | number;
   categoria?: string;
@@ -191,6 +194,11 @@ export const FREQUENCIA_EXPORT_SCOPE_LABELS: Record<FrequenciaExportScope, strin
   categoria: 'Por categoria',
   setor: 'Por setor',
   filtros_atuais: 'Pelos filtros atuais',
+};
+
+export const FREQUENCIA_BATCH_STRATEGY_LABELS: Record<FrequenciaBatchStrategy, string> = {
+  documento_unico: 'Documento único',
+  zip: 'Arquivos separados (ZIP)',
 };
 
 export const FREQUENCIA_STATUS_META: Record<FrequenciaDayStatus, FrequenciaLegendItem> = {
