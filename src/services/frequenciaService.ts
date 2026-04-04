@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../config/api';
 import type {
+  FrequenciaBatchStrategy,
   FrequenciaExportFormat,
   FrequenciaExportMode,
   FrequenciaExportPayload as FrequenciaExportPayloadType,
@@ -9,6 +10,7 @@ import type {
 export type FrequenciaFormatoExportacao = FrequenciaExportFormat;
 export type ModoExportacaoFrequencia = FrequenciaExportMode;
 export type EscopoExportacaoFrequencia = FrequenciaExportScope;
+export type EstrategiaLoteFrequencia = FrequenciaBatchStrategy;
 
 export type FrequenciaSourceFlags = {
   isWeekend?: boolean;
@@ -233,6 +235,16 @@ function getFriendlyFileName(
   return `frequencia_${nome}_${yyyy}_${mm}.${formato}`;
 }
 
+function getBatchFriendlyFileName(
+  ano: number,
+  mes: number,
+  formato: 'docx' | 'pdf' | 'zip'
+): string {
+  const yyyy = String(ano).padStart(4, '0');
+  const mm = String(mes).padStart(2, '0');
+  return `frequencias_${yyyy}_${mm}.${formato}`;
+}
+
 function parseErrorMessage(payload: any, fallback: string): string {
   return safeString(payload?.details ?? payload?.error ?? payload?.message, fallback);
 }
@@ -336,6 +348,9 @@ function normalizeExportPayload(payload: FrequenciaExportPayload): FrequenciaExp
     escopoExportacao:
       payload.escopoExportacao ||
       (payload.modoExportacao === 'lote' ? 'filtros_atuais' : 'servidor_selecionado'),
+    estrategiaLote:
+      payload.estrategiaLote ||
+      (payload.modoExportacao === 'lote' ? 'documento_unico' : undefined),
     servidorCpf: payload.servidorCpf ? onlyDigits(payload.servidorCpf) : undefined,
     servidoresCpf: Array.isArray(payload.servidoresCpf)
       ? payload.servidoresCpf.map(onlyDigits).filter(Boolean)
@@ -467,6 +482,7 @@ export async function baixarFrequenciaArquivo(
       formato: payload.formato,
       modoExportacao: payload.modoExportacao,
       escopoExportacao: payload.escopoExportacao,
+      estrategiaLote: payload.estrategiaLote,
       apenasAtivos: payload.apenasAtivos,
       usarFiltrosAtuais: payload.usarFiltrosAtuais,
       servidoresCpf: payload.servidoresCpf,
@@ -487,12 +503,23 @@ export async function baixarFrequenciaArquivo(
   const blob = await response.blob();
 
   const fallbackServidor = servidor || { nome: 'servidor' };
-  let fileName = getFriendlyFileName(
-    fallbackServidor,
-    payload.ano,
-    payload.mes,
-    payload.formato
-  );
+  let fileName =
+    payload.modoExportacao === 'lote'
+      ? getBatchFriendlyFileName(
+          payload.ano,
+          payload.mes,
+          payload.formato === 'pdf'
+            ? 'zip'
+            : payload.estrategiaLote === 'zip'
+            ? 'zip'
+            : 'docx'
+        )
+      : getFriendlyFileName(
+          fallbackServidor,
+          payload.ano,
+          payload.mes,
+          payload.formato
+        );
 
   const disposition = response.headers.get('Content-Disposition');
   const match =
@@ -502,7 +529,7 @@ export async function baixarFrequenciaArquivo(
   if (match?.[1]) {
     fileName = decodeURIComponent(match[1]);
   } else if (response.headers.get('Content-Type')?.includes('application/zip')) {
-    fileName = `frequencias_${payload.ano}_${String(payload.mes).padStart(2, '0')}.zip`;
+    fileName = getBatchFriendlyFileName(payload.ano, payload.mes, 'zip');
   }
 
   triggerBrowserDownload(blob, fileName);
