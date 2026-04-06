@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   BadgeCheck,
@@ -26,6 +26,8 @@ import {
   type FrequenciaExportPayload,
 } from '../services/frequenciaService';
 import type { FrequenciaBatchStrategy } from '../types/frequencia';
+import type { EventoCalendario } from '../services/eventosService';
+import GerenciarFeriadosModal from '../components/frequencia/GerenciarFeriadosModal';
 
 type StatsCardProps = {
   title: string;
@@ -288,6 +290,13 @@ export default function FrequenciaPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [exporting, setExporting] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [isEventosModalOpen, setIsEventosModalOpen] = useState(false);
+  const [eventosCount, setEventosCount] = useState(0);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const refreshFrequencia = useCallback(() => {
+    setReloadToken((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -310,6 +319,20 @@ export default function FrequenciaPage() {
         const safeItems = Array.isArray(result?.data) ? result.data : [];
         setItems(safeItems);
 
+        const feriadoDays = safeItems.flatMap((item) => item.dayItems || []);
+        const totalComEvento = feriadoDays.filter((day) => {
+          const text = normalizeText(
+            day.statusFinal ||
+              day.turno1?.rubrica ||
+              day.turno2?.rubrica ||
+              day.turno1?.ocorrencia ||
+              day.turno2?.ocorrencia
+          );
+          return text.includes('feriado') || text.includes('facultativo');
+        }).length;
+
+        setEventosCount(totalComEvento);
+
         setSelectedId((current) => {
           if (!safeItems.length) return '';
           const exists = safeItems.some(
@@ -321,6 +344,7 @@ export default function FrequenciaPage() {
         if (!active) return;
         setItems([]);
         setSelectedId('');
+        setEventosCount(0);
         setError(err?.message || 'Falha ao carregar os dados da frequência.');
       } finally {
         if (active) setLoading(false);
@@ -332,7 +356,7 @@ export default function FrequenciaPage() {
     return () => {
       active = false;
     };
-  }, [ano, mes, filterCategoria, filterSetor, filterStatus]);
+  }, [ano, mes, filterCategoria, filterSetor, filterStatus, reloadToken]);
 
   const categorias = useMemo(() => {
     const values = items
@@ -596,6 +620,11 @@ export default function FrequenciaPage() {
     }
   }
 
+  function handleEventosSaved(eventos: EventoCalendario[]) {
+    setEventosCount(Array.isArray(eventos) ? eventos.length : 0);
+    refreshFrequencia();
+  }
+
   return (
     <div className="min-h-screen bg-[#07111f] text-slate-100">
       <div className="mx-auto max-w-[1700px] p-4 md:p-6 xl:p-8">
@@ -615,6 +644,21 @@ export default function FrequenciaPage() {
                   Painel consolidado para análise mensal da frequência dos servidores, com filtros,
                   estatísticas, calendário individual e exportações integradas.
                 </p>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsEventosModalOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/12 px-4 py-2.5 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/18"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    Gerenciar feriados
+                  </button>
+
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300">
+                    {eventosCount} ocorrência(s) de calendário detectada(s) na competência
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -680,7 +724,11 @@ export default function FrequenciaPage() {
               </div>
 
               <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
-                <div className={`grid grid-cols-1 gap-3 ${exportMode === 'lote' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                <div
+                  className={`grid grid-cols-1 gap-3 ${
+                    exportMode === 'lote' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+                  }`}
+                >
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
                       Tipo de exportação
@@ -941,12 +989,18 @@ export default function FrequenciaPage() {
 
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
                         <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">CPF</span>
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                            CPF
+                          </span>
                           <span className="mt-1 block text-slate-200">{formatCpf(servidor.cpf)}</span>
                         </div>
                         <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">Matrícula</span>
-                          <span className="mt-1 block text-slate-200">{safeDisplay(servidor.matricula)}</span>
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                            Matrícula
+                          </span>
+                          <span className="mt-1 block text-slate-200">
+                            {safeDisplay(servidor.matricula)}
+                          </span>
                         </div>
                       </div>
                     </button>
@@ -989,7 +1043,9 @@ export default function FrequenciaPage() {
                           <Hash className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Matrícula</span>
                         </div>
-                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.matricula)}</p>
+                        <p className="text-sm font-medium text-white">
+                          {safeDisplay(selectedServidor.matricula)}
+                        </p>
                       </div>
 
                       <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
@@ -1062,8 +1118,18 @@ export default function FrequenciaPage() {
                   </p>
                 </div>
 
-                <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
-                  {selectedDias.length} dia(s) carregado(s)
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEventosModalOpen(true)}
+                    className="rounded-full border border-cyan-400/20 bg-cyan-500/12 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-500/18"
+                  >
+                    Gerenciar feriados
+                  </button>
+
+                  <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
+                    {selectedDias.length} dia(s) carregado(s)
+                  </div>
                 </div>
               </div>
 
@@ -1100,7 +1166,9 @@ export default function FrequenciaPage() {
 
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${tone.muted}`}>
+                                <span
+                                  className={`text-xs font-semibold uppercase tracking-[0.18em] ${tone.muted}`}
+                                >
                                   {getWeekdayLabel(day.data)}
                                 </span>
                                 <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
@@ -1135,8 +1203,14 @@ export default function FrequenciaPage() {
                         </div>
 
                         <div className="mt-2.5 grid grid-cols-2 gap-2">
-                          <CalendarMiniField label="O1" value={compactDisplay(day.turno1?.ocorrencia)} />
-                          <CalendarMiniField label="O2" value={compactDisplay(day.turno2?.ocorrencia)} />
+                          <CalendarMiniField
+                            label="O1"
+                            value={compactDisplay(day.turno1?.ocorrencia)}
+                          />
+                          <CalendarMiniField
+                            label="O2"
+                            value={compactDisplay(day.turno2?.ocorrencia)}
+                          />
                         </div>
                       </div>
                     );
@@ -1147,6 +1221,14 @@ export default function FrequenciaPage() {
           </section>
         </div>
       </div>
+
+      <GerenciarFeriadosModal
+        open={isEventosModalOpen}
+        ano={ano}
+        mes={mes}
+        onClose={() => setIsEventosModalOpen(false)}
+        onSaved={handleEventosSaved}
+      />
     </div>
   );
 }
