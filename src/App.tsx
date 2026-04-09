@@ -15,7 +15,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ServidoresPage } from './pages/ServidoresPage';
 import FeriasPage from './pages/FeriasPage';
 import FrequenciaPage from './pages/FrequenciaPage';
-import { MapasPage } from './pages/MapasPage';
+import MapasPage from './pages/MapasPage';
 import AdminPage from './pages/AdminPage';
 import AdminUsuariosPage from './pages/AdminUsuariosPage';
 import AdminCategoriasPage from './pages/AdminCategoriasPage';
