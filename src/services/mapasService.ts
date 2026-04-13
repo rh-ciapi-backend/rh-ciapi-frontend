@@ -11,7 +11,9 @@ function normalizeArrayPayload(payload: any): any[] {
 }
 
 function normalizePreviewResponse(payload: any, filtros: MapaFilters): MapaPreviewResponse {
-  const linhas = normalizeArrayPayload(payload?.linhas ? payload : payload?.data ? payload.data : payload).map((item: any, index: number) => ({
+  const linhas = normalizeArrayPayload(
+    payload?.linhas ? payload : payload?.data ? payload.data : payload
+  ).map((item: any, index: number) => ({
     ordem: Number(item?.ordem ?? index + 1),
     matricula: String(item?.matricula ?? item?.matriculaServidor ?? '').trim(),
     matriculaSigrh: String(item?.matriculaSigrh ?? item?.matricula_sigrh ?? '').trim(),
@@ -40,7 +42,10 @@ function normalizePreviewResponse(payload: any, filtros: MapaFilters): MapaPrevi
       totalServidores: Number(payload?.stats?.totalServidores ?? linhas.length),
       totalPendencias: Number(payload?.stats?.totalPendencias ?? payload?.diagnostics?.totalComPendenciaGrave ?? 0),
       totalComObservacao: Number(payload?.stats?.totalComObservacao ?? payload?.diagnostics?.totalComObservacao ?? 0),
-      totalAptosExportacao: Number(payload?.stats?.totalAptosExportacao ?? Math.max(0, linhas.length - (payload?.diagnostics?.totalComPendenciaGrave ?? 0))),
+      totalAptosExportacao: Number(
+        payload?.stats?.totalAptosExportacao ??
+          Math.max(0, linhas.length - (payload?.diagnostics?.totalComPendenciaGrave ?? 0))
+      ),
     },
     diagnostics: {
       totalRegistros: Number(payload?.diagnostics?.totalRegistros ?? linhas.length),
@@ -61,6 +66,17 @@ function normalizePreviewResponse(payload: any, filtros: MapaFilters): MapaPrevi
   };
 }
 
+async function parseErrorResponse(response: Response) {
+  const text = await response.text();
+
+  try {
+    const json = text ? JSON.parse(text) : {};
+    return json?.message || json?.error || text || 'Falha ao processar a requisição do mapa.';
+  } catch {
+    return text || 'Falha ao processar a requisição do mapa.';
+  }
+}
+
 async function requestJson(path: string, init?: RequestInit) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -72,6 +88,7 @@ async function requestJson(path: string, init?: RequestInit) {
 
   const text = await response.text();
   let payload: any = {};
+
   try {
     payload = text ? JSON.parse(text) : {};
   } catch {
@@ -79,7 +96,7 @@ async function requestJson(path: string, init?: RequestInit) {
   }
 
   if (!response.ok) {
-    throw new Error(payload?.message || 'Falha ao processar a requisição do mapa.');
+    throw new Error(payload?.message || payload?.error || 'Falha ao processar a requisição do mapa.');
   }
 
   return payload;
@@ -93,13 +110,13 @@ async function downloadFile(path: string, body: Record<string, any>, defaultName
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Falha ao exportar arquivo do mapa.');
+    const message = await parseErrorResponse(response);
+    throw new Error(message);
   }
 
   const blob = await response.blob();
   const disposition = response.headers.get('content-disposition') || '';
-  const match = disposition.match(/filename="?([^\"]+)"?/i);
+  const match = disposition.match(/filename="?([^"]+)"?/i);
   const fileName = match?.[1] || defaultName;
 
   const url = window.URL.createObjectURL(blob);
@@ -133,18 +150,31 @@ export const mapasService = {
       method: 'POST',
       body: JSON.stringify(filtros),
     });
+
     return normalizePreviewResponse(payload, filtros);
   },
 
   async exportarDocx(filtros: MapaFilters) {
-    await downloadFile('/api/mapas/exportar/docx', filtros, `mapa_${filtros.ano}_${filtros.mes}.docx`);
+    await downloadFile(
+      '/api/mapas/exportar/docx',
+      filtros,
+      `mapa_${filtros.ano}_${String(filtros.mes).padStart(2, '0')}.docx`
+    );
   },
 
   async exportarPdf(filtros: MapaFilters) {
-    await downloadFile('/api/mapas/exportar/pdf', filtros, `mapa_${filtros.ano}_${filtros.mes}.pdf`);
+    await downloadFile(
+      '/api/mapas/exportar/pdf',
+      filtros,
+      `mapa_${filtros.ano}_${String(filtros.mes).padStart(2, '0')}.pdf`
+    );
   },
 
   async exportarZip(filtros: MapaFilters) {
-    await downloadFile('/api/mapas/exportar/zip', filtros, `mapa_${filtros.ano}_${filtros.mes}.zip`);
+    await downloadFile(
+      '/api/mapas/exportar/zip',
+      filtros,
+      `mapa_${filtros.ano}_${String(filtros.mes).padStart(2, '0')}.zip`
+    );
   },
 };
