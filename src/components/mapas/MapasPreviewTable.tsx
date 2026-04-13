@@ -1,12 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Edit3, Save, X } from 'lucide-react';
 import { LinhaMapa, TipoLayoutMapa } from '../../types/mapas';
 
 interface Props {
   linhas: LinhaMapa[];
   layout: TipoLayoutMapa;
+  onObservationChange?: (rowIndex: number, value: string) => void;
 }
 
-export function MapasPreviewTable({ linhas, layout }: Props) {
+export function MapasPreviewTable({ linhas, layout, onObservationChange }: Props) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [draftObservation, setDraftObservation] = useState('');
+
+  const startEdit = (index: number, currentValue: string) => {
+    setEditingIndex(index);
+    setDraftObservation(currentValue || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setDraftObservation('');
+  };
+
+  const saveEdit = (index: number) => {
+    onObservationChange?.(index, draftObservation);
+    setEditingIndex(null);
+    setDraftObservation('');
+  };
+
+  const renderObservationCell = (linha: LinhaMapa, index: number) => {
+    const isEditing = editingIndex === index;
+
+    if (isEditing) {
+      return (
+        <div className="min-w-[280px] space-y-2">
+          <textarea
+            value={draftObservation}
+            onChange={(e) => setDraftObservation(e.target.value)}
+            rows={3}
+            className="w-full rounded-xl border border-cyan-400/20 bg-slate-950 px-3 py-2 text-sm text-white outline-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => saveEdit(index)}
+              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-3 py-2 text-xs font-bold text-slate-950"
+            >
+              <Save size={14} />
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white"
+            >
+              <X size={14} />
+              Cancelar
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-w-[240px] space-y-2">
+        <p className="whitespace-pre-wrap break-words text-slate-300">
+          {linha.observacao || '—'}
+        </p>
+        <button
+          type="button"
+          onClick={() => startEdit(index, linha.observacao || '')}
+          className="inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-white/10"
+        >
+          <Edit3 size={14} />
+          Editar observação
+        </button>
+      </div>
+    );
+  };
+
   const renderHead = () => {
     if (layout === 'sesau_detalhado') {
       return (
@@ -54,7 +126,7 @@ export function MapasPreviewTable({ linhas, layout }: Props) {
     );
   };
 
-  const renderRow = (linha: LinhaMapa) => {
+  const renderRow = (linha: LinhaMapa, index: number) => {
     if (layout === 'sesau_detalhado') {
       return (
         <tr key={`${linha.matricula}-${linha.ordem}`} className="border-t border-white/10">
@@ -73,7 +145,7 @@ export function MapasPreviewTable({ linhas, layout }: Props) {
 
     if (layout === 'sesau_seletivo') {
       return (
-        <tr key={`${linha.matricula}-${linha.ordem}`} className="border-t border-white/10">
+        <tr key={`${linha.matricula}-${linha.ordem}`} className="border-t border-white/10 align-top">
           <td className="px-4 py-3">{linha.ordem}</td>
           <td className="px-4 py-3">{linha.matricula || '—'}</td>
           <td className="px-4 py-3">{linha.matriculaSigrh || '—'}</td>
@@ -82,13 +154,13 @@ export function MapasPreviewTable({ linhas, layout }: Props) {
           <td className="px-4 py-3">{linha.cargo || '—'}</td>
           <td className="px-4 py-3">{linha.frequenciaTexto || '—'}</td>
           <td className="px-4 py-3">{linha.faltas || '—'}</td>
-          <td className="px-4 py-3">{linha.observacao || '—'}</td>
+          <td className="px-4 py-3">{renderObservationCell(linha, index)}</td>
         </tr>
       );
     }
 
     return (
-      <tr key={`${linha.matricula}-${linha.ordem}`} className="border-t border-white/10">
+      <tr key={`${linha.matricula}-${linha.ordem}`} className="border-t border-white/10 align-top">
         <td className="px-4 py-3">{linha.ordem}</td>
         <td className="px-4 py-3">{linha.matricula || '—'}</td>
         <td className="px-4 py-3 text-white">{linha.nomeCompleto}</td>
@@ -96,7 +168,7 @@ export function MapasPreviewTable({ linhas, layout }: Props) {
         <td className="px-4 py-3">{linha.cargo || '—'}</td>
         <td className="px-4 py-3">{linha.frequenciaTexto || '—'}</td>
         <td className="px-4 py-3">{linha.faltas || '—'}</td>
-        <td className="px-4 py-3">{linha.observacao || '—'}</td>
+        <td className="px-4 py-3">{renderObservationCell(linha, index)}</td>
       </tr>
     );
   };
@@ -105,7 +177,9 @@ export function MapasPreviewTable({ linhas, layout }: Props) {
     <div className="rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
       <div className="border-b border-white/10 px-5 py-4">
         <h3 className="text-lg font-bold text-white">Pré-visualização do mapa</h3>
-        <p className="mt-1 text-sm text-slate-400">A tabela se adapta automaticamente ao layout selecionado.</p>
+        <p className="mt-1 text-sm text-slate-400">
+          A tabela se adapta automaticamente ao layout selecionado e permite editar observações antes da exportação.
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -114,9 +188,13 @@ export function MapasPreviewTable({ linhas, layout }: Props) {
             {renderHead()}
           </thead>
           <tbody>
-            {linhas.length ? linhas.map(renderRow) : (
+            {linhas.length ? (
+              linhas.map((linha, index) => renderRow(linha, index))
+            ) : (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-slate-500">Nenhum registro encontrado para os filtros selecionados.</td>
+                <td colSpan={9} className="px-4 py-10 text-center text-slate-500">
+                  Nenhum registro encontrado para os filtros selecionados.
+                </td>
               </tr>
             )}
           </tbody>
