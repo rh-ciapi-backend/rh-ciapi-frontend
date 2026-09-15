@@ -157,32 +157,34 @@ export default function App() {
   };
 
   return (
-    <ProtectedRoute>
-      <div className="flex min-h-screen bg-bg-dark">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={(tab: string) => navigateWithAction(tab)}
-          onLogout={handleLogout}
-        />
+  <ProtectedRoute>
+    <div className="flex min-h-screen bg-bg-dark">
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={(tab: string) => navigateWithAction(tab)}
+        onLogout={handleLogout}
+      />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar title={getPageTitle()} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Topbar title={getPageTitle()} />
 
-          <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+          <div className="app-page">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
               >
                 {renderContent()}
               </motion.div>
             </AnimatePresence>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
-    </ProtectedRoute>
-  );
+    </div>
+  </ProtectedRoute>
+);
 }
