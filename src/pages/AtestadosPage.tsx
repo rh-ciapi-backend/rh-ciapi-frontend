@@ -54,9 +54,9 @@ const MONTH_OPTIONS = [
 ];
 
 const InputBaseClass =
-  'h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition-all duration-200 placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.06)]';
+  'h-12 w-full rounded-2xl border border-border-dark bg-slate-900/35 px-4 text-sm text-slate-100 outline-none transition-all duration-200 placeholder:text-slate-600 focus:border-primary/40 focus:bg-slate-900/55 focus:ring-2 focus:ring-primary/10';
 const TextAreaBaseClass =
-  'min-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition-all duration-200 placeholder:text-zinc-500 focus:border-cyan-400/30 focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.06)]';
+  'min-h-[110px] w-full resize-y rounded-2xl border border-border-dark bg-slate-900/35 px-4 py-3 text-sm text-slate-100 outline-none transition-all duration-200 placeholder:text-slate-600 focus:border-primary/40 focus:bg-slate-900/55 focus:ring-2 focus:ring-primary/10';
 
 const normalizeCpf = (value: string) => String(value || '').replace(/\D/g, '');
 
@@ -318,15 +318,13 @@ const exportAtestadosToCsv = (rows: Atestado[]) => {
 };
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="mb-2.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+  <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
     {children}
   </span>
 );
 
 const SectionCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <section
-    className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.9),rgba(9,15,31,0.88))] shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-sm ${className}`}
-  >
+  <section className={`app-surface ${className}`}>
     {children}
   </section>
 );
@@ -341,21 +339,21 @@ const KpiCard: React.FC<{
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.18 }}
-      className="group rounded-[24px] border border-white/10 bg-[#10192d]/88 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.18)]"
+      className="group app-subtle-surface p-4 transition hover:border-primary/20"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">{title}</p>
-          <h3 className="mt-2 text-[30px] font-black leading-none text-white">{value}</h3>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
+          <h3 className="mt-2 text-2xl font-bold leading-none text-white">{value}</h3>
         </div>
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br ${accent} text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border-dark bg-gradient-to-br ${accent} text-white`}
         >
           {icon}
         </div>
       </div>
-      <p className="mt-3 text-[11px] leading-5 text-zinc-500 transition-colors group-hover:text-zinc-400">
-        Indicador resumido da gestão de atestados
+      <p className="mt-2 text-[11px] leading-5 text-slate-600">
+        Indicador da consulta atual
       </p>
     </motion.div>
   );
@@ -371,8 +369,8 @@ const ActionButton: React.FC<{
     onClick={onClick}
     className={
       primary
-        ? 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/15 px-4 text-sm font-semibold text-cyan-100 shadow-[0_10px_30px_rgba(6,182,212,0.08)] transition-all hover:-translate-y-[1px] hover:border-cyan-300/30 hover:bg-cyan-500/20'
-        : 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-zinc-200 transition-all hover:-translate-y-[1px] hover:bg-white/[0.08]'
+        ? 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover'
+        : 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white'
     }
   >
     {children}
@@ -840,20 +838,19 @@ ${result.warning}`;
   };
 
   return (
-    <div ref={pageTopRef} className="min-h-full space-y-5 xl:space-y-6">
-      <SectionCard className="px-5 py-5 md:px-6 md:py-5">
+    <div ref={pageTopRef} className="min-h-full space-y-6">
+      <SectionCard className="px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">
-              <BriefcaseMedical size={13} />
-              Gestão de Saúde Ocupacional
-            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Saúde ocupacional
+            </p>
 
-            <h1 className="text-[34px] font-black leading-tight tracking-tight text-white md:text-[42px]">
-              Gestão de Atestados
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              Atestados
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 md:text-[15px]">
-              Cadastre, acompanhe e consulte afastamentos médicos dos servidores.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Cadastre, acompanhe e consulte afastamentos dos servidores.
             </p>
           </div>
 
@@ -884,7 +881,7 @@ ${result.warning}`;
         />
       )}
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard title="Total de Atestados" value={kpis.totalAtestados} icon={<FileText size={19} />} />
         <KpiCard
           title="Servidores Afastados"
@@ -914,14 +911,14 @@ ${result.warning}`;
 
       <SectionCard className="p-5 md:p-6">
         <div className="flex flex-col gap-5">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-              <Filter size={18} />
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Filter size={17} />
             </div>
             <div>
-              <h2 className="text-[20px] font-bold text-white">Filtros</h2>
-              <p className="mt-0.5 text-sm text-zinc-400">
-                Refine a consulta por servidor, período e classificação.
+              <h2 className="text-base font-semibold text-white">Filtros</h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Refine por servidor, período e classificação.
               </p>
             </div>
           </div>
@@ -929,7 +926,7 @@ ${result.warning}`;
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
             <label className="block 2xl:col-span-1">
               <FieldLabel>Busca</FieldLabel>
-              <div className="flex h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 transition-all duration-200 focus-within:border-cyan-400/30 focus-within:bg-white/[0.07] focus-within:shadow-[0_0_0_4px_rgba(34,211,238,0.06)]">
+              <div className="flex h-12 items-center gap-2 rounded-2xl border border-border-dark bg-slate-900/35 px-4 transition-all duration-200 focus-within:border-primary/40 focus-within:bg-slate-900/55 focus-within:ring-2 focus-within:ring-primary/10">
                 <Search size={16} className="shrink-0 text-zinc-400" />
                 <input
                   value={search}
@@ -1019,7 +1016,7 @@ ${result.warning}`;
             </label>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 border-t border-border-dark/70 pt-4 md:flex-row md:items-center md:justify-between">
             <p className="text-sm text-zinc-400">
               {filteredData.length === 0 ? (
                 <>Nenhum registro encontrado no momento.</>
@@ -1050,7 +1047,7 @@ ${result.warning}`;
             </p>
           </div>
 
-          <div className="inline-flex h-10 items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.05] px-3.5 text-xs font-semibold text-zinc-300">
+          <div className="inline-flex h-10 items-center gap-2 self-start rounded-full border border-border-dark bg-slate-900/35 px-3.5 text-xs font-semibold text-slate-400">
             <Clock3 size={14} />
             {isLoading ? 'Carregando...' : `${filteredData.length} registro(s)`}
           </div>
@@ -1058,7 +1055,7 @@ ${result.warning}`;
 
         <div className="hidden overflow-x-auto lg:block">
           <table className="min-w-full">
-            <thead className="bg-white/[0.03]">
+            <thead className="bg-slate-900/25">
               <tr className="text-left">
                 {['Servidor', 'CPF / Matrícula', 'Setor / Categoria', 'Tipo', 'Período', 'Dias', 'Status', 'Arquivo', 'Ações'].map(
                   (header) => (
@@ -1088,7 +1085,7 @@ ${result.warning}`;
                 </tr>
               ) : (
                 filteredData.map((item) => (
-                  <tr key={item.id} className="border-t border-white/5 transition hover:bg-white/[0.025]">
+                  <tr key={item.id} className="border-t border-border-dark/50 transition hover:bg-slate-800/20">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</span>
@@ -1189,7 +1186,7 @@ ${result.warning}`;
           )}
 
           {filteredData.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+            <div key={item.id} className="app-subtle-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</h3>
