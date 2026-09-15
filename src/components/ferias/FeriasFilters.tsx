@@ -39,9 +39,9 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
   const yearOptions = Array.from({ length: 7 }).map((_, index) => baseYear - 2 + index);
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+    <section className="app-surface p-5">
       <div className="mb-4 flex items-center gap-2 text-slate-300">
-        <Filter className="h-4 w-4 text-cyan-300" />
+        <Filter className="h-4 w-4 text-primary" />
         <h2 className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Filtros da gestão</h2>
       </div>
 
@@ -54,7 +54,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
               value={filtros.busca}
               onChange={(event) => onChange('busca', event.target.value)}
               placeholder="Servidor, matrícula, CPF, setor ou observação"
-              className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 pl-10 pr-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+              className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 pl-10 pr-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </label>
@@ -64,7 +64,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
           <select
             value={filtros.ano}
             onChange={(event) => onChange('ano', Number(event.target.value))}
-            className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+            className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           >
             {yearOptions.map((year) => (
               <option key={year} value={year}>
@@ -79,7 +79,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
           <select
             value={filtros.mes}
             onChange={(event) => onChange('mes', Number(event.target.value))}
-            className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+            className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           >
             {MONTHS.map((month) => (
               <option key={month.value} value={month.value}>
@@ -94,7 +94,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
           <select
             value={filtros.setor}
             onChange={(event) => onChange('setor', event.target.value)}
-            className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+            className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           >
             <option value="">Todos os setores</option>
             {setores.map((setor) => (
@@ -122,7 +122,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
                 onClick={() => onChange('status', option.value as FeriasFiltroState['status'])}
                 className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
                   active
-                    ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200'
+                    ? 'border-primary/40 bg-primary/15 text-blue-200'
                     : 'border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]'
                 }`}
               >
@@ -135,7 +135,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
         >
           <RotateCcw className="h-4 w-4" />
           Limpar filtros
