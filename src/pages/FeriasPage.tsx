@@ -259,7 +259,7 @@ function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.18 }}
-            className={`w-full ${maxWidthClass} max-h-[92vh] overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-[0_20px_80px_rgba(0,0,0,0.45)]`}
+            className={`w-full ${maxWidthClass} max-h-[92vh] overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl`}
           >
             {children}
           </motion.div>
@@ -564,7 +564,7 @@ export default function FeriasPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.15),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_28%)]" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <span className="mb-3 inline-flex rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+            <span className="mb-3 inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               CIAPI RH • Gestão de Férias
             </span>
             <h1 className="text-3xl font-bold tracking-tight text-white">Painel de férias e planejamento anual</h1>
@@ -577,7 +577,7 @@ export default function FeriasPage() {
             <button
               type="button"
               onClick={openExportModal}
-              className="inline-flex items-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+              className="inline-flex items-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700/70"
             >
               <Download className="h-4 w-4" />
               Exportar Férias
@@ -586,7 +586,7 @@ export default function FeriasPage() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
             >
               <Plus className="h-4 w-4" />
               Novo período
@@ -652,7 +652,7 @@ export default function FeriasPage() {
             <button
               type="button"
               onClick={closeCreateModal}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-slate-300 transition hover:bg-white/[0.08]"
+              className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-300 transition hover:bg-white/[0.08]"
             >
               <X className="h-5 w-5" />
             </button>
@@ -666,7 +666,7 @@ export default function FeriasPage() {
               <select
                 value={form.servidorId || form.cpf}
                 onChange={(event) => selectServidor(event.target.value)}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Selecione um servidor</option>
                 {servidores
@@ -685,7 +685,7 @@ export default function FeriasPage() {
               <input
                 value={form.servidorNome}
                 onChange={(event) => setForm((prev) => ({ ...prev, servidorNome: event.target.value }))}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               />
             </label>
 
@@ -694,7 +694,7 @@ export default function FeriasPage() {
               <input
                 value={form.setor}
                 onChange={(event) => setForm((prev) => ({ ...prev, setor: event.target.value }))}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               />
             </label>
 
@@ -703,7 +703,7 @@ export default function FeriasPage() {
               <input
                 value={form.matricula}
                 onChange={(event) => setForm((prev) => ({ ...prev, matricula: event.target.value }))}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               />
             </label>
 
@@ -712,7 +712,7 @@ export default function FeriasPage() {
               <input
                 value={form.cpf}
                 onChange={(event) => setForm((prev) => ({ ...prev, cpf: event.target.value }))}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               />
             </label>
 
@@ -722,7 +722,7 @@ export default function FeriasPage() {
                 type="date"
                 value={form.inicio}
                 onChange={(event) => setForm((prev) => ({ ...prev, inicio: event.target.value }))}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               />
             </label>
 
@@ -732,11 +732,11 @@ export default function FeriasPage() {
                 type="date"
                 value={form.fim}
                 onChange={(event) => setForm((prev) => ({ ...prev, fim: event.target.value }))}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
               />
             </label>
 
-            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100 md:col-span-2">
+            <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-blue-100 md:col-span-2">
               Total previsto: <strong>{calculateDays(form.inicio, form.fim)}</strong> dia(s)
             </div>
 
@@ -746,7 +746,7 @@ export default function FeriasPage() {
                 value={form.observacao}
                 onChange={(event) => setForm((prev) => ({ ...prev, observacao: event.target.value }))}
                 rows={4}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                className="w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                 placeholder="Portaria, observações internas, remanejamentos ou detalhes do período"
               />
             </label>
@@ -762,7 +762,7 @@ export default function FeriasPage() {
             <button
               type="button"
               onClick={closeCreateModal}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+              className="rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
             >
               Cancelar
             </button>
@@ -770,7 +770,7 @@ export default function FeriasPage() {
               type="button"
               onClick={handleSave}
               disabled={salvando}
-              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70"
             >
               {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {form.id ? 'Salvar alterações' : 'Cadastrar período'}
@@ -797,7 +797,7 @@ export default function FeriasPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
-                <CalendarRange className="h-5 w-5 text-cyan-300" />
+                <CalendarRange className="h-5 w-5 text-primary" />
                 Detalhes do dia{' '}
                 {dayPreview?.date ? new Date(`${dayPreview.date}T00:00:00`).toLocaleDateString('pt-BR') : ''}
               </h2>
@@ -806,7 +806,7 @@ export default function FeriasPage() {
             <button
               type="button"
               onClick={() => setDayPreview(null)}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-slate-300 transition hover:bg-white/[0.08]"
+              className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-300 transition hover:bg-white/[0.08]"
             >
               <X className="h-5 w-5" />
             </button>
@@ -821,13 +821,13 @@ export default function FeriasPage() {
           ) : (
             <div className="space-y-3">
               {dayPreview.records.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div key={item.id} className="app-subtle-surface p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="font-semibold text-white">{item.servidorNome}</h3>
                       <p className="mt-1 text-sm text-slate-400">{item.setor || 'Setor não informado'}</p>
                     </div>
-                    <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                    <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                       {item.inicio} até {item.fim}
                     </span>
                   </div>
