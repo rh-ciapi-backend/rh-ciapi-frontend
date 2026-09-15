@@ -27,7 +27,7 @@ interface FeriasListProps {
 function statusClass(status: FeriasListStatus) {
   if (status === 'EM_ANDAMENTO') return 'border-amber-500/20 bg-amber-500/10 text-amber-200';
   if (status === 'FINALIZADAS') return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200';
-  return 'border-cyan-500/20 bg-cyan-500/10 text-cyan-200';
+  return 'border-primary/20 bg-primary/10 text-blue-200';
 }
 
 function formatPeriod(inicio: string, fim: string) {
@@ -38,10 +38,10 @@ function formatPeriod(inicio: string, fim: string) {
 
 export function FeriasList({ registros, carregando = false, onVisualizar, onEditar, onExcluir }: FeriasListProps) {
   return (
-    <section className="rounded-[30px] border border-white/10 bg-slate-900/80 p-5 shadow-[0_14px_30px_rgba(0,0,0,0.22)]">
+    <section className="app-surface p-5">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-cyan-300">
+          <div className="flex items-center gap-2 text-primary">
             <CalendarClock className="h-5 w-5" />
             <span className="text-xs font-semibold uppercase tracking-[0.22em]">Lista operacional</span>
           </div>
@@ -49,7 +49,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
           <p className="mt-1 text-sm text-slate-400">Acompanhe, revise e edite os registros filtrados.</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-right">
+        <div className="app-subtle-surface px-4 py-3 text-right">
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Resultado</p>
           <p className="mt-1 text-2xl font-bold text-white">{carregando ? '...' : registros.length}</p>
         </div>
@@ -65,7 +65,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
         {registros.map((item) => (
           <article
             key={item.id}
-            className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 transition hover:bg-white/[0.05]"
+            className="app-subtle-surface p-4 transition hover:border-slate-500/70 hover:bg-slate-800/60"
           >
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="min-w-0 flex-1">
@@ -106,7 +106,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
                 <button
                   type="button"
                   onClick={() => onVisualizar?.(item)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
                 >
                   <Eye className="h-4 w-4" />
                   Visualizar
@@ -114,7 +114,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
                 <button
                   type="button"
                   onClick={() => onEditar?.(item)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-2.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/16"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-medium text-blue-200 transition hover:bg-primary/15"
                 >
                   <Pencil className="h-4 w-4" />
                   Editar
