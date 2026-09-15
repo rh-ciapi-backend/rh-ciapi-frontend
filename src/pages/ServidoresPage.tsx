@@ -565,6 +565,19 @@ export const ServidoresPage = ({
     }
   };
 
+  const summary = useMemo(() => {
+    const total = employees.length;
+    const ativos = employees.filter(
+      (emp) => getEmployeeStatus(emp).toUpperCase() === 'ATIVO'
+    ).length;
+    const inativos = employees.filter(
+      (emp) => getEmployeeStatus(emp).toUpperCase() === 'INATIVO'
+    ).length;
+    const filtrados = displayedEmployees.length;
+
+    return { total, ativos, inativos, filtrados };
+  }, [employees, displayedEmployees]);
+
   const detailEmployee = selectedEmployee
     ? {
         ...selectedEmployee,
@@ -579,84 +592,24 @@ export const ServidoresPage = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4 w-full sm:w-auto flex-wrap">
-          <button
-            onClick={() => fetchEmployees()}
-            className="p-2.5 bg-slate-800 border border-border-dark rounded-xl text-slate-400 hover:text-white transition-all"
-            title="Recarregar lista"
-          >
-            <motion.div
-              animate={isLoading ? { rotate: 360 } : {}}
-              transition={isLoading ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
-            >
-              <MoreHorizontal size={18} />
-            </motion.div>
-          </button>
-
-          <div className="relative flex-1 sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-            <input
-              type="text"
-              placeholder="Nome ou matrícula..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-card-dark border border-border-dark rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none transition-all"
-            />
-          </div>
-
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden lg:block"
-          >
-            <option value="">Todas Categorias</option>
-            {filterOptions.categorias.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterSetor}
-            onChange={(e) => setFilterSetor(e.target.value)}
-            className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden xl:block"
-          >
-            <option value="">Todos Setores</option>
-            {filterOptions.setores.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden xl:block"
-          >
-            <option value="">Todos Status</option>
-            {filterOptions.status.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterSexo}
-            onChange={(e) => setFilterSexo(e.target.value)}
-            className="bg-card-dark border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none hidden xl:block"
-          >
-            <option value="">Todos Sexos</option>
-            {filterOptions.sexo.map((s) => (
-              <option key={s} value={s}>
-                {s === 'M' ? 'MASCULINO' : s === 'F' ? 'FEMININO' : s === 'OUTRO' ? 'OUTRO' : s}
-              </option>
-            ))}
-          </select>
+      <section className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Gestão de pessoas
+          </p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            Servidores
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
+            Consulte, filtre e mantenha os registros dos servidores do CIAPI.
+          </p>
         </div>
 
-        <div className="flex w-full sm:w-auto items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             onClick={handleExportCsv}
-            className="bg-slate-800 hover:bg-slate-700 border border-border-dark text-slate-100 px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg transition-all w-full sm:w-auto justify-center"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
             title="Exportar os servidores filtrados para CSV"
           >
             <Download size={18} />
@@ -664,152 +617,288 @@ export const ServidoresPage = ({
           </button>
 
           <button
+            type="button"
             onClick={handleAddEmployee}
-            className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-primary/20 transition-all w-full sm:w-auto justify-center"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover"
           >
             <Plus size={18} />
             Novo Servidor
           </button>
         </div>
-      </div>
+      </section>
 
-      <AnimatePresence>
-        {(error || loadTimeout) && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-rose-400 text-sm"
-          >
-            <div className="flex items-center gap-3">
-              <X size={18} className="cursor-pointer" onClick={() => { setError(null); setLoadTimeout(false); }} />
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={() => fetchEmployees()}
-              className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-1.5 rounded-lg font-bold text-xs transition-all"
-            >
-              Tentar Novamente
-            </button>
-          </motion.div>
-        )}
-
-        {successMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center gap-3 text-emerald-400 text-sm"
-          >
-            <UserPlus size={18} />
-            {successMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="bg-card-dark rounded-2xl border border-border-dark overflow-hidden shadow-xl relative min-h-[200px]">
-        {isLoading && (
-          <div className="absolute inset-0 bg-card-dark/50 backdrop-blur-[2px] z-10 flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-800/40 border-b border-border-dark">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider min-w-[320px]">
-                  Servidor
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right w-[120px]">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-border-dark">
-              {displayedEmployees.length === 0 && !isLoading ? (
-                <tr>
-                  <td colSpan={2} className="px-6 py-12 text-center text-slate-500">
-                    Nenhum servidor encontrado com os filtros informados.
-                  </td>
-                </tr>
-              ) : (
-                displayedEmployees.map((emp, index) => {
-                  const safeName = getEmployeeName(emp);
-                  const safeMatricula = getEmployeeMatricula(emp);
-                  const displayIndex = String(index + 1).padStart(2, '0');
-
-                  return (
-                    <tr
-                      key={emp.id}
-                      className="group transition-colors hover:bg-slate-800/25"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs shrink-0 shadow-inner tracking-wide">
-                            {displayIndex}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDetails(emp)}
-                              className="max-w-full text-left group/name rounded-lg outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary/60"
-                              title={`Abrir detalhes de ${safeName}`}
-                            >
-                              <span className="block text-[15px] font-bold text-white truncate leading-tight tracking-[0.01em] transition-colors group-hover/name:text-primary">
-                                {safeName}
-                              </span>
-                              <span className="mt-1.5 block text-[11px] text-slate-500 font-mono truncate tracking-wide">
-                                {safeMatricula ? `Matrícula: ${safeMatricula}` : 'Matrícula não informada'}
-                              </span>
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleEditEmployee(emp)}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                            title="Editar"
-                          >
-                            <Edit2 size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEmployee(emp.id)}
-                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all"
-                            title="Excluir"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="px-6 py-4 bg-slate-800/30 border-t border-border-dark flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            Mostrando {displayedEmployees.length} servidor(es)
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="app-subtle-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Total
           </p>
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-slate-500 hover:text-white disabled:opacity-50" disabled>
-              <ChevronLeft size={20} />
-            </button>
-            <button className="px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">1</button>
-            <button className="p-2 text-slate-500 hover:text-white" disabled>
-              <ChevronRight size={20} />
+          <p className="mt-2 text-2xl font-bold text-white">{summary.total}</p>
+          <p className="mt-1 text-xs text-slate-600">servidores cadastrados</p>
+        </div>
+
+        <div className="app-subtle-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Ativos
+          </p>
+          <p className="mt-2 text-2xl font-bold text-emerald-400">{summary.ativos}</p>
+          <p className="mt-1 text-xs text-slate-600">em situação ativa</p>
+        </div>
+
+        <div className="app-subtle-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Inativos
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-300">{summary.inativos}</p>
+          <p className="mt-1 text-xs text-slate-600">em situação inativa</p>
+        </div>
+
+        <div className="app-subtle-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Exibidos
+          </p>
+          <p className="mt-2 text-2xl font-bold text-primary">{summary.filtrados}</p>
+          <p className="mt-1 text-xs text-slate-600">após busca e filtros</p>
+        </div>
+      </section>
+
+      <section className="app-surface overflow-hidden">
+        <div className="border-b border-border-dark/70 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou matrícula..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-border-dark bg-slate-900/35 pl-11 pr-4 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:flex xl:items-center">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todas categorias</option>
+                {filterOptions.categorias.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterSetor}
+                onChange={(e) => setFilterSetor(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todos setores</option>
+                {filterOptions.setores.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todos status</option>
+                {filterOptions.status.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterSexo}
+                onChange={(e) => setFilterSexo(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todos sexos</option>
+                {filterOptions.sexo.map((s) => (
+                  <option key={s} value={s}>
+                    {s === 'M' ? 'MASCULINO' : s === 'F' ? 'FEMININO' : s === 'OUTRO' ? 'OUTRO' : s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => fetchEmployees()}
+              className="flex h-11 items-center justify-center rounded-xl border border-border-dark bg-slate-900/35 px-4 text-sm font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              title="Recarregar lista"
+            >
+              <motion.div
+                animate={isLoading ? { rotate: 360 } : {}}
+                transition={isLoading ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
+              >
+                <MoreHorizontal size={18} />
+              </motion.div>
             </button>
           </div>
         </div>
-      </div>
+
+        <AnimatePresence>
+          {(error || loadTimeout) && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mx-4 mt-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-400 sm:mx-5 sm:flex-row"
+            >
+              <div className="flex items-center gap-3">
+                <X
+                  size={18}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setError(null);
+                    setLoadTimeout(false);
+                  }}
+                />
+                <span>{error}</span>
+              </div>
+
+              <button
+                onClick={() => fetchEmployees()}
+                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-600"
+              >
+                Tentar novamente
+              </button>
+            </motion.div>
+          )}
+
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400 sm:mx-5"
+            >
+              <UserPlus size={18} />
+              {successMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative min-h-[220px]">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-card-dark/55 backdrop-blur-[2px]">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          )}
+
+          {displayedEmployees.length === 0 && !isLoading ? (
+            <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-12 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/70 text-slate-500">
+                <Search size={20} />
+              </div>
+              <p className="text-sm font-semibold text-slate-300">
+                Nenhum servidor encontrado
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Ajuste a busca ou os filtros para ver outros resultados.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border-dark/60">
+              {displayedEmployees.map((emp) => {
+                const safeName = getEmployeeName(emp);
+                const safeMatricula = getEmployeeMatricula(emp);
+                const categoria = getEmployeeCategoria(emp);
+                const setor = getEmployeeSetor(emp);
+                const status = getEmployeeStatus(emp);
+
+                return (
+                  <div
+                    key={emp.id}
+                    className="group flex flex-col gap-4 px-4 py-4 transition hover:bg-slate-800/20 sm:px-5 lg:flex-row lg:items-center"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDetails(emp)}
+                      className="flex min-w-0 flex-1 items-center gap-4 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      title={`Abrir detalhes de ${safeName}`}
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-sm font-bold text-primary ring-1 ring-primary/15">
+                        {getInitials(safeName)}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="truncate text-[15px] font-semibold text-white transition group-hover:text-primary">
+                            {safeName}
+                          </span>
+                          {getStatusBadge(status)}
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                          <span>
+                            {safeMatricula ? `Matrícula ${safeMatricula}` : 'Matrícula não informada'}
+                          </span>
+                          <span className="text-slate-700">•</span>
+                          <span>{categoria}</span>
+                          <span className="text-slate-700">•</span>
+                          <span>{setor}</span>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center justify-end gap-1 lg:pl-4">
+                      <button
+                        type="button"
+                        onClick={() => handleEditEmployee(emp)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-primary/10 hover:text-primary"
+                        title="Editar"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteEmployee(emp.id)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-400"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border-dark/70 bg-slate-900/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <p className="text-xs text-slate-500">
+            Mostrando <span className="font-semibold text-slate-300">{displayedEmployees.length}</span> servidor(es)
+          </p>
+
+          <div className="flex items-center gap-1">
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 disabled:opacity-40"
+              disabled
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <button className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 text-xs font-bold text-white">
+              1
+            </button>
+
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 disabled:opacity-40"
+              disabled
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      </section>
 
       <AnimatePresence>
         {isDetailsModalOpen && detailEmployee && (
