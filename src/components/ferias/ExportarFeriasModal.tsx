@@ -79,13 +79,13 @@ export function ExportarFeriasModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.18 }}
-            className="w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+            className="w-full max-w-6xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl"
           >
             <div className="border-b border-white/10 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
-                    <FileText className="h-5 w-5 text-cyan-300" />
+                    <FileText className="h-5 w-5 text-primary" />
                     Exportar férias no modelo oficial
                   </h2>
                   <p className="mt-1 text-sm text-slate-400">
@@ -96,7 +96,7 @@ export function ExportarFeriasModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-slate-300 transition hover:bg-white/[0.08]"
+                  className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-300 transition hover:bg-white/[0.08]"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -119,7 +119,7 @@ export function ExportarFeriasModal({
                     max={2100}
                     value={filters.ano}
                     onChange={(event) => onChange('ano', Number(event.target.value) || new Date().getFullYear())}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   />
                 </label>
 
@@ -128,7 +128,7 @@ export function ExportarFeriasModal({
                   <select
                     value={(filters.categoria || 'TODOS') as string}
                     onChange={(event) => onChange('categoria', event.target.value as ExportCategoria)}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     {feriasExportLabels.categorias.map((categoria) => (
                       <option key={categoria} value={categoria}>
@@ -143,7 +143,7 @@ export function ExportarFeriasModal({
                   <select
                     value={(filters.setor || 'TODOS') as string}
                     onChange={(event) => onChange('setor', event.target.value as string | 'TODOS')}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="TODOS">Todos</option>
                     {setores.map((setor) => (
@@ -159,7 +159,7 @@ export function ExportarFeriasModal({
                   <select
                     value={(filters.status || 'ATIVO') as string}
                     onChange={(event) => onChange('status', event.target.value as ExportStatus)}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="TODOS">Todos</option>
                     <option value="ATIVO">ATIVO</option>
@@ -172,7 +172,7 @@ export function ExportarFeriasModal({
                   <select
                     value={getMesValue(filters.mes)}
                     onChange={(event) => onChange('mes', event.target.value === 'TODOS' ? 'TODOS' : Number(event.target.value))}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="TODOS">Todos os meses</option>
                     {feriasExportLabels.meses.slice(1).map((mes, index) => (
@@ -188,7 +188,7 @@ export function ExportarFeriasModal({
                   <select
                     value={filters.tipoExtracao}
                     onChange={(event) => onChange('tipoExtracao', event.target.value as ExportTipoExtracao)}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="TODOS_SERVIDORES">Todos os servidores</option>
                     <option value="COM_FERIAS">Somente servidores com férias cadastradas</option>
@@ -205,7 +205,7 @@ export function ExportarFeriasModal({
                   <select
                     value={(filters.ordenacao || 'NOME') as string}
                     onChange={(event) => onChange('ordenacao', event.target.value as ExportOrdenacao)}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="NOME">Nome A-Z</option>
                     <option value="MATRICULA">Matrícula</option>
@@ -219,7 +219,7 @@ export function ExportarFeriasModal({
                   <select
                     value={filters.formato}
                     onChange={(event) => onChange('formato', event.target.value as ExportFormato)}
-                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="DOCX">DOCX</option>
                     <option value="PDF">PDF</option>
@@ -229,10 +229,10 @@ export function ExportarFeriasModal({
               </div>
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Linhas</p>
+                <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Linhas</p>
                   <div className="mt-3 text-3xl font-bold text-white">{preview.totalLinhas}</div>
-                  <p className="mt-1 text-sm text-cyan-100">registros exportáveis</p>
+                  <p className="mt-1 text-sm text-blue-100">registros exportáveis</p>
                 </div>
 
                 <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
@@ -247,21 +247,21 @@ export function ExportarFeriasModal({
                   <p className="mt-1 text-sm text-amber-100">incluídos só quando permitido</p>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                <div className="app-subtle-surface p-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Seções</p>
                   <div className="mt-3 text-3xl font-bold text-white">{preview.sections.length}</div>
                   <p className="mt-1 text-sm text-slate-300">grupos por categoria</p>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+              <div className="app-subtle-surface p-5">
                 <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-cyan-300" />
+                  <Filter className="h-4 w-4 text-primary" />
                   <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Resumo da exportação</h3>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-blue-200">
                     Exercício: {filters.ano}
                   </span>
                   <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-200">
@@ -298,7 +298,7 @@ export function ExportarFeriasModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+                  className="rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
                 >
                   Cancelar
                 </button>
@@ -307,7 +307,7 @@ export function ExportarFeriasModal({
                   type="button"
                   onClick={onSubmit}
                   disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                   Gerar documento
