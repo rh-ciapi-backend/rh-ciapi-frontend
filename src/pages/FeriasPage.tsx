@@ -560,16 +560,13 @@ export default function FeriasPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.30)]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.15),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_28%)]" />
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="app-surface p-5 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <span className="mb-3 inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              CIAPI RH • Gestão de Férias
-            </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Painel de férias e planejamento anual</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              Visualize períodos cadastrados, acompanhe servidores em férias, distribua melhor o planejamento do ano e gere a Programação Anual de Férias no modelo oficial do CIAPI.
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Gestão de férias</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Férias</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Planejamento anual, períodos cadastrados e exportação da Programação Anual de Férias do CIAPI.
             </p>
           </div>
 
