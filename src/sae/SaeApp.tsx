@@ -1,125 +1,66 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import React from 'react';
+import { Layers3, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
-import React, { useCallback, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-
-import { Sidebar } from './components/Sidebar';
-import { Topbar } from './components/Topbar';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAuth } from './contexts/AuthContext';
-
-import { DashboardPage } from './pages/DashboardPage';
-import { ServidoresPage } from './pages/ServidoresPage';
-import FeriasPage from './pages/FeriasPage';
-import FrequenciaPage from './pages/FrequenciaPage';
-import MapasPage from './pages/MapasPage';
-import AdminPage from './pages/AdminPage';
-import AdminUsuariosPage from './pages/AdminUsuariosPage';
-import AdminCategoriasPage from './pages/AdminCategoriasPage';
-import AdminSetoresPage from './pages/AdminSetoresPage';
-import AdminLogsPage from './pages/AdminLogsPage';
-import AtestadosPage from './pages/AtestadosPage';
-import { DiagnosticoPage } from './pages/DiagnosticoPage';
-import SaeApp from './sae/SaeApp';
-
-type AppTab =
-  | 'dashboard'
-  | 'servidores'
-  | 'atestados'
-  | 'ferias'
-  | 'frequencia'
-  | 'mapas'
-  | 'admin'
-  | 'admin-usuarios'
-  | 'admin-categorias'
-  | 'admin-setores'
-  | 'admin-logs'
-  | 'diagnostico';
-
-const VALID_TABS: AppTab[] = [
-  'dashboard','servidores','atestados','ferias','frequencia','mapas','admin',
-  'admin-usuarios','admin-categorias','admin-setores','admin-logs','diagnostico',
-];
-
-function isValidTab(tab: string): tab is AppTab {
-  return VALID_TABS.includes(tab as AppTab);
-}
-
-export default function App() {
-  const { signOut, ambiente } = useAuth();
-  const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
-  const [initialAction, setInitialAction] = useState<string | null>(null);
-
-  const handleLogout = useCallback(async () => {
-    try { await signOut(); } catch (error) { console.error('Erro ao sair da sessão:', error); }
-  }, [signOut]);
-
-  const navigateWithAction = useCallback((tab: string, action?: string) => {
-    const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
-    setActiveTab(safeTab);
-    setInitialAction(action ?? null);
-  }, []);
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
-      case 'servidores': return <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
-      case 'atestados': return <AtestadosPage />;
-      case 'ferias': return <FeriasPage />;
-      case 'frequencia': return <FrequenciaPage />;
-      case 'mapas': return <MapasPage />;
-      case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
-      case 'admin-usuarios': return <AdminUsuariosPage />;
-      case 'admin-categorias': return <AdminCategoriasPage />;
-      case 'admin-setores': return <AdminSetoresPage />;
-      case 'admin-logs': return <AdminLogsPage />;
-      case 'diagnostico': return <DiagnosticoPage />;
-      default: return <DashboardPage onNavigate={navigateWithAction} />;
-    }
-  };
-
-  const getPageTitle = () => {
-    switch (activeTab) {
-      case 'dashboard': return 'Dashboard';
-      case 'servidores': return 'Gestão de Servidores';
-      case 'atestados': return 'Gestão de Atestados';
-      case 'ferias': return 'Controle de Férias';
-      case 'frequencia': return 'Frequência Mensal';
-      case 'mapas': return 'Mapas Institucionais';
-      case 'admin': return 'Administração do Sistema';
-      case 'admin-usuarios': return 'Usuários do Sistema';
-      case 'admin-categorias': return 'Gestão de Categorias';
-      case 'admin-setores': return 'Gestão de Setores';
-      case 'admin-logs': return 'Logs de Atividade';
-      case 'diagnostico': return 'Diagnóstico de Conexão';
-      default: return 'CIAPI RH';
-    }
-  };
+export default function SaeApp() {
+  const { user, signOut } = useAuth();
 
   return (
-    <ProtectedRoute>
-      {ambiente === 'sae' ? (
-        <SaeApp />
-      ) : (
-        <div className="flex min-h-screen bg-bg-dark">
-          <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar title={getPageTitle()} />
-            <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-              <div className="app-page">
-                <AnimatePresence mode="wait">
-                  <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
-                    {renderContent()}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </main>
+    <div className="min-h-screen bg-bg-dark text-white">
+      <header className="h-20 border-b border-border-dark flex items-center justify-between px-8 bg-card-dark">
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center font-bold text-xl">
+            C
+          </div>
+
+          <div>
+            <h1 className="font-bold text-lg">CIAPI</h1>
+            <p className="text-xs text-slate-500">
+              Sistema Integrado de Gestão
+            </p>
           </div>
         </div>
-      )}
-    </ProtectedRoute>
+
+        <button
+          onClick={signOut}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+        >
+          <LogOut size={18} />
+          Sair
+        </button>
+      </header>
+
+      <main className="min-h-[calc(100vh-80px)] flex items-center justify-center p-8">
+        <div className="max-w-xl w-full bg-card-dark border border-border-dark rounded-3xl p-10 text-center shadow-2xl">
+          <div className="mx-auto w-16 h-16 bg-primary/15 text-primary rounded-2xl flex items-center justify-center mb-6">
+            <Layers3 size={32} />
+          </div>
+
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-4">
+            AMBIENTE SAE
+          </div>
+
+          <h2 className="text-3xl font-bold">SAE</h2>
+
+          <p className="text-slate-400 mt-3">
+            Gestão de Atendimento e Acompanhamento
+          </p>
+
+          <div className="mt-8 bg-slate-800/60 rounded-2xl p-5 text-left">
+            <p className="text-xs text-slate-500">
+              Sessão autenticada
+            </p>
+
+            <p className="text-sm mt-1 text-slate-300">
+              {user?.email}
+            </p>
+          </div>
+
+          <p className="text-sm text-slate-500 mt-8">
+            O ambiente SAE foi carregado corretamente.
+          </p>
+        </div>
+      </main>
+    </div>
   );
 }
