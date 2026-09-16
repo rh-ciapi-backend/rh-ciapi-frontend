@@ -38,7 +38,7 @@ function monthName(month: number) {
 
 function statusBadgeClass(status: FeriasCalendarStatus) {
   if (status === 'EM_ANDAMENTO') return 'bg-amber-400';
-  if (status === 'FINALIZADAS') return 'bg-emerald-400';
+  if (status === 'FINALIZADAS') return 'bg-slate-400';
   return 'bg-primary';
 }
 
@@ -160,7 +160,7 @@ export function FeriasCalendar({ ano, mes, registros, onSelectDate }: FeriasCale
       </div>
 
       <div className="app-surface p-5">
-        <div className="flex items-center gap-2 text-emerald-300">
+        <div className="flex items-center gap-2 text-primary">
           <Sparkles className="h-5 w-5" />
           <span className="text-xs font-semibold uppercase tracking-[0.22em]">Planejamento anual</span>
         </div>
@@ -190,7 +190,7 @@ export function FeriasCalendar({ ano, mes, registros, onSelectDate }: FeriasCale
             <ul className="mt-3 space-y-3 text-sm text-slate-300">
               <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-primary" /> Programadas: períodos futuros já lançados.</li>
               <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-amber-400" /> Em andamento: servidor atualmente afastado.</li>
-              <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" /> Finalizadas: férias encerradas e mantidas no histórico.</li>
+              <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-slate-400" /> Finalizadas: férias encerradas e mantidas no histórico.</li>
             </ul>
           </div>
         </div>
