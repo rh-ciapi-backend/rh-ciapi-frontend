@@ -235,16 +235,16 @@ export function ExportarFeriasModal({
                   <p className="mt-1 text-sm text-blue-100">registros exportáveis</p>
                 </div>
 
-                <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Com férias</p>
+                <div className="app-subtle-surface p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Com férias</p>
                   <div className="mt-3 text-3xl font-bold text-white">{preview.totalComFerias}</div>
-                  <p className="mt-1 text-sm text-emerald-100">com pelo menos um período</p>
+                  <p className="mt-1 text-sm text-slate-400">com pelo menos um período</p>
                 </div>
 
-                <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">Sem férias</p>
+                <div className="app-subtle-surface p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Sem férias</p>
                   <div className="mt-3 text-3xl font-bold text-white">{preview.totalSemFerias}</div>
-                  <p className="mt-1 text-sm text-amber-100">incluídos só quando permitido</p>
+                  <p className="mt-1 text-sm text-slate-400">incluídos só quando permitido</p>
                 </div>
 
                 <div className="app-subtle-surface p-5">
