@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SaeSidebar, { SaeTab } from './components/SaeSidebar';
 import SaeTopbar from './components/SaeTopbar';
 import SaeDashboardPage from './pages/SaeDashboardPage';
+import SaeUsuariosPage from './pages/SaeUsuariosPage';
 
 export default function SaeApp() {
   const { signOut } = useAuth();
@@ -23,25 +24,55 @@ export default function SaeApp() {
         return <SaeDashboardPage />;
 
       case 'usuarios':
-        return <PlaceholderPage title="Usuários" description="Cadastro, consulta e acompanhamento dos usuários do CIAPI." />;
+        return <SaeUsuariosPage />;
 
       case 'triagem':
-        return <PlaceholderPage title="Triagem" description="Registro e acompanhamento das triagens realizadas." />;
+        return (
+          <PlaceholderPage
+            title="Triagem"
+            description="Registro e acompanhamento das triagens realizadas."
+          />
+        );
 
       case 'agendamentos':
-        return <PlaceholderPage title="Agendamentos" description="Agenda dos profissionais, horários disponíveis e marcações." />;
+        return (
+          <PlaceholderPage
+            title="Agendamentos"
+            description="Agenda dos profissionais, horários disponíveis e marcações."
+          />
+        );
 
       case 'atendimentos':
-        return <PlaceholderPage title="Atendimentos" description="Registro dos atendimentos realizados pelos profissionais." />;
+        return (
+          <PlaceholderPage
+            title="Atendimentos"
+            description="Registro dos atendimentos realizados pelos profissionais."
+          />
+        );
 
       case 'sinais-vitais':
-        return <PlaceholderPage title="Sinais Vitais" description="Monitoramento e histórico dos sinais vitais dos usuários." />;
+        return (
+          <PlaceholderPage
+            title="Sinais Vitais"
+            description="Monitoramento e histórico dos sinais vitais dos usuários."
+          />
+        );
 
       case 'mapas':
-        return <PlaceholderPage title="Mapas" description="Mapas e relatórios operacionais do SAE." />;
+        return (
+          <PlaceholderPage
+            title="Mapas"
+            description="Mapas e relatórios operacionais do SAE."
+          />
+        );
 
       case 'relatorios':
-        return <PlaceholderPage title="Relatórios" description="Indicadores, consolidados e exportações do SAE." />;
+        return (
+          <PlaceholderPage
+            title="Relatórios"
+            description="Indicadores, consolidados e exportações do SAE."
+          />
+        );
 
       default:
         return <SaeDashboardPage />;
@@ -74,7 +105,10 @@ interface PlaceholderPageProps {
   description: string;
 }
 
-function PlaceholderPage({ title, description }: PlaceholderPageProps) {
+function PlaceholderPage({
+  title,
+  description,
+}: PlaceholderPageProps) {
   return (
     <section className="space-y-5">
       <div>
@@ -91,7 +125,7 @@ function PlaceholderPage({ title, description }: PlaceholderPageProps) {
         </p>
       </div>
 
-      <div className="rounded-3xl border border-border-dark bg-card-dark p-8">
+      <div className="rounded-[20px] border border-border-dark bg-card-dark p-8">
         <p className="text-sm text-slate-400">
           Esta área já está integrada à navegação do SAE e será construída na próxima etapa.
         </p>
