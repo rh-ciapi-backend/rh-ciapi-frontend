@@ -4,9 +4,10 @@ import {
   UserCheck,
   Calendar,
   AlertCircle,
-  ArrowUpRight,
   Plus,
   ChevronRight,
+  CalendarDays,
+  Clock3,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { servidoresService } from '../services/servidoresService';
@@ -43,102 +44,116 @@ const normalizeServidoresArray = (raw: unknown): Servidor[] => {
 };
 
 const normalizeServidor = (
-  s: Partial<Servidor> | null | undefined,
+  servidor: Partial<Servidor> | null | undefined,
 ): Servidor => {
   const nomeCompleto = safeString(
-    s?.nomeCompleto ||
-      (s as any)?.nome_completo ||
-      s?.nome ||
-      (s as any)?.servidor_nome,
+    servidor?.nomeCompleto ||
+      (servidor as any)?.nome_completo ||
+      servidor?.nome ||
+      (servidor as any)?.servidor_nome,
   );
 
-  const nome = safeString(s?.nome || nomeCompleto || 'Servidor sem nome');
+  const nome = safeString(
+    servidor?.nome || nomeCompleto || 'Servidor sem nome',
+  );
 
   return {
-    ...(s as Servidor),
+    ...(servidor as Servidor),
     id: safeString(
-      s?.id ||
-        (s as any)?.servidor ||
-        (s as any)?.uuid ||
-        (s as any)?.cpf ||
+      servidor?.id ||
+        (servidor as any)?.servidor ||
+        (servidor as any)?.uuid ||
+        (servidor as any)?.cpf ||
         nome,
     ),
     nome,
     nomeCompleto,
-    status: (safeString(s?.status) || 'ATIVO') as Servidor['status'],
+    status: (safeString(servidor?.status) || 'ATIVO') as Servidor['status'],
     setor: safeString(
-      s?.setor || (s as any)?.lotacao || 'Setor não informado',
+      servidor?.setor ||
+        (servidor as any)?.lotacao ||
+        'Setor não informado',
     ),
     categoria: safeString(
-      s?.categoria ||
-        (s as any)?.categoria_canonica ||
+      servidor?.categoria ||
+        (servidor as any)?.categoria_canonica ||
         'Categoria não informada',
     ) as Servidor['categoria'],
     dataNascimento:
       safeString(
-        s?.dataNascimento ||
-          (s as any)?.data_nascimento ||
-          s?.aniversario ||
-          (s as any)?.nascimento,
+        servidor?.dataNascimento ||
+          (servidor as any)?.data_nascimento ||
+          servidor?.aniversario ||
+          (servidor as any)?.nascimento,
       ) || null,
     aniversario:
       safeString(
-        s?.aniversario ||
-          s?.dataNascimento ||
-          (s as any)?.data_nascimento,
+        servidor?.aniversario ||
+          servidor?.dataNascimento ||
+          (servidor as any)?.data_nascimento,
       ) || null,
   };
 };
 
-const StatCard = ({
-  title,
-  value,
-  icon: Icon,
-  accent,
-  description,
-  onClick,
-}: {
+type StatCardProps = {
   title: string;
   value: number | string;
+  subtitle: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  accent: string;
-  description: string;
+  iconClass: string;
   onClick?: () => void;
-}) => (
-  <motion.button
-    type="button"
-    whileHover={{ y: -3 }}
-    transition={{ duration: 0.18 }}
-    onClick={onClick}
-    className="group app-surface w-full p-5 text-left transition-all hover:border-primary/30"
-  >
-    <div className="flex items-start justify-between gap-4">
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-2xl ${accent}`}
-      >
-        <Icon size={20} />
+};
+
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  iconClass,
+  onClick,
+}: StatCardProps) {
+  return (
+    <motion.button
+      type="button"
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.18 }}
+      onClick={onClick}
+      disabled={!onClick}
+      className={`app-surface w-full p-5 text-left transition ${
+        onClick
+          ? 'cursor-pointer hover:border-slate-500/70'
+          : 'cursor-default'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {title}
+          </p>
+
+          <p className="mt-2 text-3xl font-bold tracking-tight text-white">
+            {value}
+          </p>
+
+          <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
+        </div>
+
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-dark bg-slate-800/70 ${iconClass}`}
+        >
+          <Icon size={19} />
+        </div>
       </div>
 
-      <div className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-600 transition-all group-hover:bg-white/[0.05] group-hover:text-white">
-        <ChevronRight size={17} />
-      </div>
-    </div>
-
-    <div className="mt-6">
-      <p className="text-[13px] font-medium text-slate-400">
-        {title}
-      </p>
-
-      <p className="mt-1 text-3xl font-bold tracking-tight text-white">
-        {value}
-      </p>
-
-      <p className="mt-2 text-xs leading-relaxed text-slate-600">
-        {description}
-      </p>
-    </div>
-  </motion.button>
-);
+      {onClick ? (
+        <div className="mt-4 flex items-center gap-1 text-xs font-medium text-slate-500">
+          Ver detalhes
+          <ChevronRight size={14} />
+        </div>
+      ) : null}
+    </motion.button>
+  );
+}
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigate,
@@ -153,6 +168,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [servidores, setServidores] = useState<Servidor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
 
   useEffect(() => {
     let isMounted = true;
@@ -169,12 +186,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         if (!isMounted) return;
 
         const ativos = servidoresList.filter(
-          (servidor) =>
-            normalizeStatus(servidor.status) === 'ATIVO',
+          (servidor) => normalizeStatus(servidor.status) === 'ATIVO',
         ).length;
 
         setServidores(servidoresList);
-
         setStats((prev) => ({
           ...prev,
           total: servidoresList.length,
@@ -188,7 +203,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         setError(
           'Erro ao carregar dados do dashboard. Verifique a conexão com o servidor.',
         );
-
         setServidores([]);
       } finally {
         if (isMounted) {
@@ -204,9 +218,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     };
   }, []);
 
-  const hasData = useMemo(
-    () => servidores.length > 0,
-    [servidores],
+  useEffect(() => {
+    const updateClock = () => setCurrentDateTime(new Date());
+
+    updateClock();
+
+    const interval = window.setInterval(updateClock, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const hasData = useMemo(() => servidores.length > 0, [servidores]);
+
+  const greeting = useMemo(() => {
+    const hour = currentDateTime.getHours();
+
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }, [currentDateTime]);
+
+  const formattedDate = useMemo(() => {
+    const formatted = new Intl.DateTimeFormat('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(currentDateTime);
+
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }, [currentDateTime]);
+
+  const formattedTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(currentDateTime),
+    [currentDateTime],
   );
 
   if (isLoading && !hasData) {
@@ -220,7 +269,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   return (
     <div className="space-y-7">
       {error ? (
-        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-400">
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}
         </div>
       ) : null}
@@ -232,10 +281,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </p>
 
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            Bom dia
+            {greeting}, Admin CIAPI
           </h2>
 
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={16} className="text-slate-500" />
+              <span>{formattedDate}</span>
+            </div>
+
+            <span className="text-slate-600">•</span>
+
+            <div className="flex items-center gap-2">
+              <Clock3 size={16} className="text-slate-500" />
+              <span>{formattedTime}</span>
+            </div>
+          </div>
+
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-500">
             Acompanhe os principais indicadores do CIAPI em um único lugar.
           </p>
         </div>
@@ -243,57 +306,52 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('servidores', 'add')}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
         >
           <Plus size={18} />
           Novo Servidor
         </button>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Total de Servidores"
+          title="Total de servidores"
           value={stats.total}
+          subtitle="Servidores cadastrados"
           icon={Users}
-          accent="bg-blue-500/10 text-blue-400"
-          description="Todos os servidores cadastrados"
+          iconClass="text-blue-400"
           onClick={() => onNavigate('servidores')}
         />
 
         <StatCard
-          title="Servidores Ativos"
+          title="Servidores ativos"
           value={stats.ativos}
+          subtitle="Cadastros com status ativo"
           icon={UserCheck}
-          accent="bg-emerald-500/10 text-emerald-400"
-          description="Servidores atualmente ativos"
+          iconClass="text-emerald-400"
           onClick={() => onNavigate('servidores')}
         />
 
         <StatCard
-          title="Férias no Mês"
+          title="Férias no mês"
           value={stats.ferias}
+          subtitle="Indicador mensal de férias"
           icon={Calendar}
-          accent="bg-amber-500/10 text-amber-400"
-          description="Registros previstos para este mês"
+          iconClass="text-amber-400"
           onClick={() => onNavigate('ferias')}
         />
 
         <StatCard
-          title="Faltas e Atestados"
+          title="Faltas / atestados"
           value={stats.faltas}
+          subtitle="Indicador de ocorrências"
           icon={AlertCircle}
-          accent="bg-rose-500/10 text-rose-400"
-          description="Ocorrências registradas"
+          iconClass="text-rose-400"
           onClick={() => onNavigate('atestados')}
         />
       </section>
 
-      <section>
-        <BirthdayPanel
-          servidores={servidores}
-          isLoading={isLoading}
-        />
-      </section>
+      <BirthdayPanel servidores={servidores} isLoading={isLoading} />
     </div>
   );
 };
