@@ -1,139 +1,148 @@
 import React from 'react';
-import { Eye, Pencil, Trash2, CalendarClock } from 'lucide-react';
+import { Search, RotateCcw, Filter } from 'lucide-react';
 
-export type FeriasListStatus = 'PROGRAMADAS' | 'EM_ANDAMENTO' | 'FINALIZADAS';
+export type FeriasFiltroStatus = 'TODOS' | 'PROGRAMADAS' | 'EM_ANDAMENTO' | 'FINALIZADAS';
 
-export interface FeriasListItem {
-  id: string;
-  servidorNome: string;
-  matricula?: string;
-  cpf?: string;
-  setor?: string;
-  inicio: string;
-  fim: string;
-  dias: number;
-  status: FeriasListStatus;
-  observacao?: string;
+export interface FeriasFiltroState {
+  busca: string;
+  ano: number;
+  mes: number;
+  setor: string;
+  status: FeriasFiltroStatus;
 }
 
-interface FeriasListProps {
-  registros: FeriasListItem[];
-  carregando?: boolean;
-  onVisualizar?: (item: FeriasListItem) => void;
-  onEditar?: (item: FeriasListItem) => void;
-  onExcluir?: (item: FeriasListItem) => void;
+interface FeriasFiltersProps {
+  filtros: FeriasFiltroState;
+  setores: string[];
+  onChange: <K extends keyof FeriasFiltroState>(field: K, value: FeriasFiltroState[K]) => void;
+  onReset: () => void;
 }
 
-function statusClass(status: FeriasListStatus) {
-  if (status === 'EM_ANDAMENTO') return 'border-amber-500/20 bg-amber-500/10 text-amber-200';
-  if (status === 'FINALIZADAS') return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200';
-  return 'border-primary/20 bg-primary/10 text-blue-200';
-}
+const MONTHS = [
+  { value: 0, label: 'Todos os meses' },
+  { value: 1, label: 'Janeiro' },
+  { value: 2, label: 'Fevereiro' },
+  { value: 3, label: 'Março' },
+  { value: 4, label: 'Abril' },
+  { value: 5, label: 'Maio' },
+  { value: 6, label: 'Junho' },
+  { value: 7, label: 'Julho' },
+  { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Setembro' },
+  { value: 10, label: 'Outubro' },
+  { value: 11, label: 'Novembro' },
+  { value: 12, label: 'Dezembro' },
+];
 
-function formatPeriod(inicio: string, fim: string) {
-  const start = inicio ? new Date(`${inicio}T00:00:00`).toLocaleDateString('pt-BR') : '-';
-  const end = fim ? new Date(`${fim}T00:00:00`).toLocaleDateString('pt-BR') : '-';
-  return `${start} até ${end}`;
-}
+export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFiltersProps) {
+  const baseYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 7 }).map((_, index) => baseYear - 2 + index);
 
-export function FeriasList({ registros, carregando = false, onVisualizar, onEditar, onExcluir }: FeriasListProps) {
   return (
     <section className="app-surface p-5">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-primary">
-            <CalendarClock className="h-5 w-5" />
-            <span className="text-xs font-semibold uppercase tracking-[0.22em]">Lista operacional</span>
-          </div>
-          <h2 className="mt-2 text-xl font-bold text-white">Períodos cadastrados</h2>
-          <p className="mt-1 text-sm text-slate-400">Acompanhe, revise e edite os registros filtrados.</p>
-        </div>
-
-        <div className="app-subtle-surface px-4 py-3 text-right">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Resultado</p>
-          <p className="mt-1 text-2xl font-bold text-white">{carregando ? '...' : registros.length}</p>
-        </div>
+      <div className="mb-4 flex items-center gap-2 text-slate-300">
+        <Filter className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Filtros da gestão</h2>
       </div>
 
-      <div className="space-y-3">
-        {!carregando && registros.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/35 px-4 py-12 text-center text-sm text-slate-400">
-            Nenhum período de férias encontrado para os filtros informados.
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <label className="space-y-2 xl:col-span-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Busca</span>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              value={filtros.busca}
+              onChange={(event) => onChange('busca', event.target.value)}
+              placeholder="Servidor, matrícula, CPF, setor ou observação"
+              className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 pl-10 pr-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+            />
           </div>
-        )}
+        </label>
 
-        {registros.map((item) => (
-          <article
-            key={item.id}
-            className="app-subtle-surface p-4 transition hover:border-slate-500/70 hover:bg-slate-800/60"
+        <label className="space-y-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Ano</span>
+          <select
+            value={filtros.ano}
+            onChange={(event) => onChange('ano', Number(event.target.value))}
+            className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           >
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="truncate text-lg font-semibold text-white">{item.servidorNome}</h3>
-                  <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${statusClass(item.status)}`}>
-                    {item.status.replace('_', ' ')}
-                  </span>
-                </div>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
 
-                <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-slate-300 md:grid-cols-2 xl:grid-cols-4">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Período</p>
-                    <p className="mt-1">{formatPeriod(item.inicio, item.fim)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Setor</p>
-                    <p className="mt-1">{item.setor || 'Não informado'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Matrícula / CPF</p>
-                    <p className="mt-1">{item.matricula || item.cpf || 'Não informado'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Dias</p>
-                    <p className="mt-1">{item.dias} dia(s)</p>
-                  </div>
-                </div>
+        <label className="space-y-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Mês</span>
+          <select
+            value={filtros.mes}
+            onChange={(event) => onChange('mes', Number(event.target.value))}
+            className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+          >
+            {MONTHS.map((month) => (
+              <option key={month.value} value={month.value}>
+                {month.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-                {item.observacao && (
-                  <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/35 px-3 py-2.5 text-sm text-slate-300">
-                    {item.observacao}
-                  </div>
-                )}
-              </div>
+        <label className="space-y-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Setor</span>
+          <select
+            value={filtros.setor}
+            onChange={(event) => onChange('setor', event.target.value)}
+            className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Todos os setores</option>
+            {setores.map((setor) => (
+              <option key={setor} value={setor}>
+                {setor}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-              <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                <button
-                  type="button"
-                  onClick={() => onVisualizar?.(item)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
-                >
-                  <Eye className="h-4 w-4" />
-                  Visualizar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onEditar?.(item)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-medium text-blue-200 transition hover:bg-primary/15"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onExcluir?.(item)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-200 transition hover:bg-rose-500/16"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Excluir
-                </button>
-              </div>
-            </div>
-          </article>
-        ))}
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: 'TODOS', label: 'Todos' },
+            { value: 'PROGRAMADAS', label: 'Programadas' },
+            { value: 'EM_ANDAMENTO', label: 'Em andamento' },
+            { value: 'FINALIZADAS', label: 'Finalizadas' },
+          ].map((option) => {
+            const active = filtros.status === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange('status', option.value as FeriasFiltroState['status'])}
+                className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                  active
+                    ? 'border-primary/40 bg-primary/15 text-blue-200'
+                    : 'border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={onReset}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Limpar filtros
+        </button>
       </div>
     </section>
   );
 }
 
-export default FeriasList;
+export default FeriasFilters;
