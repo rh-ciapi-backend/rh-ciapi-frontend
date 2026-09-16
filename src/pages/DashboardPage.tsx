@@ -13,6 +13,7 @@ import { motion } from 'motion/react';
 import { servidoresService } from '../services/servidoresService';
 import type { Servidor } from '../types';
 import BirthdayPanel from '../components/dashboard/BirthdayPanel';
+import { useAuth } from '../contexts/AuthContext';
 
 type DashboardPageProps = {
   onNavigate: (tab: string, action?: string) => void;
@@ -158,6 +159,8 @@ function StatCard({
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigate,
 }) => {
+  const { user } = useAuth();
+
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     ativos: 0,
@@ -230,6 +233,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const hasData = useMemo(() => servidores.length > 0, [servidores]);
 
+  const primeiroNome = useMemo(() => {
+    const nomeCompleto = String(user?.user_metadata?.nome_completo || '').trim();
+
+    if (nomeCompleto) {
+      return nomeCompleto.split(/\s+/)[0];
+    }
+
+    const emailName = String(user?.email || '')
+      .split('@')[0]
+      .trim();
+
+    if (emailName) {
+      return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+    }
+
+    return 'Usuário';
+  }, [user]);
+
   const greeting = useMemo(() => {
     const hour = currentDateTime.getHours();
 
@@ -281,7 +302,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </p>
 
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            {greeting}, Admin CIAPI
+            {greeting}, {primeiroNome}
           </h2>
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
