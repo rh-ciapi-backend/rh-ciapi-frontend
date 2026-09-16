@@ -1,0 +1,125 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useCallback, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+
+import { Sidebar } from './components/Sidebar';
+import { Topbar } from './components/Topbar';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
+
+import { DashboardPage } from './pages/DashboardPage';
+import { ServidoresPage } from './pages/ServidoresPage';
+import FeriasPage from './pages/FeriasPage';
+import FrequenciaPage from './pages/FrequenciaPage';
+import MapasPage from './pages/MapasPage';
+import AdminPage from './pages/AdminPage';
+import AdminUsuariosPage from './pages/AdminUsuariosPage';
+import AdminCategoriasPage from './pages/AdminCategoriasPage';
+import AdminSetoresPage from './pages/AdminSetoresPage';
+import AdminLogsPage from './pages/AdminLogsPage';
+import AtestadosPage from './pages/AtestadosPage';
+import { DiagnosticoPage } from './pages/DiagnosticoPage';
+import SaeApp from './sae/SaeApp';
+
+type AppTab =
+  | 'dashboard'
+  | 'servidores'
+  | 'atestados'
+  | 'ferias'
+  | 'frequencia'
+  | 'mapas'
+  | 'admin'
+  | 'admin-usuarios'
+  | 'admin-categorias'
+  | 'admin-setores'
+  | 'admin-logs'
+  | 'diagnostico';
+
+const VALID_TABS: AppTab[] = [
+  'dashboard','servidores','atestados','ferias','frequencia','mapas','admin',
+  'admin-usuarios','admin-categorias','admin-setores','admin-logs','diagnostico',
+];
+
+function isValidTab(tab: string): tab is AppTab {
+  return VALID_TABS.includes(tab as AppTab);
+}
+
+export default function App() {
+  const { signOut, ambiente } = useAuth();
+  const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
+  const [initialAction, setInitialAction] = useState<string | null>(null);
+
+  const handleLogout = useCallback(async () => {
+    try { await signOut(); } catch (error) { console.error('Erro ao sair da sessão:', error); }
+  }, [signOut]);
+
+  const navigateWithAction = useCallback((tab: string, action?: string) => {
+    const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
+    setActiveTab(safeTab);
+    setInitialAction(action ?? null);
+  }, []);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'servidores': return <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
+      case 'atestados': return <AtestadosPage />;
+      case 'ferias': return <FeriasPage />;
+      case 'frequencia': return <FrequenciaPage />;
+      case 'mapas': return <MapasPage />;
+      case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
+      case 'admin-usuarios': return <AdminUsuariosPage />;
+      case 'admin-categorias': return <AdminCategoriasPage />;
+      case 'admin-setores': return <AdminSetoresPage />;
+      case 'admin-logs': return <AdminLogsPage />;
+      case 'diagnostico': return <DiagnosticoPage />;
+      default: return <DashboardPage onNavigate={navigateWithAction} />;
+    }
+  };
+
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case 'dashboard': return 'Dashboard';
+      case 'servidores': return 'Gestão de Servidores';
+      case 'atestados': return 'Gestão de Atestados';
+      case 'ferias': return 'Controle de Férias';
+      case 'frequencia': return 'Frequência Mensal';
+      case 'mapas': return 'Mapas Institucionais';
+      case 'admin': return 'Administração do Sistema';
+      case 'admin-usuarios': return 'Usuários do Sistema';
+      case 'admin-categorias': return 'Gestão de Categorias';
+      case 'admin-setores': return 'Gestão de Setores';
+      case 'admin-logs': return 'Logs de Atividade';
+      case 'diagnostico': return 'Diagnóstico de Conexão';
+      default: return 'CIAPI RH';
+    }
+  };
+
+  return (
+    <ProtectedRoute>
+      {ambiente === 'sae' ? (
+        <SaeApp />
+      ) : (
+        <div className="flex min-h-screen bg-bg-dark">
+          <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar title={getPageTitle()} />
+            <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+              <div className="app-page">
+                <AnimatePresence mode="wait">
+                  <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                    {renderContent()}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </main>
+          </div>
+        </div>
+      )}
+    </ProtectedRoute>
+  );
+}
