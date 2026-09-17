@@ -162,7 +162,23 @@ const buildUsuarioPayload = (form: SaeUsuarioForm) => ({
 
   situacao_cadastral: form.situacaoCadastral,
 
+  data_desligamento:
+    form.situacaoCadastral === 'INATIVO'
+      ? form.dataDesligamento || null
+      : null,
+
+  motivo_desligamento:
+    form.situacaoCadastral === 'INATIVO'
+      ? safeString(form.motivoDesligamento) || null
+      : null,
+
   raca: safeString(form.raca) || null,
+
+  escolaridade_normalizada:
+    safeString(form.escolaridade) || null,
+
+  faixa_renda:
+    safeString(form.faixaRenda) || null,
 
   possui_deficiencia: form.possuiDeficiencia,
 
@@ -509,8 +525,19 @@ export const saeUsuariosService = {
           normalizeSituacao(
             row.situacao_cadastral,
           ),
+        dataDesligamento:
+          safeString(row.data_desligamento),
+        motivoDesligamento:
+          safeString(row.motivo_desligamento) ||
+          safeString(row.motivo_desligamento_original),
         raca:
           safeString(row.raca) || 'NÃO INFORMADO',
+        escolaridade:
+          safeString(row.escolaridade_normalizada) ||
+          safeString(row.escolaridade_original),
+        faixaRenda:
+          safeString(row.faixa_renda) ||
+          safeString(row.rendimento_original),
         possuiDeficiencia:
           Boolean(row.possui_deficiencia),
         tipoDeficiencia:
