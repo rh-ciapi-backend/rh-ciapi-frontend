@@ -17,6 +17,7 @@ export type PermissionModule =
   | 'mapas'
   | 'atestados'
   | 'eventos'
+  | 'sae_profissionais'
   | 'administracao'
   | 'relatorios'
   | 'exportacoes';
@@ -133,6 +134,7 @@ export const ADMIN_PERMISSION_MODULES: PermissionModule[] = [
   'mapas',
   'atestados',
   'eventos',
+  'sae_profissionais',
   'administracao',
   'relatorios',
   'exportacoes',
