@@ -6,6 +6,7 @@ import SaeTopbar from './components/SaeTopbar';
 import SaeDashboardPage from './pages/SaeDashboardPage';
 import SaeUsuariosPage from './pages/SaeUsuariosPage';
 import SaeUsuarioPerfilPage from './pages/SaeUsuarioPerfilPage';
+import SaeAgendamentosPage from './pages/SaeAgendamentosPage';
 
 export default function SaeApp() {
   const { signOut } = useAuth();
@@ -69,12 +70,7 @@ export default function SaeApp() {
         );
 
       case 'agendamentos':
-        return (
-          <PlaceholderPage
-            title="Agendamentos"
-            description="Agenda dos profissionais, horários disponíveis e marcações."
-          />
-        );
+        return <SaeAgendamentosPage />;
 
       case 'atendimentos':
         return (
