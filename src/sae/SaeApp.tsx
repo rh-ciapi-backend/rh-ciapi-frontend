@@ -5,10 +5,14 @@ import SaeSidebar, { SaeTab } from './components/SaeSidebar';
 import SaeTopbar from './components/SaeTopbar';
 import SaeDashboardPage from './pages/SaeDashboardPage';
 import SaeUsuariosPage from './pages/SaeUsuariosPage';
+import SaeUsuarioPerfilPage from './pages/SaeUsuarioPerfilPage';
 
 export default function SaeApp() {
   const { signOut } = useAuth();
+
   const [activeTab, setActiveTab] = useState<SaeTab>('dashboard');
+  const [usuarioSelecionadoId, setUsuarioSelecionadoId] =
+    useState<string | null>(null);
 
   const handleLogout = async () => {
     try {
@@ -18,13 +22,43 @@ export default function SaeApp() {
     }
   };
 
+  const handleChangeTab = (tab: SaeTab) => {
+    setActiveTab(tab);
+
+    if (tab !== 'usuarios') {
+      setUsuarioSelecionadoId(null);
+    }
+  };
+
+  const abrirUsuario = (usuarioId: string) => {
+    setActiveTab('usuarios');
+    setUsuarioSelecionadoId(usuarioId);
+  };
+
+  const voltarParaUsuarios = () => {
+    setUsuarioSelecionadoId(null);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <SaeDashboardPage />;
 
       case 'usuarios':
-        return <SaeUsuariosPage />;
+        if (usuarioSelecionadoId) {
+          return (
+            <SaeUsuarioPerfilPage
+              usuarioId={usuarioSelecionadoId}
+              onVoltar={voltarParaUsuarios}
+            />
+          );
+        }
+
+        return (
+          <SaeUsuariosPage
+            onAbrirUsuario={abrirUsuario}
+          />
+        );
 
       case 'triagem':
         return (
@@ -83,7 +117,7 @@ export default function SaeApp() {
     <div className="flex min-h-screen bg-bg-dark text-white">
       <SaeSidebar
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleChangeTab}
         onLogout={handleLogout}
       />
 
