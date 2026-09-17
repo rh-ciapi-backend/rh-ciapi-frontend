@@ -7,12 +7,14 @@ import {
   Loader2,
   Search,
   Stethoscope,
+  UserCog,
   UserRound,
   Users,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { saeAgendamentosService } from '../services/saeAgendamentosService';
+import GerenciarProfissionaisModal from '../components/agendamentos/GerenciarProfissionaisModal';
 
 import type {
   SaeAgendamentoFiltros,
@@ -78,6 +80,7 @@ export default function SaeAgendamentosPage() {
   const [agendamentos, setAgendamentos] = useState<SaeAgendamentoResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [profissionaisAberto, setProfissionaisAberto] = useState(false);
   const [filtros, setFiltros] =
     useState<SaeAgendamentoFiltros>(FILTROS_INICIAIS);
 
@@ -213,17 +216,28 @@ export default function SaeAgendamentosPage() {
       transition={{ duration: 0.18 }}
       className="space-y-6"
     >
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-          Gestão de Agendamentos
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
-          Agendamentos
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-400">
-          Consulte o histórico de marcações do SAE, incluindo usuários,
-          serviços, turnos, profissionais e horários disponíveis na fonte.
-        </p>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            Gestão de Agendamentos
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+            Agendamentos
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-400">
+            Consulte o histórico de marcações do SAE, incluindo usuários,
+            serviços, turnos, profissionais e horários disponíveis na fonte.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setProfissionaisAberto(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white"
+        >
+          <UserCog size={18} className="text-primary" />
+          Profissionais
+        </button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -450,6 +464,11 @@ export default function SaeAgendamentosPage() {
           <EmptyState />
         )}
       </section>
+
+      <GerenciarProfissionaisModal
+        aberto={profissionaisAberto}
+        onClose={() => setProfissionaisAberto(false)}
+      />
     </motion.section>
   );
 }
