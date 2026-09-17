@@ -7,12 +7,20 @@ import type {
   SituacaoUsuario,
 } from '../types/saeUsuario';
 
+import type { SaeUsuarioForm } from '../types/saeUsuarioForm';
+
 const VIEW_USUARIOS = 'sae_usuarios_resumo';
+const TABLE_USUARIOS = 'sae_usuarios';
+const TABLE_ENDERECOS = 'sae_enderecos';
+const TABLE_CONTATOS = 'sae_contatos';
 
 const PAGE_SIZE = 1000;
 
 const safeString = (value: unknown) =>
   String(value ?? '').trim();
+
+const onlyDigits = (value: unknown) =>
+  safeString(value).replace(/\D/g, '');
 
 const getErrorMessage = (
   error: unknown,
@@ -255,6 +263,200 @@ export const saeUsuariosService = {
         getErrorMessage(
           error,
           'Falha ao obter usuário do SAE.',
+        ),
+      );
+    }
+  },
+
+  async adicionar(
+    form: SaeUsuarioForm,
+  ): Promise<SaeUsuarioResumo> {
+    let usuarioCriadoId: string | null = null;
+
+    try {
+      const usuarioPayload = {
+        prontuario: safeString(form.prontuario),
+        turno: safeString(form.turno) || null,
+        nome: safeString(form.nome),
+        sexo: safeString(form.sexo) || null,
+        nacionalidade:
+          safeString(form.nacionalidade) || null,
+
+        rg_original:
+          safeString(form.rg) || null,
+        rg_normalizado:
+          onlyDigits(form.rg) || null,
+
+        cpf_original:
+          safeString(form.cpf) || null,
+        cpf_normalizado:
+          onlyDigits(form.cpf) || null,
+
+        data_nascimento:
+          form.dataNascimento || null,
+
+        cartao_sus_original:
+          safeString(form.cartaoSus) || null,
+        cartao_sus_normalizado:
+          onlyDigits(form.cartaoSus) || null,
+
+        data_ingresso:
+          form.dataIngresso || null,
+
+        situacao_cadastral:
+          form.situacaoCadastral,
+
+        raca:
+          safeString(form.raca) || null,
+
+        possui_deficiencia:
+          form.possuiDeficiencia,
+
+        tipo_deficiencia:
+          form.possuiDeficiencia
+            ? safeString(form.tipoDeficiencia) || null
+            : null,
+
+        observacao:
+          safeString(form.observacao) || null,
+      };
+
+      const { data: usuarioData, error: usuarioError } =
+        await supabase
+          .from(TABLE_USUARIOS)
+          .insert(usuarioPayload)
+          .select('id')
+          .single();
+
+      if (usuarioError || !usuarioData?.id) {
+        throw new Error(
+          getErrorMessage(
+            usuarioError,
+            'Falha ao cadastrar usuário.',
+          ),
+        );
+      }
+
+      usuarioCriadoId = usuarioData.id;
+
+      const enderecoTemDados =
+        safeString(form.endereco.logradouro) ||
+        safeString(form.endereco.numero) ||
+        safeString(form.endereco.complemento) ||
+        safeString(form.endereco.bairro) ||
+        safeString(form.endereco.cep);
+
+      if (enderecoTemDados) {
+        const enderecoOriginal = [
+          safeString(form.endereco.logradouro),
+          safeString(form.endereco.numero),
+          safeString(form.endereco.complemento),
+          safeString(form.endereco.bairro),
+          safeString(form.endereco.cidade),
+          safeString(form.endereco.uf),
+          safeString(form.endereco.cep),
+        ]
+          .filter(Boolean)
+          .join(', ');
+
+        const { error: enderecoError } = await supabase
+          .from(TABLE_ENDERECOS)
+          .insert({
+            usuario_id: usuarioCriadoId,
+            endereco_original:
+              enderecoOriginal || null,
+            logradouro:
+              safeString(form.endereco.logradouro) || null,
+            numero:
+              safeString(form.endereco.numero) || null,
+            complemento:
+              safeString(form.endereco.complemento) || null,
+            bairro:
+              safeString(form.endereco.bairro) || null,
+            cidade:
+              safeString(form.endereco.cidade) ||
+              'Boa Vista',
+            uf:
+              safeString(form.endereco.uf) || 'RR',
+            cep:
+              onlyDigits(form.endereco.cep) || null,
+            principal: true,
+          });
+
+        if (enderecoError) {
+          throw new Error(
+            getErrorMessage(
+              enderecoError,
+              'Usuário criado, mas ocorreu erro ao cadastrar o endereço.',
+            ),
+          );
+        }
+      }
+
+      const contatosValidos = form.contatos
+        .filter((contato) =>
+          safeString(contato.telefone),
+        )
+        .map((contato, index) => ({
+          usuario_id: usuarioCriadoId,
+          ordem: index + 1,
+          telefone_original:
+            safeString(contato.telefone),
+          telefone_normalizado:
+            onlyDigits(contato.telefone) || null,
+          nome_contato:
+            safeString(contato.nomeContato) || null,
+          parentesco:
+            safeString(contato.parentesco) || null,
+          tipo:
+            safeString(contato.tipo) || null,
+          observacao:
+            safeString(contato.observacao) || null,
+          principal:
+            contato.principal,
+        }));
+
+      if (contatosValidos.length > 0) {
+        const possuiPrincipal =
+          contatosValidos.some(
+            (contato) => contato.principal,
+          );
+
+        if (!possuiPrincipal) {
+          contatosValidos[0].principal = true;
+        }
+
+        const { error: contatosError } = await supabase
+          .from(TABLE_CONTATOS)
+          .insert(contatosValidos);
+
+        if (contatosError) {
+          throw new Error(
+            getErrorMessage(
+              contatosError,
+              'Usuário criado, mas ocorreu erro ao cadastrar os contatos.',
+            ),
+          );
+        }
+      }
+
+      const usuarioCriado =
+        await saeUsuariosService.obterPorId(
+          usuarioCriadoId,
+        );
+
+      if (!usuarioCriado) {
+        throw new Error(
+          'Usuário cadastrado, mas não foi possível carregar os dados atualizados.',
+        );
+      }
+
+      return usuarioCriado;
+    } catch (error) {
+      throw new Error(
+        getErrorMessage(
+          error,
+          'Falha ao cadastrar usuário do SAE.',
         ),
       );
     }
