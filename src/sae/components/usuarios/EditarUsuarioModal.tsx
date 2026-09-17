@@ -37,6 +37,30 @@ const racas = [
   'NÃO INFORMADO',
 ];
 
+const escolaridades = [
+  'NÃO INFORMADO',
+  'NÃO ALFABETIZADO',
+  'ALFABETIZADO',
+  'ENSINO FUNDAMENTAL INCOMPLETO',
+  'ENSINO FUNDAMENTAL COMPLETO',
+  'ENSINO MÉDIO INCOMPLETO',
+  'ENSINO MÉDIO COMPLETO',
+  'ENSINO SUPERIOR INCOMPLETO',
+  'ENSINO SUPERIOR COMPLETO',
+  'PÓS-GRADUAÇÃO',
+  'OUTRO',
+];
+
+const faixasRenda = [
+  'NÃO INFORMADO',
+  'SEM RENDA',
+  'ATÉ 1 SALÁRIO MÍNIMO',
+  'DE 1 A 2 SALÁRIOS MÍNIMOS',
+  'DE 2 A 3 SALÁRIOS MÍNIMOS',
+  'ACIMA DE 3 SALÁRIOS MÍNIMOS',
+  'OUTRO',
+];
+
 const parentescos = [
   'FILHA',
   'FILHO',
@@ -308,6 +332,13 @@ export default function EditarUsuarioModal({
       return 'Informe a nacionalidade.';
     }
 
+    if (
+      form.situacaoCadastral === 'INATIVO' &&
+      !String(form.motivoDesligamento || '').trim()
+    ) {
+      return 'Informe o motivo do desligamento.';
+    }
+
     return null;
   };
 
@@ -518,6 +549,40 @@ export default function EditarUsuarioModal({
                         className={inputClass}
                       />
                     </Field>
+
+                    {form.situacaoCadastral === 'INATIVO' && (
+                      <>
+                        <Field label="Data de desligamento">
+                          <input
+                            type="date"
+                            value={form.dataDesligamento || ''}
+                            onChange={(e) =>
+                              atualizarCampo(
+                                'dataDesligamento',
+                                e.target.value,
+                              )
+                            }
+                            className={inputClass}
+                          />
+                        </Field>
+
+                        <div className="md:col-span-2 xl:col-span-3">
+                          <Field label="Motivo do desligamento">
+                            <input
+                              value={form.motivoDesligamento || ''}
+                              onChange={(e) =>
+                                atualizarCampo(
+                                  'motivoDesligamento',
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="Informe o motivo do desligamento"
+                              className={inputClass}
+                            />
+                          </Field>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -639,6 +704,46 @@ export default function EditarUsuarioModal({
                             value={raca}
                           >
                             {raca}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Escolaridade">
+                      <select
+                        value={form.escolaridade || ''}
+                        onChange={(e) =>
+                          atualizarCampo(
+                            'escolaridade',
+                            e.target.value,
+                          )
+                        }
+                        className={inputClass}
+                      >
+                        <option value="">Selecione</option>
+                        {escolaridades.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Faixa de renda">
+                      <select
+                        value={form.faixaRenda || ''}
+                        onChange={(e) =>
+                          atualizarCampo(
+                            'faixaRenda',
+                            e.target.value,
+                          )
+                        }
+                        className={inputClass}
+                      >
+                        <option value="">Selecione</option>
+                        {faixasRenda.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
                           </option>
                         ))}
                       </select>
