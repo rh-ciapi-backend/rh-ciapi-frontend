@@ -29,6 +29,8 @@ import type {
   AdminProfile,
   AdminUserFormData,
   AdminUserStatus,
+  PermissionAction,
+  PermissionModule,
 } from '../types/adminAccess';
 import { adminAccessService } from '../services/adminAccessService';
 
@@ -41,6 +43,7 @@ const moduleLabels: Record<string, string> = {
   mapas: 'Mapas',
   atestados: 'Atestados',
   eventos: 'Eventos',
+  sae_profissionais: 'SAE — Profissionais',
   administracao: 'Administração',
   relatorios: 'Relatórios',
   exportacoes: 'Exportações',
@@ -55,6 +58,13 @@ const actionLabels: Record<string, string> = {
   aprovar: 'Aprovar',
   gerenciar_usuarios: 'Gerenciar usuários',
 };
+
+const moduleActions: Partial<Record<PermissionModule, PermissionAction[]>> = {
+  sae_profissionais: ['visualizar', 'criar', 'editar', 'excluir'],
+};
+
+const getPermissionActions = (module: PermissionModule) =>
+  moduleActions[module] ?? ADMIN_PERMISSION_ACTIONS;
 
 type AdminUserCreateFormData = AdminUserFormData & {
   senha_inicial?: string;
@@ -862,7 +872,7 @@ const AdminUsuariosPage = () => {
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {ADMIN_PERMISSION_ACTIONS.map((action) => {
+                          {getPermissionActions(permission.module).map((action) => {
                             const checked = permission.actions.includes(action);
 
                             return (
