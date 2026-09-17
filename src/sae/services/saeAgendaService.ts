@@ -7,6 +7,11 @@ import type {
   SaeAgendaListResponse,
   SaeAgendaPeriodo,
   SaeAgendaPeriodoForm,
+  SaeAnalisarSolicitacaoPayload,
+  SaeCriarSolicitacaoPayload,
+  SaeMinhasSolicitacoesResponse,
+  SaeSolicitacaoAgenda,
+  SaeSolicitacaoAgendaStatus,
 } from '../types/saeAgenda';
 
 export class SaeAgendaApiError extends Error {
@@ -34,14 +39,10 @@ const buildUrl = (path = '') => {
 
 async function getAccessToken() {
   const { data, error } = await supabase.auth.getSession();
-
   if (error) throw error;
 
   const token = data.session?.access_token;
-
-  if (!token) {
-    throw new Error('Sessão expirada. Faça login novamente.');
-  }
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
 
   return token;
 }
@@ -117,6 +118,63 @@ export const saeAgendaService = {
         body: JSON.stringify(payload),
       },
     );
+  },
+
+  async minhaAgenda(): Promise<SaeAgendaListResponse> {
+    return request<SaeAgendaListResponse>('/minha-agenda');
+  },
+
+  async minhasSolicitacoes(): Promise<SaeMinhasSolicitacoesResponse> {
+    return request<SaeMinhasSolicitacoesResponse>('/minhas-solicitacoes');
+  },
+
+  async criarSolicitacao(
+    payload: SaeCriarSolicitacaoPayload,
+  ): Promise<{ ok: true; solicitacao: SaeSolicitacaoAgenda }> {
+    return request<{ ok: true; solicitacao: SaeSolicitacaoAgenda }>('/solicitacoes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async cancelarSolicitacao(
+    id: string,
+  ): Promise<{ ok: true; solicitacao: SaeSolicitacaoAgenda }> {
+    return request<{ ok: true; solicitacao: SaeSolicitacaoAgenda }>(
+      `/solicitacoes/${id}/cancelar`,
+      { method: 'PATCH' },
+    );
+  },
+
+  async listarSolicitacoes(filters: {
+    status?: SaeSolicitacaoAgendaStatus | '';
+    profissionalId?: string;
+  } = {}): Promise<{ solicitacoes: SaeSolicitacaoAgenda[] }> {
+    const params = new URLSearchParams();
+    if (filters.status) params.set('status', filters.status);
+    if (filters.profissionalId) params.set('profissionalId', filters.profissionalId);
+    const query = params.toString();
+    return request<{ solicitacoes: SaeSolicitacaoAgenda[] }>(
+      `/solicitacoes${query ? `?${query}` : ''}`,
+    );
+  },
+
+  async analisarSolicitacao(
+    id: string,
+    payload: SaeAnalisarSolicitacaoPayload,
+  ): Promise<{
+    ok: true;
+    solicitacao: SaeSolicitacaoAgenda;
+    impacto: {
+      totalAfetados: number;
+      afetados: Array<Record<string, unknown>>;
+      porAgenda: Array<Record<string, unknown>>;
+    };
+  }> {
+    return request(`/solicitacoes/${id}/analisar`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 };
 
