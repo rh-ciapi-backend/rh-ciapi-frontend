@@ -323,83 +323,102 @@ function ResumoTab({
   perfil: SaeUsuarioPerfil;
 }) {
   const endereco = perfil.enderecoPrincipal;
+  const dados = perfil.dadosCadastrais;
+  const usuarioInativo = perfil.usuario.situacao === 'INATIVO';
+
+  const possuiDeficienciaTexto =
+    dados.possuiDeficiencia == null
+      ? dados.deficienciaOriginal || '—'
+      : dados.possuiDeficiencia
+        ? 'SIM'
+        : 'NÃO';
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+    <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
       <div className="space-y-5">
-        <SectionCard
-          title="Dados pessoais"
-          icon={IdCard}
-        >
+        <SectionCard title="Dados pessoais" icon={IdCard}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <InfoItem
-              label="Prontuário"
-              value={perfil.usuario.prontuario}
-            />
-            <InfoItem
-              label="Sexo"
-              value={perfil.usuario.sexo}
-            />
-            <InfoItem
-              label="Nascimento"
-              value={formatarData(
-                perfil.usuario.dataNascimento,
-              )}
-            />
-            <InfoItem
-              label="Idade"
-              value={
-                perfil.usuario.idade != null
-                  ? `${perfil.usuario.idade} anos`
-                  : null
-              }
-            />
-            <InfoItem
-              label="Nacionalidade"
-              value={perfil.usuario.nacionalidade}
-            />
-            <InfoItem
-              label="Turno"
-              value={perfil.usuario.turno}
-            />
+            <InfoItem label="Prontuário" value={perfil.usuario.prontuario} />
+            <InfoItem label="Sexo" value={perfil.usuario.sexo} />
+            <InfoItem label="Nascimento" value={formatarData(perfil.usuario.dataNascimento)} />
+            <InfoItem label="Idade" value={perfil.usuario.idade != null ? `${perfil.usuario.idade} anos` : null} />
+            <InfoItem label="Nacionalidade" value={perfil.usuario.nacionalidade} />
+            <InfoItem label="Raça" value={dados.raca} />
+            <InfoItem label="Turno" value={perfil.usuario.turno} />
+            <InfoItem label="Data de ingresso" value={formatarData(dados.dataIngresso)} />
+            <InfoItem label="Situação cadastral" value={perfil.usuario.situacao} />
+
+            {usuarioInativo && (
+              <>
+                <InfoItem label="Data de desligamento" value={formatarData(dados.dataDesligamento)} />
+                <InfoItem
+                  label="Motivo do desligamento"
+                  value={dados.motivoDesligamento || dados.motivoDesligamentoOriginal}
+                />
+              </>
+            )}
           </div>
         </SectionCard>
 
-        <SectionCard
-          title="Endereço"
-          icon={MapPin}
-        >
-          {endereco ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <SectionCard title="Documentos e informações sociais" icon={FileHeart}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <InfoItem label="RG" value={dados.rgOriginal} />
+            <InfoItem label="CPF" value={formatarCpf(dados.cpfOriginal)} />
+            <InfoItem label="Cartão SUS" value={dados.cartaoSusOriginal} />
+            <InfoItem
+              label="Escolaridade"
+              value={dados.escolaridadeNormalizada || dados.escolaridadeOriginal}
+            />
+            <InfoItem
+              label="Faixa de renda"
+              value={dados.faixaRenda || dados.rendimentoOriginal}
+            />
+            <InfoItem label="Possui deficiência" value={possuiDeficienciaTexto} />
+
+            {(dados.possuiDeficiencia || dados.tipoDeficiencia) && (
               <InfoItem
-                label="Logradouro"
-                value={endereco.logradouro}
+                label="Tipo de deficiência"
+                value={dados.tipoDeficiencia || dados.deficienciaOriginal}
               />
-              <InfoItem
-                label="Número"
-                value={endereco.numero}
-              />
-              <InfoItem
-                label="Complemento"
-                value={endereco.complemento}
-              />
-              <InfoItem
-                label="Bairro"
-                value={endereco.bairro}
-              />
-              <InfoItem
-                label="Cidade"
-                value={endereco.cidade}
-              />
-              <InfoItem
-                label="UF"
-                value={endereco.uf}
-              />
-              <InfoItem
-                label="CEP"
-                value={formatarCep(endereco.cep)}
-              />
+            )}
+          </div>
+
+          {dados.observacao && (
+            <div className="mt-5 rounded-xl border border-border-dark bg-slate-800/25 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                Observações
+              </p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-300">
+                {dados.observacao}
+              </p>
             </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Endereço" icon={MapPin}>
+          {endereco ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <InfoItem label="Logradouro" value={endereco.logradouro} />
+                <InfoItem label="Número" value={endereco.numero} />
+                <InfoItem label="Complemento" value={endereco.complemento} />
+                <InfoItem label="Bairro" value={endereco.bairro} />
+                <InfoItem label="Cidade" value={endereco.cidade} />
+                <InfoItem label="UF" value={endereco.uf} />
+                <InfoItem label="CEP" value={formatarCep(endereco.cep)} />
+              </div>
+
+              {endereco.enderecoOriginal && (
+                <div className="mt-5 rounded-xl border border-border-dark bg-slate-800/25 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                    Endereço original
+                  </p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    {endereco.enderecoOriginal}
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <EmptyText text="Nenhum endereço cadastrado." />
           )}
@@ -407,10 +426,7 @@ function ResumoTab({
       </div>
 
       <div className="space-y-5">
-        <SectionCard
-          title="Contatos"
-          icon={Phone}
-        >
+        <SectionCard title="Contatos" icon={Phone}>
           {perfil.contatos.length > 0 ? (
             <div className="space-y-3">
               {perfil.contatos.map((contato) => (
@@ -425,13 +441,9 @@ function ResumoTab({
                           contato.telefoneNormalizado ||
                           'Sem telefone'}
                       </p>
-
                       <p className="mt-1 text-xs text-slate-500">
-                        {contato.nomeContato ||
-                          'Contato sem nome'}
-                        {contato.parentesco
-                          ? ` • ${contato.parentesco}`
-                          : ''}
+                        {contato.nomeContato || 'Contato sem nome'}
+                        {contato.parentesco ? ` • ${contato.parentesco}` : ''}
                       </p>
                     </div>
 
@@ -442,21 +454,11 @@ function ResumoTab({
                     )}
                   </div>
 
-                  {(contato.tipo ||
-                    contato.observacao) && (
+                  {(contato.tipo || contato.observacao) && (
                     <div className="mt-3 text-xs text-slate-400">
-                      {contato.tipo && (
-                        <span>{contato.tipo}</span>
-                      )}
-
-                      {contato.tipo &&
-                        contato.observacao && (
-                          <span> • </span>
-                        )}
-
-                      {contato.observacao && (
-                        <span>{contato.observacao}</span>
-                      )}
+                      {contato.tipo && <span>{contato.tipo}</span>}
+                      {contato.tipo && contato.observacao && <span> • </span>}
+                      {contato.observacao && <span>{contato.observacao}</span>}
                     </div>
                   )}
                 </div>
@@ -467,27 +469,12 @@ function ResumoTab({
           )}
         </SectionCard>
 
-        <SectionCard
-          title="Resumo assistencial"
-          icon={FileHeart}
-        >
+        <SectionCard title="Resumo assistencial" icon={FileHeart}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <MiniMetric
-              label="Agendamentos"
-              value={perfil.agendamentos.length}
-            />
-            <MiniMetric
-              label="Atendimentos"
-              value={perfil.atendimentos.length}
-            />
-            <MiniMetric
-              label="Avaliações"
-              value={perfil.avaliacoes.length}
-            />
-            <MiniMetric
-              label="Ciclos"
-              value={perfil.ciclosAvaliacao.length}
-            />
+            <MiniMetric label="Agendamentos" value={perfil.agendamentos.length} />
+            <MiniMetric label="Atendimentos" value={perfil.atendimentos.length} />
+            <MiniMetric label="Avaliações" value={perfil.avaliacoes.length} />
+            <MiniMetric label="Ciclos" value={perfil.ciclosAvaliacao.length} />
           </div>
         </SectionCard>
       </div>
@@ -1201,6 +1188,18 @@ function formatarHorario(
   }
 
   return value.slice(0, 5);
+}
+
+function formatarCpf(
+  value?: string | null,
+) {
+  if (!value) return '—';
+
+  const digits = value.replace(/\D/g, '');
+
+  if (digits.length !== 11) return value;
+
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
 function formatarCep(
