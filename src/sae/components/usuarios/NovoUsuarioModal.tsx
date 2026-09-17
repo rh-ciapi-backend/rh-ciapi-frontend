@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   Loader2,
-  RefreshCw,
 } from 'lucide-react';
 
 import { saeUsuariosService } from '../../services/saeUsuariosService';
@@ -119,7 +118,6 @@ export default function NovoUsuarioModal({
 }: NovoUsuarioModalProps) {
   const [form, setForm] = useState<SaeUsuarioForm>(criarFormInicial);
   const [salvando, setSalvando] = useState(false);
-  const [gerandoProntuario, setGerandoProntuario] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [outraNacionalidade, setOutraNacionalidade] = useState('');
 
@@ -131,34 +129,7 @@ export default function NovoUsuarioModal({
     setForm(criarFormInicial());
     setOutraNacionalidade('');
     setErro(null);
-
-    void gerarProntuario();
   }, [aberto]);
-
-  const gerarProntuario = async () => {
-    try {
-      setGerandoProntuario(true);
-      setErro(null);
-
-      const prontuario =
-        await saeUsuariosService.reservarProximoProntuario();
-
-      setForm((atual) => ({
-        ...atual,
-        prontuario,
-      }));
-    } catch (error) {
-      console.error('Erro ao gerar prontuário:', error);
-
-      setErro(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível gerar o prontuário.',
-      );
-    } finally {
-      setGerandoProntuario(false);
-    }
-  };
 
   const nacionalidadeSelecionada = useMemo(() => {
     if (form.nacionalidade === 'OUTRA') {
@@ -273,10 +244,6 @@ export default function NovoUsuarioModal({
   };
 
   const validar = () => {
-    if (!form.prontuario.trim()) {
-      return 'Não foi possível gerar o número do prontuário.';
-    }
-
     if (!form.nome.trim()) {
       return 'Informe o nome do usuário.';
     }
@@ -386,37 +353,12 @@ export default function NovoUsuarioModal({
               descricao="Identificação e situação cadastral."
             >
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Field label="Prontuário" required>
-                  <div className="relative">
-                    <input
-                      value={form.prontuario}
-                      readOnly
-                      placeholder={
-                        gerandoProntuario
-                          ? 'Gerando...'
-                          : 'Automático'
-                      }
-                      className={`${inputClass} cursor-not-allowed pr-10 text-slate-300`}
-                    />
-
-                    {gerandoProntuario && (
-                      <Loader2
-                        size={16}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary"
-                      />
-                    )}
-
-                    {!gerandoProntuario && !form.prontuario && (
-                      <button
-                        type="button"
-                        onClick={gerarProntuario}
-                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-700 hover:text-white"
-                        title="Tentar gerar prontuário novamente"
-                      >
-                        <RefreshCw size={14} />
-                      </button>
-                    )}
-                  </div>
+                <Field label="Prontuário">
+                  <input
+                    value="Gerado automaticamente ao salvar"
+                    readOnly
+                    className={`${inputClass} cursor-not-allowed text-slate-400`}
+                  />
                 </Field>
 
                 <Field label="Turno" required>
@@ -926,7 +868,7 @@ export default function NovoUsuarioModal({
           <button
             type="button"
             onClick={handleSalvar}
-            disabled={salvando || gerandoProntuario || !form.prontuario}
+            disabled={salvando}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {salvando ? (
