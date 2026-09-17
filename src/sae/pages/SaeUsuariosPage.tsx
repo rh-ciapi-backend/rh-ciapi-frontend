@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   SlidersHorizontal,
@@ -6,43 +6,67 @@ import {
   Users,
   UserCheck,
   UserX,
-  Clock3,
+  Sun,
   MoreHorizontal,
   Eye,
   Pencil,
   Phone,
   MapPin,
   IdCard,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
-type SituacaoUsuario = 'ATIVO' | 'INATIVO' | 'TRIAGEM';
+import { saeUsuariosService } from '../services/saeUsuariosService';
 
-interface UsuarioResumo {
-  id: string;
-  prontuario?: string | null;
-  nome: string;
-  sexo?: string | null;
-  dataNascimento?: string | null;
-  idade?: number | null;
-  turno?: string | null;
-  situacao: SituacaoUsuario;
-  telefone?: string | null;
-  bairro?: string | null;
-}
-
-const usuarios: UsuarioResumo[] = [];
+import type {
+  SaeUsuarioResumo,
+  SituacaoUsuario,
+} from '../types/saeUsuario';
 
 const statusStyles: Record<SituacaoUsuario, string> = {
-  ATIVO: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
-  INATIVO: 'border-slate-500/20 bg-slate-500/10 text-slate-400',
-  TRIAGEM: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
+  ATIVO:
+    'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
+  INATIVO:
+    'border-slate-500/20 bg-slate-500/10 text-slate-400',
 };
 
 export default function SaeUsuariosPage() {
+  const [usuarios, setUsuarios] = useState<SaeUsuarioResumo[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
   const [busca, setBusca] = useState('');
-  const [situacao, setSituacao] = useState<'TODOS' | SituacaoUsuario>('TODOS');
-  const [turno, setTurno] = useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
+  const [situacao, setSituacao] =
+    useState<'TODOS' | SituacaoUsuario>('TODOS');
+  const [turno, setTurno] =
+    useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
+
+  useEffect(() => {
+    carregarUsuarios();
+  }, []);
+
+  const carregarUsuarios = async () => {
+    try {
+      setCarregando(true);
+      setErro(null);
+
+      const dados = await saeUsuariosService.listar();
+
+      setUsuarios(dados);
+    } catch (error) {
+      console.error('Erro ao carregar usuários do SAE:', error);
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar os usuários.',
+      );
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   const usuariosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -51,21 +75,47 @@ export default function SaeUsuariosPage() {
       const atendeBusca =
         !termo ||
         usuario.nome.toLowerCase().includes(termo) ||
-        (usuario.prontuario ?? '').toLowerCase().includes(termo);
+        usuario.prontuario.toLowerCase().includes(termo);
 
       const atendeSituacao =
-        situacao === 'TODOS' || usuario.situacao === situacao;
+        situacao === 'TODOS' ||
+        usuario.situacao === situacao;
 
       const atendeTurno =
-        turno === 'TODOS' || usuario.turno === turno;
+        turno === 'TODOS' ||
+        usuario.turno === turno;
 
-      return atendeBusca && atendeSituacao && atendeTurno;
+      return (
+        atendeBusca &&
+        atendeSituacao &&
+        atendeTurno
+      );
     });
-  }, [busca, situacao, turno]);
+  }, [usuarios, busca, situacao, turno]);
 
-  const totalAtivos = usuarios.filter((u) => u.situacao === 'ATIVO').length;
-  const totalInativos = usuarios.filter((u) => u.situacao === 'INATIVO').length;
-  const totalTriagem = usuarios.filter((u) => u.situacao === 'TRIAGEM').length;
+  const totalAtivos = useMemo(
+    () =>
+      usuarios.filter(
+        (usuario) => usuario.situacao === 'ATIVO',
+      ).length,
+    [usuarios],
+  );
+
+  const totalInativos = useMemo(
+    () =>
+      usuarios.filter(
+        (usuario) => usuario.situacao === 'INATIVO',
+      ).length,
+    [usuarios],
+  );
+
+  const totalManha = useMemo(
+    () =>
+      usuarios.filter(
+        (usuario) => usuario.turno === 'MANHÃ',
+      ).length,
+    [usuarios],
+  );
 
   return (
     <motion.section
@@ -85,15 +135,15 @@ export default function SaeUsuariosPage() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Consulte e acompanhe os usuários atendidos pelo CIAPI de forma simples e organizada.
+            Consulte e acompanhe os usuários atendidos pelo CIAPI.
           </p>
         </div>
 
         <button
           type="button"
           disabled
-          title="Será habilitado quando o cadastro estiver integrado ao banco do SAE."
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white opacity-50 shadow-lg shadow-primary/10 cursor-not-allowed"
+          title="O cadastro será habilitado na próxima etapa."
+          className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white opacity-50 shadow-lg shadow-primary/10"
         >
           <UserPlus size={18} />
           Novo Usuário
@@ -106,7 +156,7 @@ export default function SaeUsuariosPage() {
           value={usuarios.length}
           helper="Cadastros disponíveis"
           icon={Users}
-          iconClass="text-blue-400 bg-blue-500/10 border-blue-500/20"
+          iconClass="border-blue-500/20 bg-blue-500/10 text-blue-400"
         />
 
         <KpiCard
@@ -114,15 +164,15 @@ export default function SaeUsuariosPage() {
           value={totalAtivos}
           helper="Em acompanhamento"
           icon={UserCheck}
-          iconClass="text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+          iconClass="border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
         />
 
         <KpiCard
-          label="Em Triagem"
-          value={totalTriagem}
-          helper="Aguardando definição"
-          icon={Clock3}
-          iconClass="text-amber-400 bg-amber-500/10 border-amber-500/20"
+          label="Turno da Manhã"
+          value={totalManha}
+          helper="Usuários cadastrados"
+          icon={Sun}
+          iconClass="border-amber-500/20 bg-amber-500/10 text-amber-400"
         />
 
         <KpiCard
@@ -130,7 +180,7 @@ export default function SaeUsuariosPage() {
           value={totalInativos}
           helper="Cadastros inativos"
           icon={UserX}
-          iconClass="text-rose-400 bg-rose-500/10 border-rose-500/20"
+          iconClass="border-rose-500/20 bg-rose-500/10 text-rose-400"
         />
       </div>
 
@@ -152,7 +202,7 @@ export default function SaeUsuariosPage() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome ou número do prontuário..."
-                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 pl-10 pr-4 text-sm text-white outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20 placeholder:text-slate-600"
+                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -165,13 +215,16 @@ export default function SaeUsuariosPage() {
             <select
               value={situacao}
               onChange={(e) =>
-                setSituacao(e.target.value as 'TODOS' | SituacaoUsuario)
+                setSituacao(
+                  e.target.value as
+                    | 'TODOS'
+                    | SituacaoUsuario,
+                )
               }
               className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             >
               <option value="TODOS">Todos</option>
               <option value="ATIVO">Ativos</option>
-              <option value="TRIAGEM">Em triagem</option>
               <option value="INATIVO">Inativos</option>
             </select>
           </div>
@@ -184,7 +237,12 @@ export default function SaeUsuariosPage() {
             <select
               value={turno}
               onChange={(e) =>
-                setTurno(e.target.value as 'TODOS' | 'MANHÃ' | 'TARDE')
+                setTurno(
+                  e.target.value as
+                    | 'TODOS'
+                    | 'MANHÃ'
+                    | 'TARDE',
+                )
               }
               className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             >
@@ -229,13 +287,21 @@ export default function SaeUsuariosPage() {
             <h2 className="text-sm font-bold text-white">
               Lista de usuários
             </h2>
+
             <p className="mt-1 text-xs text-slate-500">
               {usuariosFiltrados.length} registro(s) encontrado(s)
             </p>
           </div>
         </div>
 
-        {usuariosFiltrados.length > 0 ? (
+        {carregando ? (
+          <LoadingState />
+        ) : erro ? (
+          <ErrorState
+            mensagem={erro}
+            onRetry={carregarUsuarios}
+          />
+        ) : usuariosFiltrados.length > 0 ? (
           <>
             <div className="hidden lg:block">
               <div className="grid grid-cols-[110px_1.4fr_110px_110px_140px_140px_56px] gap-3 border-b border-border-dark bg-slate-800/30 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -249,13 +315,19 @@ export default function SaeUsuariosPage() {
               </div>
 
               {usuariosFiltrados.map((usuario) => (
-                <UsuarioRow key={usuario.id} usuario={usuario} />
+                <UsuarioRow
+                  key={usuario.id}
+                  usuario={usuario}
+                />
               ))}
             </div>
 
             <div className="divide-y divide-border-dark lg:hidden">
               {usuariosFiltrados.map((usuario) => (
-                <UsuarioCard key={usuario.id} usuario={usuario} />
+                <UsuarioCard
+                  key={usuario.id}
+                  usuario={usuario}
+                />
               ))}
             </div>
           </>
@@ -307,7 +379,11 @@ function KpiCard({
   );
 }
 
-function UsuarioRow({ usuario }: { usuario: UsuarioResumo }) {
+function UsuarioRow({
+  usuario,
+}: {
+  usuario: SaeUsuarioResumo;
+}) {
   return (
     <div className="grid grid-cols-[110px_1.4fr_110px_110px_140px_140px_56px] items-center gap-3 border-b border-border-dark px-5 py-4 text-sm last:border-b-0 hover:bg-slate-800/20">
       <span className="font-semibold text-slate-300">
@@ -320,7 +396,10 @@ function UsuarioRow({ usuario }: { usuario: UsuarioResumo }) {
         </p>
 
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-          {usuario.idade != null && <span>{usuario.idade} anos</span>}
+          {usuario.idade != null && (
+            <span>{usuario.idade} anos</span>
+          )}
+
           {usuario.bairro && (
             <>
               <span>•</span>
@@ -347,7 +426,7 @@ function UsuarioRow({ usuario }: { usuario: UsuarioResumo }) {
       </div>
 
       <span className="text-slate-400">
-        {usuario.telefone || '—'}
+        {usuario.telefonePrincipal || '—'}
       </span>
 
       <button
@@ -361,7 +440,11 @@ function UsuarioRow({ usuario }: { usuario: UsuarioResumo }) {
   );
 }
 
-function UsuarioCard({ usuario }: { usuario: UsuarioResumo }) {
+function UsuarioCard({
+  usuario,
+}: {
+  usuario: SaeUsuarioResumo;
+}) {
   return (
     <article className="p-4">
       <div className="flex items-start justify-between gap-3">
@@ -384,17 +467,26 @@ function UsuarioCard({ usuario }: { usuario: UsuarioResumo }) {
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-400">
         <div className="flex items-center gap-2">
-          <IdCard size={14} className="text-slate-600" />
+          <IdCard
+            size={14}
+            className="text-slate-600"
+          />
           {usuario.turno || 'Turno não informado'}
         </div>
 
         <div className="flex items-center gap-2">
-          <Phone size={14} className="text-slate-600" />
-          {usuario.telefone || 'Sem telefone'}
+          <Phone
+            size={14}
+            className="text-slate-600"
+          />
+          {usuario.telefonePrincipal || 'Sem telefone'}
         </div>
 
         <div className="flex items-center gap-2">
-          <MapPin size={14} className="text-slate-600" />
+          <MapPin
+            size={14}
+            className="text-slate-600"
+          />
           {usuario.bairro || 'Bairro não informado'}
         </div>
       </div>
@@ -420,6 +512,58 @@ function UsuarioCard({ usuario }: { usuario: UsuarioResumo }) {
   );
 }
 
+function LoadingState() {
+  return (
+    <div className="flex min-h-[320px] items-center justify-center">
+      <div className="text-center">
+        <Loader2
+          size={28}
+          className="mx-auto animate-spin text-primary"
+        />
+
+        <p className="mt-3 text-sm text-slate-400">
+          Carregando usuários...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({
+  mensagem,
+  onRetry,
+}: {
+  mensagem: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="flex min-h-[320px] items-center justify-center px-6 py-12 text-center">
+      <div className="max-w-md">
+        <AlertCircle
+          size={28}
+          className="mx-auto text-rose-400"
+        />
+
+        <h3 className="mt-4 font-bold text-white">
+          Não foi possível carregar os usuários
+        </h3>
+
+        <p className="mt-2 text-sm text-slate-500">
+          {mensagem}
+        </p>
+
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <div className="flex min-h-[320px] items-center justify-center px-6 py-12 text-center">
@@ -429,12 +573,11 @@ function EmptyState() {
         </div>
 
         <h3 className="mt-4 text-base font-bold text-white">
-          Nenhum usuário carregado
+          Nenhum usuário encontrado
         </h3>
 
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          A estrutura visual do módulo está pronta. Os registros aparecerão aqui
-          quando o banco de usuários do SAE for conectado.
+          Não existem registros correspondentes aos filtros selecionados.
         </p>
       </div>
     </div>
