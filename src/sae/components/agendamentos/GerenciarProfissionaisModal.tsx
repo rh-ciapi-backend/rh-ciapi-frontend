@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
+  ClipboardCheck,
   CheckCircle2,
   Loader2,
   Pencil,
@@ -19,6 +20,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { saeProfissionaisService } from '../../services/saeProfissionaisService';
 import AgendaProfissionalPanel from './AgendaProfissionalPanel';
+import SolicitacoesAgendaPanel from './SolicitacoesAgendaPanel';
 
 import type {
   SaeProfissional,
@@ -79,7 +81,7 @@ export default function GerenciarProfissionaisModal({
   const [busca, setBusca] = useState('');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [modoNovo, setModoNovo] = useState(false);
-  const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'agenda'>('cadastro');
+  const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'agenda' | 'solicitacoes'>('cadastro');
   const [form, setForm] = useState<SaeProfissionalForm>(FORM_INICIAL);
 
   const podeCriar = permissions.includes('criar');
@@ -579,6 +581,18 @@ export default function GerenciarProfissionaisModal({
                     <CalendarDays size={15} />
                     Agenda oficial
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setAbaAtiva('solicitacoes')}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                      abaAtiva === 'solicitacoes'
+                        ? 'bg-primary text-white'
+                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    }`}
+                  >
+                    <ClipboardCheck size={15} />
+                    Solicitações
+                  </button>
                 </div>
               )}
 
@@ -587,6 +601,11 @@ export default function GerenciarProfissionaisModal({
                   <AgendaProfissionalPanel
                     profissional={selecionado}
                     servicos={servicos}
+                    podeEditar={podeEditar}
+                  />
+                ) : !modoNovo && selecionado && abaAtiva === 'solicitacoes' ? (
+                  <SolicitacoesAgendaPanel
+                    profissional={selecionado}
                     podeEditar={podeEditar}
                   />
                 ) : (
