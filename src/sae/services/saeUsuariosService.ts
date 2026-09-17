@@ -139,6 +139,102 @@ const aplicarFiltros = (
   return result;
 };
 
+const buildUsuarioPayload = (form: SaeUsuarioForm) => ({
+  prontuario: safeString(form.prontuario),
+  turno: safeString(form.turno) || null,
+  nome: safeString(form.nome),
+  sexo: safeString(form.sexo) || null,
+  nacionalidade: safeString(form.nacionalidade) || null,
+
+  rg_original: safeString(form.rg) || null,
+  rg_normalizado: onlyDigits(form.rg) || null,
+
+  cpf_original: safeString(form.cpf) || null,
+  cpf_normalizado: onlyDigits(form.cpf) || null,
+
+  data_nascimento: form.dataNascimento || null,
+
+  cartao_sus_original: safeString(form.cartaoSus) || null,
+  cartao_sus_normalizado: onlyDigits(form.cartaoSus) || null,
+
+  data_ingresso: form.dataIngresso || null,
+
+  situacao_cadastral: form.situacaoCadastral,
+
+  raca: safeString(form.raca) || null,
+
+  possui_deficiencia: form.possuiDeficiencia,
+
+  tipo_deficiencia: form.possuiDeficiencia
+    ? safeString(form.tipoDeficiencia) || null
+    : null,
+
+  observacao: safeString(form.observacao) || null,
+});
+
+const buildEnderecoPayload = (
+  usuarioId: string,
+  form: SaeUsuarioForm,
+) => {
+  const enderecoOriginal = [
+    safeString(form.endereco.logradouro),
+    safeString(form.endereco.numero),
+    safeString(form.endereco.complemento),
+    safeString(form.endereco.bairro),
+    safeString(form.endereco.cidade),
+    safeString(form.endereco.uf),
+    safeString(form.endereco.cep),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  return {
+    usuario_id: usuarioId,
+    endereco_original: enderecoOriginal || null,
+    logradouro: safeString(form.endereco.logradouro) || null,
+    numero: safeString(form.endereco.numero) || null,
+    complemento: safeString(form.endereco.complemento) || null,
+    bairro: safeString(form.endereco.bairro) || null,
+    cidade: safeString(form.endereco.cidade) || 'Boa Vista',
+    uf: safeString(form.endereco.uf) || 'RR',
+    cep: onlyDigits(form.endereco.cep) || null,
+    principal: true,
+  };
+};
+
+const buildContatosPayload = (
+  usuarioId: string,
+  form: SaeUsuarioForm,
+) => {
+  const contatos = form.contatos
+    .filter((contato) => safeString(contato.telefone))
+    .map((contato, index) => ({
+      usuario_id: usuarioId,
+      ordem: index + 1,
+      telefone_original: safeString(contato.telefone),
+      telefone_normalizado:
+        onlyDigits(contato.telefone) || null,
+      nome_contato:
+        safeString(contato.nomeContato) || null,
+      parentesco:
+        safeString(contato.parentesco) || null,
+      tipo:
+        safeString(contato.tipo) || null,
+      observacao:
+        safeString(contato.observacao) || null,
+      principal: contato.principal,
+    }));
+
+  if (
+    contatos.length > 0 &&
+    !contatos.some((contato) => contato.principal)
+  ) {
+    contatos[0].principal = true;
+  }
+
+  return contatos;
+};
+
 export const saeUsuariosService = {
   async listar(
     params?: ListarSaeUsuariosParams,
@@ -275,6 +371,270 @@ export const saeUsuariosService = {
         getErrorMessage(
           error,
           'Falha ao obter usuário do SAE.',
+        ),
+      );
+    }
+  },
+
+  async obterFormularioEdicao(
+    id: string,
+  ): Promise<SaeUsuarioForm | null> {
+    try {
+      const usuarioId = safeString(id);
+
+      if (!usuarioId) {
+        return null;
+      }
+
+      const [
+        usuarioResponse,
+        enderecoResponse,
+        contatosResponse,
+      ] = await Promise.all([
+        supabase
+          .from(TABLE_USUARIOS)
+          .select('*')
+          .eq('id', usuarioId)
+          .maybeSingle(),
+
+        supabase
+          .from(TABLE_ENDERECOS)
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('principal', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+
+        supabase
+          .from(TABLE_CONTATOS)
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('principal', { ascending: false })
+          .order('ordem', { ascending: true }),
+      ]);
+
+      if (usuarioResponse.error) {
+        throw usuarioResponse.error;
+      }
+
+      if (enderecoResponse.error) {
+        throw enderecoResponse.error;
+      }
+
+      if (contatosResponse.error) {
+        throw contatosResponse.error;
+      }
+
+      const row = usuarioResponse.data;
+
+      if (!row) {
+        return null;
+      }
+
+      const endereco = enderecoResponse.data;
+
+      const contatos = (contatosResponse.data ?? []).map(
+        (contato: any) => ({
+          telefone:
+            safeString(contato.telefone_original) ||
+            safeString(contato.telefone_normalizado),
+          nomeContato:
+            safeString(contato.nome_contato),
+          parentesco:
+            safeString(contato.parentesco),
+          tipo:
+            safeString(contato.tipo) || 'CELULAR',
+          observacao:
+            safeString(contato.observacao),
+          principal:
+            Boolean(contato.principal),
+        }),
+      );
+
+      return {
+        prontuario: safeString(row.prontuario),
+        turno:
+          safeString(row.turno) === 'MANHÃ' ||
+          safeString(row.turno) === 'TARDE'
+            ? safeString(row.turno) as 'MANHÃ' | 'TARDE'
+            : '',
+        nome: safeString(row.nome),
+        sexo: safeString(row.sexo),
+        nacionalidade:
+          safeString(row.nacionalidade) || 'BRASILEIRA',
+        rg: safeString(row.rg_original),
+        cpf: safeString(row.cpf_original),
+        dataNascimento:
+          safeString(row.data_nascimento),
+        cartaoSus:
+          safeString(row.cartao_sus_original),
+        dataIngresso:
+          safeString(row.data_ingresso),
+        situacaoCadastral:
+          normalizeSituacao(
+            row.situacao_cadastral,
+          ),
+        raca:
+          safeString(row.raca) || 'NÃO INFORMADO',
+        possuiDeficiencia:
+          Boolean(row.possui_deficiencia),
+        tipoDeficiencia:
+          safeString(row.tipo_deficiencia),
+        observacao:
+          safeString(row.observacao),
+
+        endereco: {
+          logradouro:
+            safeString(endereco?.logradouro),
+          numero:
+            safeString(endereco?.numero),
+          complemento:
+            safeString(endereco?.complemento),
+          bairro:
+            safeString(endereco?.bairro),
+          cidade:
+            safeString(endereco?.cidade) ||
+            'Boa Vista',
+          uf:
+            safeString(endereco?.uf) || 'RR',
+          cep:
+            safeString(endereco?.cep),
+        },
+
+        contatos:
+          contatos.length > 0
+            ? contatos
+            : [
+                {
+                  telefone: '',
+                  nomeContato: '',
+                  parentesco: '',
+                  tipo: 'CELULAR',
+                  observacao: '',
+                  principal: true,
+                },
+              ],
+      };
+    } catch (error) {
+      throw new Error(
+        getErrorMessage(
+          error,
+          'Falha ao carregar os dados para edição.',
+        ),
+      );
+    }
+  },
+
+  async editar(
+    id: string,
+    form: SaeUsuarioForm,
+  ): Promise<SaeUsuarioResumo> {
+    try {
+      const usuarioId = safeString(id);
+
+      if (!usuarioId) {
+        throw new Error('Usuário inválido.');
+      }
+
+      const { error: usuarioError } = await supabase
+        .from(TABLE_USUARIOS)
+        .update(buildUsuarioPayload(form))
+        .eq('id', usuarioId);
+
+      if (usuarioError) {
+        throw new Error(
+          getErrorMessage(
+            usuarioError,
+            'Falha ao atualizar os dados do usuário.',
+          ),
+        );
+      }
+
+      const enderecoTemDados =
+        safeString(form.endereco.logradouro) ||
+        safeString(form.endereco.numero) ||
+        safeString(form.endereco.complemento) ||
+        safeString(form.endereco.bairro) ||
+        safeString(form.endereco.cep);
+
+      const { data: enderecoExistente, error: enderecoBuscaError } =
+        await supabase
+          .from(TABLE_ENDERECOS)
+          .select('id')
+          .eq('usuario_id', usuarioId)
+          .order('principal', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (enderecoBuscaError) {
+        throw enderecoBuscaError;
+      }
+
+      if (enderecoTemDados) {
+        const enderecoPayload = buildEnderecoPayload(
+          usuarioId,
+          form,
+        );
+
+        if (enderecoExistente?.id) {
+          const { error } = await supabase
+            .from(TABLE_ENDERECOS)
+            .update(enderecoPayload)
+            .eq('id', enderecoExistente.id);
+
+          if (error) {
+            throw error;
+          }
+        } else {
+          const { error } = await supabase
+            .from(TABLE_ENDERECOS)
+            .insert(enderecoPayload);
+
+          if (error) {
+            throw error;
+          }
+        }
+      }
+
+      const { error: deleteContatosError } = await supabase
+        .from(TABLE_CONTATOS)
+        .delete()
+        .eq('usuario_id', usuarioId);
+
+      if (deleteContatosError) {
+        throw deleteContatosError;
+      }
+
+      const contatosPayload = buildContatosPayload(
+        usuarioId,
+        form,
+      );
+
+      if (contatosPayload.length > 0) {
+        const { error: contatosError } = await supabase
+          .from(TABLE_CONTATOS)
+          .insert(contatosPayload);
+
+        if (contatosError) {
+          throw contatosError;
+        }
+      }
+
+      const atualizado =
+        await saeUsuariosService.obterPorId(usuarioId);
+
+      if (!atualizado) {
+        throw new Error(
+          'Dados atualizados, mas não foi possível recarregar o usuário.',
+        );
+      }
+
+      return atualizado;
+    } catch (error) {
+      throw new Error(
+        getErrorMessage(
+          error,
+          'Falha ao atualizar usuário do SAE.',
         ),
       );
     }
@@ -762,57 +1122,10 @@ export const saeUsuariosService = {
     let usuarioCriadoId: string | null = null;
 
     try {
-      const usuarioPayload = {
-        prontuario: safeString(form.prontuario),
-        turno: safeString(form.turno) || null,
-        nome: safeString(form.nome),
-        sexo: safeString(form.sexo) || null,
-        nacionalidade:
-          safeString(form.nacionalidade) || null,
-
-        rg_original:
-          safeString(form.rg) || null,
-        rg_normalizado:
-          onlyDigits(form.rg) || null,
-
-        cpf_original:
-          safeString(form.cpf) || null,
-        cpf_normalizado:
-          onlyDigits(form.cpf) || null,
-
-        data_nascimento:
-          form.dataNascimento || null,
-
-        cartao_sus_original:
-          safeString(form.cartaoSus) || null,
-        cartao_sus_normalizado:
-          onlyDigits(form.cartaoSus) || null,
-
-        data_ingresso:
-          form.dataIngresso || null,
-
-        situacao_cadastral:
-          form.situacaoCadastral,
-
-        raca:
-          safeString(form.raca) || null,
-
-        possui_deficiencia:
-          form.possuiDeficiencia,
-
-        tipo_deficiencia:
-          form.possuiDeficiencia
-            ? safeString(form.tipoDeficiencia) || null
-            : null,
-
-        observacao:
-          safeString(form.observacao) || null,
-      };
-
       const { data: usuarioData, error: usuarioError } =
         await supabase
           .from(TABLE_USUARIOS)
-          .insert(usuarioPayload)
+          .insert(buildUsuarioPayload(form))
           .select('id')
           .single();
 
@@ -835,41 +1148,14 @@ export const saeUsuariosService = {
         safeString(form.endereco.cep);
 
       if (enderecoTemDados) {
-        const enderecoOriginal = [
-          safeString(form.endereco.logradouro),
-          safeString(form.endereco.numero),
-          safeString(form.endereco.complemento),
-          safeString(form.endereco.bairro),
-          safeString(form.endereco.cidade),
-          safeString(form.endereco.uf),
-          safeString(form.endereco.cep),
-        ]
-          .filter(Boolean)
-          .join(', ');
-
         const { error: enderecoError } = await supabase
           .from(TABLE_ENDERECOS)
-          .insert({
-            usuario_id: usuarioCriadoId,
-            endereco_original:
-              enderecoOriginal || null,
-            logradouro:
-              safeString(form.endereco.logradouro) || null,
-            numero:
-              safeString(form.endereco.numero) || null,
-            complemento:
-              safeString(form.endereco.complemento) || null,
-            bairro:
-              safeString(form.endereco.bairro) || null,
-            cidade:
-              safeString(form.endereco.cidade) ||
-              'Boa Vista',
-            uf:
-              safeString(form.endereco.uf) || 'RR',
-            cep:
-              onlyDigits(form.endereco.cep) || null,
-            principal: true,
-          });
+          .insert(
+            buildEnderecoPayload(
+              usuarioCriadoId,
+              form,
+            ),
+          );
 
         if (enderecoError) {
           throw new Error(
@@ -881,42 +1167,16 @@ export const saeUsuariosService = {
         }
       }
 
-      const contatosValidos = form.contatos
-        .filter((contato) =>
-          safeString(contato.telefone),
-        )
-        .map((contato, index) => ({
-          usuario_id: usuarioCriadoId,
-          ordem: index + 1,
-          telefone_original:
-            safeString(contato.telefone),
-          telefone_normalizado:
-            onlyDigits(contato.telefone) || null,
-          nome_contato:
-            safeString(contato.nomeContato) || null,
-          parentesco:
-            safeString(contato.parentesco) || null,
-          tipo:
-            safeString(contato.tipo) || null,
-          observacao:
-            safeString(contato.observacao) || null,
-          principal:
-            contato.principal,
-        }));
+      const contatosPayload =
+        buildContatosPayload(
+          usuarioCriadoId,
+          form,
+        );
 
-      if (contatosValidos.length > 0) {
-        const possuiPrincipal =
-          contatosValidos.some(
-            (contato) => contato.principal,
-          );
-
-        if (!possuiPrincipal) {
-          contatosValidos[0].principal = true;
-        }
-
+      if (contatosPayload.length > 0) {
         const { error: contatosError } = await supabase
           .from(TABLE_CONTATOS)
-          .insert(contatosValidos);
+          .insert(contatosPayload);
 
         if (contatosError) {
           throw new Error(
