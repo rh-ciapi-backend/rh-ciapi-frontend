@@ -236,6 +236,40 @@ const buildContatosPayload = (
 };
 
 export const saeUsuariosService = {
+  async reservarProximoProntuario(): Promise<string> {
+    try {
+      const { data, error } = await supabase.rpc(
+        'sae_reservar_proximo_prontuario',
+      );
+
+      if (error) {
+        throw new Error(
+          getErrorMessage(
+            error,
+            'Falha ao gerar o próximo prontuário.',
+          ),
+        );
+      }
+
+      const prontuario = safeString(data);
+
+      if (!prontuario) {
+        throw new Error(
+          'O banco não retornou o número do prontuário.',
+        );
+      }
+
+      return prontuario;
+    } catch (error) {
+      throw new Error(
+        getErrorMessage(
+          error,
+          'Falha ao gerar o próximo prontuário.',
+        ),
+      );
+    }
+  },
+
   async listar(
     params?: ListarSaeUsuariosParams,
   ): Promise<SaeUsuarioResumo[]> {
