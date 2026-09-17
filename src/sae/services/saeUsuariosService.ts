@@ -252,7 +252,82 @@ const buildContatosPayload = (
   return contatos;
 };
 
-\nconst validarDuplicidades = async (\n  form: SaeUsuarioForm,\n  usuarioIdIgnorado?: string,\n) => {\n  const cpf = onlyDigits(form.cpf);\n  const cartaoSus = onlyDigits(form.cartaoSus);\n\n  if (!cpf && !cartaoSus) {\n    return;\n  }\n\n  const filtros: string[] = [];\n\n  if (cpf) {\n    filtros.push(`cpf_normalizado.eq.${cpf}`);\n  }\n\n  if (cartaoSus) {\n    filtros.push(`cartao_sus_normalizado.eq.${cartaoSus}`);\n  }\n\n  let query = supabase\n    .from(TABLE_USUARIOS)\n    .select('id, prontuario, nome, cpf_normalizado, cartao_sus_normalizado')\n    .or(filtros.join(','));\n\n  if (usuarioIdIgnorado) {\n    query = query.neq('id', usuarioIdIgnorado);\n  }\n\n  const { data, error } = await query.limit(10);\n\n  if (error) {\n    throw new Error(\n      getErrorMessage(\n        error,\n        'Falha ao validar CPF e Cartão SUS.',\n      ),\n    );\n  }\n\n  const registros = Array.isArray(data) ? data : [];\n\n  const duplicadoCpf = cpf\n    ? registros.find(\n        (item: any) =>\n          onlyDigits(item.cpf_normalizado) === cpf,\n      )\n    : null;\n\n  if (duplicadoCpf) {\n    throw new Error(\n      `CPF já cadastrado no prontuário ${safeString(\n        duplicadoCpf.prontuario,\n      )} - ${safeString(duplicadoCpf.nome)}.`,\n    );\n  }\n\n  const duplicadoSus = cartaoSus\n    ? registros.find(\n        (item: any) =>\n          onlyDigits(item.cartao_sus_normalizado) === cartaoSus,\n      )\n    : null;\n\n  if (duplicadoSus) {\n    throw new Error(\n      `Cartão SUS já cadastrado no prontuário ${safeString(\n        duplicadoSus.prontuario,\n      )} - ${safeString(duplicadoSus.nome)}.`,\n    );\n  }\n};\n\nexport const saeUsuariosService = {
+
+const validarDuplicidades = async (
+  form: SaeUsuarioForm,
+  usuarioIdIgnorado?: string,
+) => {
+  const cpf = onlyDigits(form.cpf);
+  const cartaoSus = onlyDigits(form.cartaoSus);
+
+  if (!cpf && !cartaoSus) {
+    return;
+  }
+
+  const filtros: string[] = [];
+
+  if (cpf) {
+    filtros.push(`cpf_normalizado.eq.${cpf}`);
+  }
+
+  if (cartaoSus) {
+    filtros.push(`cartao_sus_normalizado.eq.${cartaoSus}`);
+  }
+
+  let query = supabase
+    .from(TABLE_USUARIOS)
+    .select('id, prontuario, nome, cpf_normalizado, cartao_sus_normalizado')
+    .or(filtros.join(','));
+
+  if (usuarioIdIgnorado) {
+    query = query.neq('id', usuarioIdIgnorado);
+  }
+
+  const { data, error } = await query.limit(10);
+
+  if (error) {
+    throw new Error(
+      getErrorMessage(
+        error,
+        'Falha ao validar CPF e Cartão SUS.',
+      ),
+    );
+  }
+
+  const registros = Array.isArray(data) ? data : [];
+
+  const duplicadoCpf = cpf
+    ? registros.find(
+        (item: any) =>
+          onlyDigits(item.cpf_normalizado) === cpf,
+      )
+    : null;
+
+  if (duplicadoCpf) {
+    throw new Error(
+      `CPF já cadastrado no prontuário ${safeString(
+        duplicadoCpf.prontuario,
+      )} - ${safeString(duplicadoCpf.nome)}.`,
+    );
+  }
+
+  const duplicadoSus = cartaoSus
+    ? registros.find(
+        (item: any) =>
+          onlyDigits(item.cartao_sus_normalizado) === cartaoSus,
+      )
+    : null;
+
+  if (duplicadoSus) {
+    throw new Error(
+      `Cartão SUS já cadastrado no prontuário ${safeString(
+        duplicadoSus.prontuario,
+      )} - ${safeString(duplicadoSus.nome)}.`,
+    );
+  }
+};
+
+export const saeUsuariosService = {
   async listar(
     params?: ListarSaeUsuariosParams,
   ): Promise<SaeUsuarioResumo[]> {
