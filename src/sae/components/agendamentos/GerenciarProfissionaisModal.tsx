@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  CalendarDays,
   CheckCircle2,
   Loader2,
   Pencil,
@@ -17,6 +18,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 
 import { saeProfissionaisService } from '../../services/saeProfissionaisService';
+import AgendaProfissionalPanel from './AgendaProfissionalPanel';
 
 import type {
   SaeProfissional,
@@ -77,6 +79,7 @@ export default function GerenciarProfissionaisModal({
   const [busca, setBusca] = useState('');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [modoNovo, setModoNovo] = useState(false);
+  const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'agenda'>('cadastro');
   const [form, setForm] = useState<SaeProfissionalForm>(FORM_INICIAL);
 
   const podeCriar = permissions.includes('criar');
@@ -145,6 +148,7 @@ export default function GerenciarProfissionaisModal({
 
     setBusca('');
     setModoNovo(false);
+    setAbaAtiva('cadastro');
     setForm(FORM_INICIAL);
     setSelecionadoId(null);
     setErro(null);
@@ -176,6 +180,7 @@ export default function GerenciarProfissionaisModal({
     }
 
     setModoNovo(true);
+    setAbaAtiva('cadastro');
     setSelecionadoId(null);
     setForm(FORM_INICIAL);
     setErro(null);
@@ -183,6 +188,7 @@ export default function GerenciarProfissionaisModal({
 
   const selecionarProfissional = (profissional: SaeProfissional) => {
     setModoNovo(false);
+    setAbaAtiva('cadastro');
     setSelecionadoId(profissional.id);
     setForm(formFromProfissional(profissional));
     setErro(null);
@@ -547,7 +553,43 @@ export default function GerenciarProfissionaisModal({
                 )}
               </AnimatePresence>
 
+              {!modoNovo && selecionado && (
+                <div className="mb-5 flex flex-wrap gap-2 rounded-xl border border-border-dark bg-slate-900/25 p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAbaAtiva('cadastro')}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                      abaAtiva === 'cadastro'
+                        ? 'bg-primary text-white'
+                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    }`}
+                  >
+                    <UserCog size={15} />
+                    Cadastro e serviços
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAbaAtiva('agenda')}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                      abaAtiva === 'agenda'
+                        ? 'bg-primary text-white'
+                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    }`}
+                  >
+                    <CalendarDays size={15} />
+                    Agenda oficial
+                  </button>
+                </div>
+              )}
+
               {modoNovo || selecionado ? (
+                !modoNovo && selecionado && abaAtiva === 'agenda' ? (
+                  <AgendaProfissionalPanel
+                    profissional={selecionado}
+                    servicos={servicos}
+                    podeEditar={podeEditar}
+                  />
+                ) : (
                 <form onSubmit={salvar} className="space-y-6">
                   <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                     <div>
@@ -765,6 +807,7 @@ export default function GerenciarProfissionaisModal({
                     </button>
                   </div>
                 </form>
+                )
               ) : (
                 <div className="flex min-h-[420px] items-center justify-center text-center">
                   <div className="max-w-sm">
