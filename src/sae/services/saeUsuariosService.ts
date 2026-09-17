@@ -11,6 +11,7 @@ import type { SaeUsuarioForm } from '../types/saeUsuarioForm';
 
 import type {
   SaeUsuarioPerfil,
+  SaeUsuarioDadosCadastrais,
   SaeUsuarioEndereco,
   SaeUsuarioContato,
   SaeUsuarioAgendamento,
@@ -692,6 +693,7 @@ export const saeUsuariosService = {
       }
 
       const [
+        cadastroResponse,
         enderecosResponse,
         contatosResponse,
         agendamentosResponse,
@@ -700,6 +702,31 @@ export const saeUsuariosService = {
         avaliacoesResponse,
         ciclosResponse,
       ] = await Promise.all([
+        supabase
+          .from(TABLE_USUARIOS)
+          .select(
+            [
+              'rg_original',
+              'cpf_original',
+              'cartao_sus_original',
+              'data_ingresso',
+              'data_desligamento',
+              'motivo_desligamento',
+              'motivo_desligamento_original',
+              'raca',
+              'deficiencia_original',
+              'possui_deficiencia',
+              'tipo_deficiencia',
+              'escolaridade_original',
+              'escolaridade_normalizada',
+              'rendimento_original',
+              'faixa_renda',
+              'observacao',
+            ].join(','),
+          )
+          .eq('id', usuarioId)
+          .maybeSingle(),
+
         supabase
           .from('sae_enderecos')
           .select('*')
@@ -745,6 +772,7 @@ export const saeUsuariosService = {
       ]);
 
       const responses = [
+        cadastroResponse,
         enderecosResponse,
         contatosResponse,
         agendamentosResponse,
@@ -863,6 +891,30 @@ export const saeUsuariosService = {
           );
         }
       }
+
+      const cadastroRow = cadastroResponse.data ?? {};
+
+      const dadosCadastrais: SaeUsuarioDadosCadastrais = {
+        rgOriginal: safeString((cadastroRow as any).rg_original) || null,
+        cpfOriginal: safeString((cadastroRow as any).cpf_original) || null,
+        cartaoSusOriginal: safeString((cadastroRow as any).cartao_sus_original) || null,
+        dataIngresso: safeString((cadastroRow as any).data_ingresso) || null,
+        dataDesligamento: safeString((cadastroRow as any).data_desligamento) || null,
+        motivoDesligamento: safeString((cadastroRow as any).motivo_desligamento) || null,
+        motivoDesligamentoOriginal: safeString((cadastroRow as any).motivo_desligamento_original) || null,
+        raca: safeString((cadastroRow as any).raca) || null,
+        deficienciaOriginal: safeString((cadastroRow as any).deficiencia_original) || null,
+        possuiDeficiencia:
+          (cadastroRow as any).possui_deficiencia == null
+            ? null
+            : Boolean((cadastroRow as any).possui_deficiencia),
+        tipoDeficiencia: safeString((cadastroRow as any).tipo_deficiencia) || null,
+        escolaridadeOriginal: safeString((cadastroRow as any).escolaridade_original) || null,
+        escolaridadeNormalizada: safeString((cadastroRow as any).escolaridade_normalizada) || null,
+        rendimentoOriginal: safeString((cadastroRow as any).rendimento_original) || null,
+        faixaRenda: safeString((cadastroRow as any).faixa_renda) || null,
+        observacao: safeString((cadastroRow as any).observacao) || null,
+      };
 
       const enderecos: SaeUsuarioEndereco[] =
         (enderecosResponse.data ?? []).map(
@@ -1126,6 +1178,7 @@ export const saeUsuariosService = {
 
       return {
         usuario,
+        dadosCadastrais,
         enderecoPrincipal:
           enderecos.find(
             (endereco) => endereco.principal,
