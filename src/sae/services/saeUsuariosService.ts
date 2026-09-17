@@ -252,7 +252,7 @@ const buildContatosPayload = (
   return contatos;
 };
 
-export const saeUsuariosService = {
+\nconst validarDuplicidades = async (\n  form: SaeUsuarioForm,\n  usuarioIdIgnorado?: string,\n) => {\n  const cpf = onlyDigits(form.cpf);\n  const cartaoSus = onlyDigits(form.cartaoSus);\n\n  if (!cpf && !cartaoSus) {\n    return;\n  }\n\n  const filtros: string[] = [];\n\n  if (cpf) {\n    filtros.push(`cpf_normalizado.eq.${cpf}`);\n  }\n\n  if (cartaoSus) {\n    filtros.push(`cartao_sus_normalizado.eq.${cartaoSus}`);\n  }\n\n  let query = supabase\n    .from(TABLE_USUARIOS)\n    .select('id, prontuario, nome, cpf_normalizado, cartao_sus_normalizado')\n    .or(filtros.join(','));\n\n  if (usuarioIdIgnorado) {\n    query = query.neq('id', usuarioIdIgnorado);\n  }\n\n  const { data, error } = await query.limit(10);\n\n  if (error) {\n    throw new Error(\n      getErrorMessage(\n        error,\n        'Falha ao validar CPF e Cartão SUS.',\n      ),\n    );\n  }\n\n  const registros = Array.isArray(data) ? data : [];\n\n  const duplicadoCpf = cpf\n    ? registros.find(\n        (item: any) =>\n          onlyDigits(item.cpf_normalizado) === cpf,\n      )\n    : null;\n\n  if (duplicadoCpf) {\n    throw new Error(\n      `CPF já cadastrado no prontuário ${safeString(\n        duplicadoCpf.prontuario,\n      )} - ${safeString(duplicadoCpf.nome)}.`,\n    );\n  }\n\n  const duplicadoSus = cartaoSus\n    ? registros.find(\n        (item: any) =>\n          onlyDigits(item.cartao_sus_normalizado) === cartaoSus,\n      )\n    : null;\n\n  if (duplicadoSus) {\n    throw new Error(\n      `Cartão SUS já cadastrado no prontuário ${safeString(\n        duplicadoSus.prontuario,\n      )} - ${safeString(duplicadoSus.nome)}.`,\n    );\n  }\n};\n\nexport const saeUsuariosService = {
   async listar(
     params?: ListarSaeUsuariosParams,
   ): Promise<SaeUsuarioResumo[]> {
@@ -563,6 +563,16 @@ export const saeUsuariosService = {
       if (!usuarioId) {
         throw new Error('Usuário inválido.');
       }
+
+      await validarDuplicidades(
+        form,
+        usuarioId,
+      );
+
+      await validarDuplicidades(
+        form,
+        usuarioId,
+      );
 
       const { error: usuarioError } = await supabase
         .from(TABLE_USUARIOS)
@@ -1202,6 +1212,8 @@ export const saeUsuariosService = {
     let usuarioCriadoId: string | null = null;
 
     try {
+      await validarDuplicidades(form);
+
       const payloadCompleto = buildUsuarioPayload(form);
       const {
         prontuario: _prontuarioIgnorado,
