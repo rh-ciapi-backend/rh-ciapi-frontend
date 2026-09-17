@@ -9,6 +9,18 @@ import type {
 
 import type { SaeUsuarioForm } from '../types/saeUsuarioForm';
 
+import type {
+  SaeUsuarioPerfil,
+  SaeUsuarioEndereco,
+  SaeUsuarioContato,
+  SaeUsuarioAgendamento,
+  SaeUsuarioAgendamentoServico,
+  SaeUsuarioAtendimento,
+  SaeUsuarioSinalVital,
+  SaeUsuarioAvaliacaoServico,
+  SaeUsuarioCicloAvaliacao,
+} from '../types/saeUsuarioPerfil';
+
 const VIEW_USUARIOS = 'sae_usuarios_resumo';
 const TABLE_USUARIOS = 'sae_usuarios';
 const TABLE_ENDERECOS = 'sae_enderecos';
@@ -263,6 +275,482 @@ export const saeUsuariosService = {
         getErrorMessage(
           error,
           'Falha ao obter usuário do SAE.',
+        ),
+      );
+    }
+  },
+
+  async obterPerfil(
+    id: string,
+  ): Promise<SaeUsuarioPerfil | null> {
+    try {
+      const usuarioId = safeString(id);
+
+      if (!usuarioId) {
+        return null;
+      }
+
+      const usuario =
+        await saeUsuariosService.obterPorId(usuarioId);
+
+      if (!usuario) {
+        return null;
+      }
+
+      const [
+        enderecosResponse,
+        contatosResponse,
+        agendamentosResponse,
+        atendimentosResponse,
+        sinaisVitaisResponse,
+        avaliacoesResponse,
+        ciclosResponse,
+      ] = await Promise.all([
+        supabase
+          .from('sae_enderecos')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('principal', { ascending: false }),
+
+        supabase
+          .from('sae_contatos')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('principal', { ascending: false })
+          .order('ordem', { ascending: true }),
+
+        supabase
+          .from('sae_agendamentos')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('data', { ascending: false }),
+
+        supabase
+          .from('sae_atendimentos')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('data_atendimento', { ascending: false }),
+
+        supabase
+          .from('sae_sinais_vitais')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('data_afericao', { ascending: false }),
+
+        supabase
+          .from('sae_avaliacoes_servicos')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('ano_referencia', { ascending: false }),
+
+        supabase
+          .from('sae_ciclos_avaliacao')
+          .select('*')
+          .eq('usuario_id', usuarioId)
+          .order('periodo_referencia', { ascending: false }),
+      ]);
+
+      const responses = [
+        enderecosResponse,
+        contatosResponse,
+        agendamentosResponse,
+        atendimentosResponse,
+        sinaisVitaisResponse,
+        avaliacoesResponse,
+        ciclosResponse,
+      ];
+
+      const respostaComErro = responses.find(
+        (response) => response.error,
+      );
+
+      if (respostaComErro?.error) {
+        throw respostaComErro.error;
+      }
+
+      const agendamentosRows =
+        agendamentosResponse.data ?? [];
+
+      const agendamentoIds = agendamentosRows
+        .map((item: any) => safeString(item.id))
+        .filter(Boolean);
+
+      let agendamentoServicosRows: any[] = [];
+
+      if (agendamentoIds.length > 0) {
+        const { data, error } = await supabase
+          .from('sae_agendamento_servicos')
+          .select('*')
+          .in('agendamento_id', agendamentoIds);
+
+        if (error) {
+          throw error;
+        }
+
+        agendamentoServicosRows = data ?? [];
+      }
+
+      const atendimentosRows =
+        atendimentosResponse.data ?? [];
+
+      const avaliacoesRows =
+        avaliacoesResponse.data ?? [];
+
+      const servicoIds = Array.from(
+        new Set(
+          [
+            ...agendamentoServicosRows.map(
+              (item) => safeString(item.servico_id),
+            ),
+            ...atendimentosRows.map(
+              (item: any) => safeString(item.servico_id),
+            ),
+            ...avaliacoesRows.map(
+              (item: any) => safeString(item.servico_id),
+            ),
+          ].filter(Boolean),
+        ),
+      );
+
+      const profissionalIds = Array.from(
+        new Set(
+          [
+            ...agendamentoServicosRows.map(
+              (item) =>
+                safeString(item.profissional_id),
+            ),
+            ...atendimentosRows.map(
+              (item: any) =>
+                safeString(item.profissional_id),
+            ),
+          ].filter(Boolean),
+        ),
+      );
+
+      const servicosMap = new Map<
+        string,
+        { nome: string; sigla: string }
+      >();
+
+      if (servicoIds.length > 0) {
+        const { data, error } = await supabase
+          .from('sae_servicos')
+          .select('id,nome,sigla')
+          .in('id', servicoIds);
+
+        if (error) {
+          throw error;
+        }
+
+        for (const servico of data ?? []) {
+          servicosMap.set(safeString(servico.id), {
+            nome: safeString(servico.nome),
+            sigla: safeString(servico.sigla),
+          });
+        }
+      }
+
+      const profissionaisMap = new Map<string, string>();
+
+      if (profissionalIds.length > 0) {
+        const { data, error } = await supabase
+          .from('sae_profissionais')
+          .select('id,nome')
+          .in('id', profissionalIds);
+
+        if (error) {
+          throw error;
+        }
+
+        for (const profissional of data ?? []) {
+          profissionaisMap.set(
+            safeString(profissional.id),
+            safeString(profissional.nome),
+          );
+        }
+      }
+
+      const enderecos: SaeUsuarioEndereco[] =
+        (enderecosResponse.data ?? []).map(
+          (row: any) => ({
+            id: safeString(row.id),
+            usuarioId: safeString(row.usuario_id),
+            enderecoOriginal:
+              safeString(row.endereco_original) || null,
+            logradouro:
+              safeString(row.logradouro) || null,
+            numero: safeString(row.numero) || null,
+            complemento:
+              safeString(row.complemento) || null,
+            bairro: safeString(row.bairro) || null,
+            cidade: safeString(row.cidade) || null,
+            uf: safeString(row.uf) || null,
+            cep: safeString(row.cep) || null,
+            principal: Boolean(row.principal),
+          }),
+        );
+
+      const contatos: SaeUsuarioContato[] =
+        (contatosResponse.data ?? []).map(
+          (row: any) => ({
+            id: safeString(row.id),
+            usuarioId: safeString(row.usuario_id),
+            ordem:
+              row.ordem != null
+                ? Number(row.ordem)
+                : null,
+            telefoneOriginal:
+              safeString(row.telefone_original) || null,
+            telefoneNormalizado:
+              safeString(row.telefone_normalizado) || null,
+            nomeContato:
+              safeString(row.nome_contato) || null,
+            parentesco:
+              safeString(row.parentesco) || null,
+            tipo: safeString(row.tipo) || null,
+            observacao:
+              safeString(row.observacao) || null,
+            principal: Boolean(row.principal),
+          }),
+        );
+
+      const servicosPorAgendamento =
+        new Map<string, SaeUsuarioAgendamentoServico[]>();
+
+      for (const row of agendamentoServicosRows) {
+        const agendamentoId =
+          safeString(row.agendamento_id);
+
+        const servicoId =
+          safeString(row.servico_id);
+
+        const profissionalId =
+          safeString(row.profissional_id);
+
+        const servico =
+          servicosMap.get(servicoId);
+
+        const item: SaeUsuarioAgendamentoServico = {
+          id: safeString(row.id),
+          agendamentoId,
+          servicoId,
+          servicoNome: servico?.nome || null,
+          servicoSigla: servico?.sigla || null,
+          profissionalId:
+            profissionalId || null,
+          profissionalNome:
+            profissionaisMap.get(profissionalId) || null,
+          turno: safeString(row.turno) || null,
+          horaInicio:
+            safeString(row.hora_inicio) || null,
+          horaFim:
+            safeString(row.hora_fim) || null,
+          status: safeString(row.status),
+          observacao:
+            safeString(row.observacao) || null,
+        };
+
+        const lista =
+          servicosPorAgendamento.get(agendamentoId) ?? [];
+
+        lista.push(item);
+
+        servicosPorAgendamento.set(
+          agendamentoId,
+          lista,
+        );
+      }
+
+      const agendamentos: SaeUsuarioAgendamento[] =
+        agendamentosRows.map((row: any) => ({
+          id: safeString(row.id),
+          data: safeString(row.data) || null,
+          tipoUsuario: safeString(row.tipo_usuario),
+          usuarioId:
+            safeString(row.usuario_id) || null,
+          prontuarioInformado:
+            safeString(row.prontuario_informado) || null,
+          nomeAvulso:
+            safeString(row.nome_avulso) || null,
+          sexoAvulso:
+            safeString(row.sexo_avulso) || null,
+          dataNascimentoAvulso:
+            safeString(row.data_nascimento_avulso) ||
+            null,
+          tipoAtendimento:
+            safeString(row.tipo_atendimento) || null,
+          status: safeString(row.status),
+          observacao:
+            safeString(row.observacao) || null,
+          servicos:
+            servicosPorAgendamento.get(
+              safeString(row.id),
+            ) ?? [],
+        }));
+
+      const atendimentos: SaeUsuarioAtendimento[] =
+        atendimentosRows.map((row: any) => {
+          const servicoId =
+            safeString(row.servico_id);
+
+          const profissionalId =
+            safeString(row.profissional_id);
+
+          const servico =
+            servicosMap.get(servicoId);
+
+          return {
+            id: safeString(row.id),
+            usuarioId:
+              safeString(row.usuario_id) || null,
+            agendamentoId:
+              safeString(row.agendamento_id) || null,
+            agendamentoServicoId:
+              safeString(
+                row.agendamento_servico_id,
+              ) || null,
+            servicoId,
+            servicoNome: servico?.nome || null,
+            servicoSigla: servico?.sigla || null,
+            profissionalId:
+              profissionalId || null,
+            profissionalNome:
+              profissionaisMap.get(
+                profissionalId,
+              ) || null,
+            dataAtendimento:
+              safeString(row.data_atendimento),
+            horaInicio:
+              safeString(row.hora_inicio) || null,
+            horaFim:
+              safeString(row.hora_fim) || null,
+            tipoAtendimento:
+              safeString(row.tipo_atendimento) ||
+              null,
+            procedimento:
+              safeString(row.procedimento) || null,
+            evolucao:
+              safeString(row.evolucao) || null,
+            observacao:
+              safeString(row.observacao) || null,
+            status: safeString(row.status),
+          };
+        });
+
+      const sinaisVitais: SaeUsuarioSinalVital[] =
+        (sinaisVitaisResponse.data ?? []).map(
+          (row: any) => ({
+            id: safeString(row.id),
+            usuarioId:
+              safeString(row.usuario_id) || null,
+            atendimentoId:
+              safeString(row.atendimento_id) ||
+              null,
+            prontuarioInformado:
+              safeString(row.prontuario_informado) ||
+              null,
+            nomeAvulso:
+              safeString(row.nome_avulso) || null,
+            dataAfericao:
+              safeString(row.data_afericao),
+            pressaoSistolica:
+              row.pressao_sistolica != null
+                ? Number(row.pressao_sistolica)
+                : null,
+            pressaoDiastolica:
+              row.pressao_diastolica != null
+                ? Number(row.pressao_diastolica)
+                : null,
+            statusOriginal:
+              safeString(row.status_original) ||
+              null,
+            observacao:
+              safeString(row.observacao) || null,
+          }),
+        );
+
+      const avaliacoes: SaeUsuarioAvaliacaoServico[] =
+        avaliacoesRows.map((row: any) => {
+          const servicoId =
+            safeString(row.servico_id);
+
+          const servico =
+            servicosMap.get(servicoId);
+
+          return {
+            id: safeString(row.id),
+            usuarioId:
+              safeString(row.usuario_id),
+            servicoId,
+            servicoNome:
+              servico?.nome || null,
+            servicoSigla:
+              servico?.sigla || null,
+            anoReferencia:
+              Number(row.ano_referencia),
+            dataAvaliacao:
+              safeString(row.data_avaliacao) ||
+              null,
+            status:
+              safeString(row.status) || null,
+            valorOriginal:
+              safeString(row.valor_original) ||
+              null,
+            observacao:
+              safeString(row.observacao) ||
+              null,
+          };
+        });
+
+      const ciclosAvaliacao:
+        SaeUsuarioCicloAvaliacao[] =
+        (ciclosResponse.data ?? []).map(
+          (row: any) => ({
+            id: safeString(row.id),
+            usuarioId:
+              safeString(row.usuario_id),
+            periodoReferencia:
+              safeString(row.periodo_referencia),
+            dataInicio:
+              safeString(row.data_inicio) || null,
+            dataFim:
+              safeString(row.data_fim) || null,
+            statusInicio:
+              safeString(row.status_inicio) || null,
+            statusFim:
+              safeString(row.status_fim) || null,
+            valorInicioOriginal:
+              safeString(row.valor_inicio_original) ||
+              null,
+            valorFimOriginal:
+              safeString(row.valor_fim_original) ||
+              null,
+            observacao:
+              safeString(row.observacao) || null,
+          }),
+        );
+
+      return {
+        usuario,
+        enderecoPrincipal:
+          enderecos.find(
+            (endereco) => endereco.principal,
+          ) ??
+          enderecos[0] ??
+          null,
+        enderecos,
+        contatos,
+        agendamentos,
+        atendimentos,
+        sinaisVitais,
+        avaliacoes,
+        ciclosAvaliacao,
+      };
+    } catch (error) {
+      throw new Error(
+        getErrorMessage(
+          error,
+          'Falha ao carregar o perfil do usuário.',
         ),
       );
     }
