@@ -20,6 +20,7 @@ import {
 import { motion } from 'motion/react';
 
 import { saeUsuariosService } from '../services/saeUsuariosService';
+import NovoUsuarioModal from '../components/usuarios/NovoUsuarioModal';
 
 import type {
   SaeUsuarioResumo,
@@ -37,6 +38,8 @@ export default function SaeUsuariosPage() {
   const [usuarios, setUsuarios] = useState<SaeUsuarioResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  const [novoUsuarioAberto, setNovoUsuarioAberto] = useState(false);
 
   const [busca, setBusca] = useState('');
   const [situacao, setSituacao] =
@@ -154,9 +157,8 @@ export default function SaeUsuariosPage() {
 
         <button
           type="button"
-          disabled
-          title="O cadastro será habilitado na próxima etapa."
-          className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white opacity-50 shadow-lg shadow-primary/10"
+          onClick={() => setNovoUsuarioAberto(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-blue-600"
         >
           <UserPlus size={18} />
           Novo Usuário
@@ -356,6 +358,20 @@ export default function SaeUsuariosPage() {
           <EmptyState />
         )}
       </section>
+
+      <NovoUsuarioModal
+        aberto={novoUsuarioAberto}
+        onClose={() => setNovoUsuarioAberto(false)}
+        onSalvo={(usuario) => {
+          setNovoUsuarioAberto(false);
+
+          setUsuarios((atuais) =>
+            [...atuais, usuario].sort((a, b) =>
+              a.nome.localeCompare(b.nome, 'pt-BR'),
+            ),
+          );
+        }}
+      />
     </motion.section>
   );
 }
