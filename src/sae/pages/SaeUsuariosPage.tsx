@@ -27,6 +27,10 @@ import type {
   SituacaoUsuario,
 } from '../types/saeUsuario';
 
+interface SaeUsuariosPageProps {
+  onAbrirUsuario: (usuarioId: string) => void;
+}
+
 const statusStyles: Record<SituacaoUsuario, string> = {
   ATIVO:
     'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
@@ -34,7 +38,9 @@ const statusStyles: Record<SituacaoUsuario, string> = {
     'border-slate-500/20 bg-slate-500/10 text-slate-400',
 };
 
-export default function SaeUsuariosPage() {
+export default function SaeUsuariosPage({
+  onAbrirUsuario,
+}: SaeUsuariosPageProps) {
   const [usuarios, setUsuarios] = useState<SaeUsuarioResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -341,6 +347,7 @@ export default function SaeUsuariosPage() {
                 <UsuarioRow
                   key={usuario.id}
                   usuario={usuario}
+                  onAbrir={onAbrirUsuario}
                 />
               ))}
             </div>
@@ -350,6 +357,7 @@ export default function SaeUsuariosPage() {
                 <UsuarioCard
                   key={usuario.id}
                   usuario={usuario}
+                  onAbrir={onAbrirUsuario}
                 />
               ))}
             </div>
@@ -418,19 +426,31 @@ function KpiCard({
 
 function UsuarioRow({
   usuario,
+  onAbrir,
 }: {
   usuario: SaeUsuarioResumo;
+  onAbrir: (usuarioId: string) => void;
 }) {
   return (
     <div className="grid grid-cols-[110px_1.4fr_110px_110px_140px_140px_56px] items-center gap-3 border-b border-border-dark px-5 py-4 text-sm last:border-b-0 hover:bg-slate-800/20">
-      <span className="font-semibold text-slate-300">
+      <button
+        type="button"
+        onClick={() => onAbrir(usuario.id)}
+        className="text-left font-semibold text-slate-300 transition hover:text-primary"
+        title="Abrir perfil do usuário"
+      >
         {usuario.prontuario || '—'}
-      </span>
+      </button>
 
       <div className="min-w-0">
-        <p className="truncate font-semibold text-white">
+        <button
+          type="button"
+          onClick={() => onAbrir(usuario.id)}
+          className="block max-w-full truncate text-left font-semibold text-white transition hover:text-primary"
+          title={`Abrir perfil de ${usuario.nome}`}
+        >
           {usuario.nome}
-        </p>
+        </button>
 
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
           {usuario.idade != null && (
@@ -468,8 +488,10 @@ function UsuarioRow({
 
       <button
         type="button"
+        onClick={() => onAbrir(usuario.id)}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
-        aria-label={`Ações de ${usuario.nome}`}
+        aria-label={`Abrir perfil de ${usuario.nome}`}
+        title="Abrir perfil"
       >
         <MoreHorizontal size={18} />
       </button>
@@ -479,20 +501,30 @@ function UsuarioRow({
 
 function UsuarioCard({
   usuario,
+  onAbrir,
 }: {
   usuario: SaeUsuarioResumo;
+  onAbrir: (usuarioId: string) => void;
 }) {
   return (
     <article className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-white">
+          <button
+            type="button"
+            onClick={() => onAbrir(usuario.id)}
+            className="block max-w-full truncate text-left font-semibold text-white transition hover:text-primary"
+          >
             {usuario.nome}
-          </p>
+          </button>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <button
+            type="button"
+            onClick={() => onAbrir(usuario.id)}
+            className="mt-1 text-left text-xs text-slate-500 transition hover:text-primary"
+          >
             Prontuário {usuario.prontuario || '—'}
-          </p>
+          </button>
         </div>
 
         <span
@@ -531,7 +563,8 @@ function UsuarioCard({
       <div className="mt-4 flex gap-2">
         <button
           type="button"
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300"
+          onClick={() => onAbrir(usuario.id)}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
         >
           <Eye size={15} />
           Abrir
@@ -539,10 +572,11 @@ function UsuarioCard({
 
         <button
           type="button"
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300"
+          onClick={() => onAbrir(usuario.id)}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
         >
           <Pencil size={15} />
-          Editar
+          Perfil
         </button>
       </div>
     </article>
