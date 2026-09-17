@@ -7,6 +7,7 @@ import {
   UserCheck,
   UserX,
   Sun,
+  Sunset,
   MoreHorizontal,
   Eye,
   Pencil,
@@ -112,7 +113,19 @@ export default function SaeUsuariosPage() {
   const totalManha = useMemo(
     () =>
       usuarios.filter(
-        (usuario) => usuario.turno === 'MANHÃ',
+        (usuario) =>
+          usuario.situacao === 'ATIVO' &&
+          usuario.turno === 'MANHÃ',
+      ).length,
+    [usuarios],
+  );
+
+  const totalTarde = useMemo(
+    () =>
+      usuarios.filter(
+        (usuario) =>
+          usuario.situacao === 'ATIVO' &&
+          usuario.turno === 'TARDE',
       ).length,
     [usuarios],
   );
@@ -150,7 +163,7 @@ export default function SaeUsuariosPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           label="Total de Usuários"
           value={usuarios.length}
@@ -170,9 +183,17 @@ export default function SaeUsuariosPage() {
         <KpiCard
           label="Turno da Manhã"
           value={totalManha}
-          helper="Usuários cadastrados"
+          helper="Usuários ativos"
           icon={Sun}
           iconClass="border-amber-500/20 bg-amber-500/10 text-amber-400"
+        />
+
+        <KpiCard
+          label="Turno da Tarde"
+          value={totalTarde}
+          helper="Usuários ativos"
+          icon={Sunset}
+          iconClass="border-orange-500/20 bg-orange-500/10 text-orange-400"
         />
 
         <KpiCard
