@@ -487,7 +487,13 @@ function AgendamentosTab({
 }: {
   itens: SaeUsuarioAgendamento[];
 }) {
-  if (!itens.length) {
+  const ordenados = [...itens].sort((a, b) =>
+    String(b.data || '').localeCompare(
+      String(a.data || ''),
+    ),
+  );
+
+  if (!ordenados.length) {
     return (
       <EmptySection text="Nenhum agendamento registrado para este usuário." />
     );
@@ -495,88 +501,139 @@ function AgendamentosTab({
 
   return (
     <div className="space-y-4">
-      {itens.map((agendamento) => (
-        <article
-          key={agendamento.id}
-          className="rounded-[18px] border border-border-dark bg-card-dark p-5"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <CalendarDays
-                  size={17}
-                  className="text-primary"
-                />
+      {ordenados.map((agendamento) => {
+        const totalServicos =
+          agendamento.servicos.length;
 
-                <h3 className="font-bold text-white">
-                  {formatarData(agendamento.data)}
-                </h3>
-              </div>
+        return (
+          <article
+            key={agendamento.id}
+            className="rounded-[18px] border border-border-dark bg-card-dark p-5"
+          >
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
+                    <CalendarDays size={17} />
+                  </div>
 
-              <p className="mt-2 text-xs text-slate-500">
-                {agendamento.tipoAtendimento ||
-                  agendamento.tipoUsuario ||
-                  'Atendimento'}
-              </p>
-            </div>
+                  <div>
+                    <h3 className="font-bold text-white">
+                      {formatarData(
+                        agendamento.data,
+                      )}
+                    </h3>
 
-            <StatusBadge
-              value={agendamento.status}
-            />
-          </div>
-
-          {agendamento.servicos.length > 0 && (
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              {agendamento.servicos.map((servico) => (
-                <div
-                  key={servico.id}
-                  className="rounded-xl border border-border-dark bg-slate-800/30 p-4"
-                >
-                  <p className="font-semibold text-slate-200">
-                    {servico.servicoNome ||
-                      servico.servicoSigla ||
-                      'Serviço'}
-                  </p>
-
-                  <div className="mt-2 space-y-1 text-xs text-slate-500">
-                    {servico.profissionalNome && (
-                      <p>
-                        Profissional:{' '}
-                        {servico.profissionalNome}
-                      </p>
-                    )}
-
-                    {servico.turno && (
-                      <p>Turno: {servico.turno}</p>
-                    )}
-
-                    {(servico.horaInicio ||
-                      servico.horaFim) && (
-                      <p>
-                        Horário:{' '}
-                        {formatarHorario(
-                          servico.horaInicio,
-                        )}
-                        {servico.horaFim
-                          ? ` – ${formatarHorario(
-                              servico.horaFim,
-                            )}`
-                          : ''}
-                      </p>
-                    )}
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {agendamento.tipoAtendimento ||
+                        agendamento.tipoUsuario ||
+                        'Atendimento'}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
 
-          {agendamento.observacao && (
-            <p className="mt-4 rounded-xl border border-border-dark bg-slate-800/20 p-3 text-sm leading-6 text-slate-400">
-              {agendamento.observacao}
-            </p>
-          )}
-        </article>
-      ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-border-dark bg-slate-800/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                  {totalServicos}{' '}
+                  {totalServicos === 1
+                    ? 'serviço'
+                    : 'serviços'}
+                </span>
+
+                <StatusBadge
+                  value={agendamento.status}
+                />
+              </div>
+            </div>
+
+            {agendamento.servicos.length > 0 ? (
+              <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                {agendamento.servicos.map(
+                  (servico) => (
+                    <div
+                      key={servico.id}
+                      className="rounded-xl border border-border-dark bg-slate-800/30 p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-slate-200">
+                            {servico.servicoNome ||
+                              servico.servicoSigla ||
+                              'Serviço'}
+                          </p>
+
+                          {servico.profissionalNome && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {
+                                servico.profissionalNome
+                              }
+                            </p>
+                          )}
+                        </div>
+
+                        <StatusBadge
+                          value={servico.status}
+                        />
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <MiniInfo
+                          label="Turno"
+                          value={servico.turno}
+                        />
+
+                        <MiniInfo
+                          label="Horário"
+                          value={
+                            servico.horaInicio ||
+                            servico.horaFim
+                              ? [
+                                  formatarHorario(
+                                    servico.horaInicio,
+                                  ),
+                                  servico.horaFim
+                                    ? formatarHorario(
+                                        servico.horaFim,
+                                      )
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' – ')
+                              : null
+                          }
+                        />
+                      </div>
+
+                      {servico.observacao && (
+                        <p className="mt-4 rounded-lg border border-border-dark bg-[#0b1220]/35 p-3 text-xs leading-5 text-slate-400">
+                          {servico.observacao}
+                        </p>
+                      )}
+                    </div>
+                  ),
+                )}
+              </div>
+            ) : (
+              <div className="mt-5">
+                <EmptyText text="Nenhum serviço vinculado a este agendamento." />
+              </div>
+            )}
+
+            {agendamento.observacao && (
+              <div className="mt-4 rounded-xl border border-border-dark bg-slate-800/20 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                  Observação
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  {agendamento.observacao}
+                </p>
+              </div>
+            )}
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -666,20 +723,27 @@ function AvaliacoesTab({
   avaliacoes: SaeUsuarioAvaliacaoServico[];
   ciclos: SaeUsuarioCicloAvaliacao[];
 }) {
+  const avaliacoesOrdenadas = [...avaliacoes].sort(
+    (a, b) =>
+      String(b.dataAvaliacao || '').localeCompare(
+        String(a.dataAvaliacao || ''),
+      ),
+  );
+
   return (
     <div className="space-y-5">
       <SectionCard
         title="Avaliações por serviço"
         icon={ClipboardList}
       >
-        {avaliacoes.length > 0 ? (
+        {avaliacoesOrdenadas.length > 0 ? (
           <div className="space-y-3">
-            {avaliacoes.map((item) => (
+            {avaliacoesOrdenadas.map((item) => (
               <div
                 key={item.id}
                 className="rounded-xl border border-border-dark bg-slate-800/25 p-4"
               >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-semibold text-white">
                       {item.servicoNome ||
@@ -687,15 +751,21 @@ function AvaliacoesTab({
                         'Serviço'}
                     </p>
 
-                    <p className="mt-1 text-xs text-slate-500">
-                      Ano de referência:{' '}
-                      {item.anoReferencia}
-                      {item.dataAvaliacao
-                        ? ` • ${formatarData(
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <span>
+                        Ano de referência:{' '}
+                        {item.anoReferencia}
+                      </span>
+
+                      {item.dataAvaliacao && (
+                        <span>
+                          Avaliação:{' '}
+                          {formatarData(
                             item.dataAvaliacao,
-                          )}`
-                        : ''}
-                    </p>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {item.status && (
@@ -706,15 +776,27 @@ function AvaliacoesTab({
                 </div>
 
                 {item.valorOriginal && (
-                  <p className="mt-3 text-sm text-slate-300">
-                    {item.valorOriginal}
-                  </p>
+                  <div className="mt-4 rounded-lg border border-border-dark bg-[#0b1220]/35 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                      Registro original
+                    </p>
+
+                    <p className="mt-1.5 text-sm text-slate-300">
+                      {item.valorOriginal}
+                    </p>
+                  </div>
                 )}
 
                 {item.observacao && (
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {item.observacao}
-                  </p>
+                  <div className="mt-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                      Observação
+                    </p>
+
+                    <p className="mt-1.5 text-sm leading-6 text-slate-400">
+                      {item.observacao}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}
@@ -735,51 +817,78 @@ function AvaliacoesTab({
                 key={item.id}
                 className="rounded-xl border border-border-dark bg-slate-800/25 p-4"
               >
-                <p className="font-semibold text-white">
-                  {item.periodoReferencia}
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-white">
+                    {item.periodoReferencia}
+                  </p>
 
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <MiniInfo
-                    label="Início"
-                    value={[
-                      formatarData(item.dataInicio),
-                      item.statusInicio,
-                    ]
-                      .filter(Boolean)
-                      .join(' • ')}
-                  />
-
-                  <MiniInfo
-                    label="Fim"
-                    value={[
-                      formatarData(item.dataFim),
-                      item.statusFim,
-                    ]
-                      .filter(Boolean)
-                      .join(' • ')}
-                  />
+                  <span className="rounded-full border border-border-dark bg-slate-800/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Ciclo
+                  </span>
                 </div>
 
-                {(item.valorInicioOriginal ||
-                  item.valorFimOriginal) && (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <MiniInfo
-                      label="Valor inicial"
-                      value={item.valorInicioOriginal}
-                    />
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border-dark bg-[#0b1220]/30 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                      Início
+                    </p>
 
-                    <MiniInfo
-                      label="Valor final"
-                      value={item.valorFimOriginal}
-                    />
+                    <div className="mt-2 space-y-2">
+                      <MiniInfo
+                        label="Data"
+                        value={formatarData(
+                          item.dataInicio,
+                        )}
+                      />
+                      <MiniInfo
+                        label="Status"
+                        value={item.statusInicio}
+                      />
+                      <MiniInfo
+                        label="Registro"
+                        value={
+                          item.valorInicioOriginal
+                        }
+                      />
+                    </div>
                   </div>
-                )}
+
+                  <div className="rounded-xl border border-border-dark bg-[#0b1220]/30 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                      Fim
+                    </p>
+
+                    <div className="mt-2 space-y-2">
+                      <MiniInfo
+                        label="Data"
+                        value={formatarData(
+                          item.dataFim,
+                        )}
+                      />
+                      <MiniInfo
+                        label="Status"
+                        value={item.statusFim}
+                      />
+                      <MiniInfo
+                        label="Registro"
+                        value={
+                          item.valorFimOriginal
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 {item.observacao && (
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
-                    {item.observacao}
-                  </p>
+                  <div className="mt-4 rounded-lg border border-border-dark bg-[#0b1220]/35 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                      Observação
+                    </p>
+
+                    <p className="mt-1.5 text-sm leading-6 text-slate-400">
+                      {item.observacao}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}
