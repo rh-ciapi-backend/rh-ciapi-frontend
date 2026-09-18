@@ -6,6 +6,7 @@ import {
   FilterX,
   Loader2,
   Plus,
+  XCircle,
   Search,
   Stethoscope,
   UserCog,
@@ -84,6 +85,10 @@ export default function SaeAgendamentosPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [profissionaisAberto, setProfissionaisAberto] = useState(false);
   const [novoAgendamentoAberto, setNovoAgendamentoAberto] = useState(false);
+  const [cancelando, setCancelando] = useState<SaeAgendamentoResumo | null>(null);
+  const [motivoCancelamento, setMotivoCancelamento] = useState('');
+  const [cancelamentoEmAndamento, setCancelamentoEmAndamento] = useState(false);
+  const [erroCancelamento, setErroCancelamento] = useState<string | null>(null);
   const [filtros, setFiltros] =
     useState<SaeAgendamentoFiltros>(FILTROS_INICIAIS);
 
@@ -178,7 +183,44 @@ export default function SaeAgendamentosPage() {
         filtros.status === 'TODOS' ||
         agendamento.status === filtros.status;
 
-      return (
+      const abrirCancelamento = (agendamento: SaeAgendamentoResumo) => {
+    setCancelando(agendamento);
+    setMotivoCancelamento('');
+    setErroCancelamento(null);
+  };
+
+  const confirmarCancelamento = async () => {
+    if (!cancelando) return;
+
+    if (!motivoCancelamento.trim()) {
+      setErroCancelamento('Informe o motivo do cancelamento.');
+      return;
+    }
+
+    try {
+      setCancelamentoEmAndamento(true);
+      setErroCancelamento(null);
+
+      await saeAgendamentosService.cancelar(
+        cancelando.id,
+        motivoCancelamento.trim(),
+      );
+
+      setCancelando(null);
+      setMotivoCancelamento('');
+      await carregarAgendamentos();
+    } catch (error) {
+      setErroCancelamento(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível cancelar o agendamento.',
+      );
+    } finally {
+      setCancelamentoEmAndamento(false);
+    }
+  };
+
+  return (
         atendeBusca &&
         atendeData &&
         atendeTipoUsuario &&
@@ -436,7 +478,7 @@ export default function SaeAgendamentosPage() {
         ) : agendamentosFiltrados.length > 0 ? (
           <>
             <div className="hidden xl:block">
-              <div className="grid grid-cols-[110px_minmax(220px,1.3fr)_130px_140px_minmax(280px,1.8fr)_100px_110px] gap-4 border-b border-border-dark bg-slate-800/30 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              <div className="grid grid-cols-[110px_minmax(220px,1.3fr)_130px_140px_minmax(280px,1.8fr)_100px_110px_110px] gap-4 border-b border-border-dark bg-slate-800/30 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                 <span>Data</span>
                 <span>Usuário</span>
                 <span>Tipo</span>
@@ -444,6 +486,7 @@ export default function SaeAgendamentosPage() {
                 <span>Serviços / Profissional</span>
                 <span>Turno</span>
                 <span>Status</span>
+                <span>Ações</span>
               </div>
 
               {agendamentosFiltrados.map((agendamento) => (
@@ -478,6 +521,80 @@ export default function SaeAgendamentosPage() {
         onClose={() => setNovoAgendamentoAberto(false)}
         onCriado={carregarAgendamentos}
       />
+
+      {cancelando && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            onClick={() => !cancelamentoEmAndamento && setCancelando(null)}
+          />
+
+          <div className="relative w-full max-w-xl rounded-[22px] border border-border-dark bg-card-dark p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-300">
+                  Cancelamento
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-white">
+                  Cancelar agendamento
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  {cancelando.nomeUsuario} • {formatarData(cancelando.data)}
+                </p>
+              </div>
+              <XCircle size={22} className="text-rose-300" />
+            </div>
+
+            <div className="mt-5 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
+              O registro permanecerá no histórico e o horário voltará a ficar disponível.
+            </div>
+
+            {erroCancelamento && (
+              <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-300">
+                {erroCancelamento}
+              </div>
+            )}
+
+            <div className="mt-5">
+              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                Motivo do cancelamento
+              </label>
+              <textarea
+                value={motivoCancelamento}
+                onChange={(event) => setMotivoCancelamento(event.target.value)}
+                rows={4}
+                placeholder="Ex.: agendamento realizado por engano."
+                className="w-full resize-none rounded-xl border border-border-dark bg-slate-900/50 p-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-primary/50"
+              />
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border-dark pt-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCancelando(null)}
+                disabled={cancelamentoEmAndamento}
+                className="rounded-xl border border-border-dark px-4 py-2.5 text-sm font-semibold text-slate-300 disabled:opacity-50"
+              >
+                Voltar
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmarCancelamento}
+                disabled={cancelamentoEmAndamento}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-400 disabled:opacity-50"
+              >
+                {cancelamentoEmAndamento ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <XCircle size={16} />
+                )}
+                Confirmar cancelamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.section>
   );
 }
@@ -530,15 +647,17 @@ function KpiCard({
 
 function AgendamentoRow({
   agendamento,
+  onCancelar,
 }: {
   agendamento: SaeAgendamentoResumo;
+  onCancelar: (agendamento: SaeAgendamentoResumo) => void;
 }) {
   const turnos = Array.from(
     new Set(agendamento.servicos.map((item) => item.turno).filter(Boolean)),
   );
 
   return (
-    <div className="grid grid-cols-[110px_minmax(220px,1.3fr)_130px_140px_minmax(280px,1.8fr)_100px_110px] items-start gap-4 border-b border-border-dark px-5 py-4 text-sm last:border-b-0 hover:bg-slate-800/20">
+    <div className="grid grid-cols-[110px_minmax(220px,1.3fr)_130px_140px_minmax(280px,1.8fr)_100px_110px_110px] items-start gap-4 border-b border-border-dark px-5 py-4 text-sm last:border-b-0 hover:bg-slate-800/20">
       <div className="font-semibold text-slate-300">
         {formatarData(agendamento.data)}
       </div>
@@ -591,14 +710,31 @@ function AgendamentoRow({
       </span>
 
       <Badge value={agendamento.status || '—'} />
+
+      <div>
+        {String(agendamento.status || '').toUpperCase() === 'AGENDADO' ? (
+          <button
+            type="button"
+            onClick={() => onCancelar(agendamento)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-bold text-rose-300 transition hover:bg-rose-500/15"
+          >
+            <XCircle size={13} />
+            Cancelar
+          </button>
+        ) : (
+          <span className="text-[10px] text-slate-600">—</span>
+        )}
+      </div>
     </div>
   );
 }
 
 function AgendamentoCard({
   agendamento,
+  onCancelar,
 }: {
   agendamento: SaeAgendamentoResumo;
+  onCancelar: (agendamento: SaeAgendamentoResumo) => void;
 }) {
   return (
     <article className="p-4 sm:p-5">
@@ -628,6 +764,19 @@ function AgendamentoCard({
           {agendamento.tipoAtendimento || '—'}
         </div>
       </div>
+
+      {String(agendamento.status || '').toUpperCase() === 'AGENDADO' && (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => onCancelar(agendamento)}
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:bg-rose-500/15"
+          >
+            <XCircle size={14} />
+            Cancelar agendamento
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 rounded-xl border border-border-dark bg-slate-800/30 p-3">
         {agendamento.servicos.length > 0 ? (
