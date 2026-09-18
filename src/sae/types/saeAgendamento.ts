@@ -49,3 +49,68 @@ export interface SaeAgendamentoFiltros {
   turno: 'TODOS' | 'MANHÃ' | 'TARDE';
   status: 'TODOS' | string;
 }
+
+export interface SaeAgendamentoCatalogoServico {
+  id: string;
+  nome: string;
+  sigla?: string | null;
+}
+
+export interface SaeAgendamentoCatalogoProfissional {
+  id: string;
+  nome: string;
+  servicoIds: string[];
+}
+
+export interface SaeAgendamentoCatalogoResponse {
+  servicos: SaeAgendamentoCatalogoServico[];
+  profissionais: SaeAgendamentoCatalogoProfissional[];
+}
+
+export interface SaeAgendamentoUsuarioOpcao {
+  id: string;
+  prontuario: string;
+  nome: string;
+}
+
+export interface SaeAgendamentoSlotDisponivel {
+  horaInicio: string;
+  horaFim: string;
+  turno?: string | null;
+  agendaId?: string | null;
+}
+
+export interface SaeAgendamentoDisponibilidadeResponse {
+  profissional: { id: string; nome: string; ativo: boolean };
+  servico: SaeAgendamentoCatalogoServico & { ativo?: boolean };
+  data: string;
+  diaSemana: number;
+  slots: SaeAgendamentoSlotDisponivel[];
+}
+
+export interface SaeNovoAgendamentoServicoPayload {
+  servicoId: string;
+  profissionalId: string;
+  horaInicio: string;
+  horaFim: string;
+  observacao?: string | null;
+}
+
+export interface SaeNovoAgendamentoPayload {
+  data: string;
+  tipoUsuario: SaeTipoUsuario;
+  usuarioId?: string | null;
+  prontuarioInformado?: string | null;
+  nomeAvulso?: string | null;
+  sexoAvulso?: string | null;
+  dataNascimentoAvulso?: string | null;
+  tipoAtendimento: SaeTipoAtendimento;
+  observacao?: string | null;
+  servicos: SaeNovoAgendamentoServicoPayload[];
+}
+
+export interface SaeNovoAgendamentoResponse {
+  ok: true;
+  agendamento: { id: string; status: string; data: string; servicos: unknown[] };
+}
+
