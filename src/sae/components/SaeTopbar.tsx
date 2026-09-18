@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Bell,
   CalendarClock,
@@ -10,6 +10,8 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { SaeTab } from './SaeSidebar';
 import MinhaAgendaModal from './agendamentos/MinhaAgendaModal';
+import CentralSolicitacoesModal from './agendamentos/CentralSolicitacoesModal';
+import { saeAgendaService } from '../services/saeAgendaService';
 
 interface SaeTopbarProps {
   activeTab: SaeTab;
@@ -46,7 +48,39 @@ function getFirstName(user: ReturnType<typeof useAuth>['user']) {
 export default function SaeTopbar({ activeTab }: SaeTopbarProps) {
   const { user } = useAuth();
   const firstName = getFirstName(user);
+
   const [minhaAgendaAberta, setMinhaAgendaAberta] = useState(false);
+  const [centralAberta, setCentralAberta] = useState(false);
+  const [pendentes, setPendentes] = useState(0);
+  const [podeVerSolicitacoes, setPodeVerSolicitacoes] = useState(false);
+
+  const atualizarPendentes = useCallback(async () => {
+    try {
+      const response = await saeAgendaService.listarSolicitacoes({
+        status: 'PENDENTE',
+      });
+
+      setPendentes(response.solicitacoes?.length || 0);
+      setPodeVerSolicitacoes(true);
+    } catch {
+      setPendentes(0);
+      setPodeVerSolicitacoes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    atualizarPendentes();
+
+    const timer = window.setInterval(atualizarPendentes, 60_000);
+    const onFocus = () => atualizarPendentes();
+
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [atualizarPendentes]);
 
   return (
     <>
@@ -98,10 +132,25 @@ export default function SaeTopbar({ activeTab }: SaeTopbarProps) {
 
           <button
             type="button"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border-dark bg-card-dark text-slate-400 transition-colors hover:text-white"
+            onClick={() => podeVerSolicitacoes && setCentralAberta(true)}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-xl border bg-card-dark transition-colors ${
+              podeVerSolicitacoes
+                ? 'border-border-dark text-slate-400 hover:border-primary/30 hover:text-white'
+                : 'cursor-default border-border-dark text-slate-600'
+            }`}
+            title={
+              podeVerSolicitacoes
+                ? 'Solicitações pendentes'
+                : 'Sem acesso à caixa de solicitações'
+            }
           >
             <Bell size={18} />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary ring-2 ring-card-dark" />
+
+            {podeVerSolicitacoes && pendentes > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-extrabold leading-none text-white ring-2 ring-bg-dark">
+                {pendentes > 99 ? '99+' : pendentes}
+              </span>
+            )}
           </button>
 
           <div className="flex items-center gap-3 rounded-xl border border-border-dark bg-card-dark px-3 py-2">
@@ -124,6 +173,12 @@ export default function SaeTopbar({ activeTab }: SaeTopbarProps) {
       <MinhaAgendaModal
         aberto={minhaAgendaAberta}
         onClose={() => setMinhaAgendaAberta(false)}
+      />
+
+      <CentralSolicitacoesModal
+        aberto={centralAberta}
+        onClose={() => setCentralAberta(false)}
+        onAtualizarPendentes={atualizarPendentes}
       />
     </>
   );
