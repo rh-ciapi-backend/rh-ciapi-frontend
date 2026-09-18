@@ -145,16 +145,7 @@ export default function GerenciarProfissionaisModal({
   };
 
   useEffect(() => {
-    const atualizarProfissionalLocal = (profissionalAtualizado: SaeProfissional) => {
-    setProfissionais((atuais) =>
-      atuais.map((item) =>
-        item.id === profissionalAtualizado.id ? profissionalAtualizado : item,
-      ),
-    );
-    setForm(formFromProfissional(profissionalAtualizado));
-  };
-
-  if (!aberto) {
+    if (!aberto) {
       return;
     }
 
@@ -167,6 +158,17 @@ export default function GerenciarProfissionaisModal({
     setSucesso(null);
     carregar();
   }, [aberto]);
+
+  const atualizarProfissionalLocal = (
+    profissionalAtualizado: SaeProfissional,
+  ) => {
+    setProfissionais((atuais) =>
+      atuais.map((item) =>
+        item.id === profissionalAtualizado.id ? profissionalAtualizado : item,
+      ),
+    );
+    setForm(formFromProfissional(profissionalAtualizado));
+  };
 
   useEffect(() => {
     if (!aberto || modoNovo || !selecionado) {
