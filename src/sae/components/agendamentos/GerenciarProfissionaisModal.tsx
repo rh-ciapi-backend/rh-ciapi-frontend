@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
-  ClipboardCheck,
   CheckCircle2,
   Loader2,
   Pencil,
@@ -20,7 +19,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { saeProfissionaisService } from '../../services/saeProfissionaisService';
 import AgendaProfissionalPanel from './AgendaProfissionalPanel';
-import SolicitacoesAgendaPanel from './SolicitacoesAgendaPanel';
+import VinculoUsuarioSistemaPanel from './VinculoUsuarioSistemaPanel';
 
 import type {
   SaeProfissional,
@@ -81,7 +80,7 @@ export default function GerenciarProfissionaisModal({
   const [busca, setBusca] = useState('');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [modoNovo, setModoNovo] = useState(false);
-  const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'agenda' | 'solicitacoes'>('cadastro');
+  const [abaAtiva, setAbaAtiva] = useState<'cadastro' | 'agenda'>('cadastro');
   const [form, setForm] = useState<SaeProfissionalForm>(FORM_INICIAL);
 
   const podeCriar = permissions.includes('criar');
@@ -144,7 +143,16 @@ export default function GerenciarProfissionaisModal({
   };
 
   useEffect(() => {
-    if (!aberto) {
+    const atualizarProfissionalLocal = (profissionalAtualizado: SaeProfissional) => {
+    setProfissionais((atuais) =>
+      atuais.map((item) =>
+        item.id === profissionalAtualizado.id ? profissionalAtualizado : item,
+      ),
+    );
+    setForm(formFromProfissional(profissionalAtualizado));
+  };
+
+  if (!aberto) {
       return;
     }
 
@@ -364,6 +372,15 @@ export default function GerenciarProfissionaisModal({
     }
   };
 
+  const atualizarProfissionalLocal = (profissionalAtualizado: SaeProfissional) => {
+    setProfissionais((atuais) =>
+      atuais.map((item) =>
+        item.id === profissionalAtualizado.id ? profissionalAtualizado : item,
+      ),
+    );
+    setForm(formFromProfissional(profissionalAtualizado));
+  };
+
   if (!aberto) {
     return null;
   }
@@ -581,18 +598,6 @@ export default function GerenciarProfissionaisModal({
                     <CalendarDays size={15} />
                     Agenda oficial
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAbaAtiva('solicitacoes')}
-                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                      abaAtiva === 'solicitacoes'
-                        ? 'bg-primary text-white'
-                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                    }`}
-                  >
-                    <ClipboardCheck size={15} />
-                    Solicitações
-                  </button>
                 </div>
               )}
 
@@ -601,11 +606,6 @@ export default function GerenciarProfissionaisModal({
                   <AgendaProfissionalPanel
                     profissional={selecionado}
                     servicos={servicos}
-                    podeEditar={podeEditar}
-                  />
-                ) : !modoNovo && selecionado && abaAtiva === 'solicitacoes' ? (
-                  <SolicitacoesAgendaPanel
-                    profissional={selecionado}
                     podeEditar={podeEditar}
                   />
                 ) : (
@@ -743,6 +743,14 @@ export default function GerenciarProfissionaisModal({
                       </Field>
                     </div>
                   </section>
+
+                  {!modoNovo && selecionado && (
+                    <VinculoUsuarioSistemaPanel
+                      profissional={selecionado}
+                      podeEditar={podeEditar}
+                      onProfissionalAtualizado={atualizarProfissionalLocal}
+                    />
+                  )}
 
                   <section className="rounded-[18px] border border-border-dark bg-slate-900/20 p-4 sm:p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
