@@ -411,7 +411,7 @@ export default function NovoAgendamentoModal({ aberto, onClose, onCriado }: Prop
               </div>
             )}
           </section>
-        </div>        </div>
+        </div>
       </div>
       <footer className="flex flex-col-reverse gap-2 border-t border-border-dark px-5 py-4 sm:flex-row sm:justify-end sm:px-6"><button type="button" onClick={onClose} disabled={salvando} className="rounded-xl border border-border-dark bg-slate-900/40 px-4 py-2.5 text-sm font-semibold text-slate-300">Cancelar</button><button type="button" onClick={salvar} disabled={salvando||carregandoCatalogo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-hover disabled:opacity-50">{salvando?<Loader2 size={16} className="animate-spin"/>:<CalendarPlus2 size={16}/>} {salvando?'Agendando...':'Confirmar agendamento'}</button></footer>
     </motion.div>
