@@ -5,6 +5,7 @@ import type {
   SaeProfissional,
   SaeProfissionalForm,
   SaeProfissionaisListResponse,
+  SaeUsuarioSistemaOpcao,
 } from '../types/saeProfissional';
 
 const buildUrl = (path = '') => {
@@ -90,6 +91,24 @@ export const saeProfissionaisService = {
       {
         method: 'PATCH',
         body: JSON.stringify({ ativo }),
+      },
+    );
+  },
+
+
+  async listarUsuariosSistema(): Promise<{ usuarios: SaeUsuarioSistemaOpcao[] }> {
+    return request<{ usuarios: SaeUsuarioSistemaOpcao[] }>('/usuarios-sistema');
+  },
+
+  async vincularUsuario(
+    id: string,
+    authUserId: string | null,
+  ): Promise<{ ok: true; profissional: SaeProfissional }> {
+    return request<{ ok: true; profissional: SaeProfissional }>(
+      `/${id}/usuario-sistema`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ authUserId }),
       },
     );
   },
