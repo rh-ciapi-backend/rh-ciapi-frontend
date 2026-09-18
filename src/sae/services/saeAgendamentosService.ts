@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../../config/api';
 
 import type {
   SaeAgendamentoCatalogoResponse,
+  SaeAgendamentoDisponibilidadePeriodoResponse,
   SaeAgendamentoDisponibilidadeResponse,
   SaeAgendamentoResumo,
   SaeAgendamentoServicoResumo,
@@ -187,6 +188,25 @@ export const saeAgendamentosService = {
       '/disponibilidade',
       { method: 'GET' },
       { profissionalId, servicoId, data },
+    );
+  },
+
+
+  async consultarDisponibilidadePeriodo(
+    profissionalId: string,
+    servicoId: string,
+    inicio: string,
+    fim: string,
+  ): Promise<SaeAgendamentoDisponibilidadePeriodoResponse> {
+    return apiRequest<SaeAgendamentoDisponibilidadePeriodoResponse>(
+      '/disponibilidade-periodo',
+      { method: 'GET' },
+      {
+        profissionalId,
+        servicoId,
+        inicio,
+        fim,
+      },
     );
   },
 
