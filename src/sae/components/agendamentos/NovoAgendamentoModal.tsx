@@ -220,11 +220,93 @@ export default function NovoAgendamentoModal({ aberto, onClose, onCriado }: Prop
       <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         {erro&&<div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-300"><AlertCircle size={17}/><span>{erro}</span></div>}
         {sucesso&&<div className="mb-4 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-300"><CheckCircle2 size={17}/><span>{sucesso}</span></div>}
-        <div className="grid gap-5 xl:grid-cols-[.72fr_.9fr_1.15fr]">
-          <section className="rounded-[18px] border border-border-dark bg-slate-900/20 p-4 sm:p-5"><div className="mb-4 flex items-center gap-2"><UserRound size={16} className="text-primary"/><h3 className="text-sm font-bold text-white">Usuário e atendimento</h3></div>
-            <div className="grid gap-4 sm:grid-cols-2"><Field label="Tipo de usuário"><select value={tipoUsuario} onChange={e=>setTipoUsuario(e.target.value as SaeTipoUsuario)} className={INPUT}>{TIPOS_USUARIO.map(x=><option key={x}>{x}</option>)}</select></Field><Field label="Atendimento"><select value={tipoAtendimento} onChange={e=>setTipoAtendimento(e.target.value as SaeTipoAtendimento)} className={INPUT}>{TIPOS_ATENDIMENTO.map(x=><option key={x}>{x}</option>)}</select></Field><Field label="Data selecionada"><div className={`${INPUT} flex items-center`}>{data?parseIsoLocal(data).toLocaleDateString('pt-BR'):'Escolha no calendário'}</div></Field></div>
-            {tipoUsuario==='MATRICULADO'?<div className="mt-4"><Field label="Buscar matriculado">{usuarioSelecionado?<div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/[.06] p-3"><div><p className="text-sm font-semibold text-white">{usuarioSelecionado.nome}</p><p className="mt-1 text-xs text-slate-500">Prontuário {usuarioSelecionado.prontuario||'—'}</p></div><button type="button" onClick={()=>{setUsuarioSelecionado(null);setBuscaUsuario('')}} className="rounded-lg border border-border-dark px-3 py-2 text-xs font-bold text-slate-400 hover:text-white">Trocar</button></div>:<div className="relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"/><input value={buscaUsuario} onChange={e=>setBuscaUsuario(e.target.value)} placeholder="Nome ou prontuário..." className={`${INPUT} pl-9`}/>{buscandoUsuarios&&<Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary"/>}</div>}</Field>{!usuarioSelecionado&&usuariosEncontrados.length>0&&<div className="mt-2 max-h-52 overflow-y-auto rounded-xl border border-border-dark bg-slate-950/30">{usuariosEncontrados.map(u=><button key={u.id} type="button" onClick={()=>{setUsuarioSelecionado(u);setBuscaUsuario(u.nome);setUsuariosEncontrados([])}} className="block w-full border-b border-border-dark px-4 py-3 text-left last:border-b-0 hover:bg-slate-800/40"><p className="text-sm font-semibold text-white">{u.nome}</p><p className="mt-1 text-xs text-slate-500">Prontuário {u.prontuario||'—'}</p></button>)}</div>}</div>:<div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Nome"><input value={nomeAvulso} onChange={e=>setNomeAvulso(e.target.value)} className={INPUT} placeholder="Nome completo"/></Field><Field label="Prontuário / referência"><input value={prontuarioInformado} onChange={e=>setProntuarioInformado(e.target.value)} className={INPUT} placeholder="Opcional"/></Field><Field label="Sexo"><select value={sexoAvulso} onChange={e=>setSexoAvulso(e.target.value)} className={INPUT}><option value="">Não informado</option><option value="FEMININO">Feminino</option><option value="MASCULINO">Masculino</option></select></Field><Field label="Data de nascimento"><input type="date" value={dataNascimentoAvulso} onChange={e=>setDataNascimentoAvulso(e.target.value)} className={INPUT}/></Field></div>}
-            <div className="mt-4"><Field label="Observação geral"><textarea value={observacao} onChange={e=>setObservacao(e.target.value)} rows={3} className={`${INPUT} h-auto min-h-[84px] resize-none py-3`} placeholder="Opcional"/></Field></div>
+        <div className="space-y-5">
+          <section className="rounded-[18px] border border-border-dark bg-slate-900/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <UserRound size={16} className="text-primary"/>
+              <div>
+                <h3 className="text-sm font-bold text-white">1. Usuário e atendimento</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Identifique quem será atendido e o tipo de atendimento.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Field label="Tipo de usuário"><select value={tipoUsuario} onChange={e=>setTipoUsuario(e.target.value as SaeTipoUsuario)} className={INPUT}>{TIPOS_USUARIO.map(t=><option key={t}>{t}</option>)}</select></Field>
+              <Field label="Atendimento"><select value={tipoAtendimento} onChange={e=>setTipoAtendimento(e.target.value as SaeTipoAtendimento)} className={INPUT}>{TIPOS_ATENDIMENTO.map(t=><option key={t}>{t}</option>)}</select></Field>
+              <Field label="Data selecionada"><div className={`${INPUT} flex items-center`}>{data?parseIsoLocal(data).toLocaleDateString('pt-BR'):'Definida na disponibilidade'}</div></Field>
+            </div>
+
+            {tipoUsuario==='MATRICULADO'?(
+              <div className="mt-4 max-w-2xl">
+                <Field label="Buscar matriculado">
+                  {usuarioSelecionado?(
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/[.06] p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{usuarioSelecionado.nome}</p>
+                        <p className="mt-1 text-xs text-slate-500">Prontuário {usuarioSelecionado.prontuario||'—'}</p>
+                      </div>
+                      <button type="button" onClick={()=>{setUsuarioSelecionado(null);setBuscaUsuario('')}} className="rounded-lg border border-border-dark px-3 py-2 text-xs font-bold text-slate-400">Trocar</button>
+                    </div>
+                  ):(
+                    <div className="relative">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"/>
+                      <input value={buscaUsuario} onChange={e=>setBuscaUsuario(e.target.value)} placeholder="Nome ou prontuário..." className={`${INPUT} pl-9`}/>
+                      {buscandoUsuarios&&<Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary"/>}
+                    </div>
+                  )}
+                </Field>
+                {!usuarioSelecionado&&usuariosEncontrados.length>0&&(
+                  <div className="mt-2 max-h-52 overflow-y-auto rounded-xl border border-border-dark bg-slate-950/30">
+                    {usuariosEncontrados.map(u=><button key={u.id} type="button" onClick={()=>{setUsuarioSelecionado(u);setBuscaUsuario(u.nome);setUsuariosEncontrados([])}} className="block w-full border-b border-border-dark px-4 py-3 text-left last:border-b-0 hover:bg-slate-800/40"><p className="text-sm font-semibold text-white">{u.nome}</p><p className="mt-1 text-xs text-slate-500">Prontuário {u.prontuario||'—'}</p></button>)}
+                  </div>
+                )}
+              </div>
+            ):(
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Field label="Nome"><input value={nomeAvulso} onChange={e=>setNomeAvulso(e.target.value)} className={INPUT} placeholder="Nome completo"/></Field>
+                <Field label="Prontuário / referência"><input value={prontuarioInformado} onChange={e=>setProntuarioInformado(e.target.value)} className={INPUT} placeholder="Opcional"/></Field>
+                <Field label="Sexo"><select value={sexoAvulso} onChange={e=>setSexoAvulso(e.target.value)} className={INPUT}><option value="">Não informado</option><option value="FEMININO">Feminino</option><option value="MASCULINO">Masculino</option></select></Field>
+                <Field label="Data de nascimento"><input type="date" value={dataNascimentoAvulso} onChange={e=>setDataNascimentoAvulso(e.target.value)} className={INPUT}/></Field>
+              </div>
+            )}
+
+            <div className="mt-4 max-w-2xl"><Field label="Observação geral"><textarea value={observacao} onChange={e=>setObservacao(e.target.value)} rows={3} className={`${INPUT} h-auto min-h-[84px] resize-none py-3`} placeholder="Opcional"/></Field></div>
+          </section>
+
+          <section className="rounded-[18px] border border-border-dark bg-slate-900/20 p-4 sm:p-5">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div>
+                <h3 className="text-sm font-bold text-white">2. Serviços e profissionais</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Escolha os serviços e quem realizará cada atendimento.
+                </p>
+              </div>
+              <button type="button" onClick={()=>setLinhas(a=>[...a,novaLinha()])} className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary"><Plus size={14}/>Adicionar serviço</button>
+            </div>
+
+            {carregandoCatalogo?(
+              <div className="flex min-h-[180px] items-center justify-center"><Loader2 size={25} className="animate-spin text-primary"/></div>
+            ):(
+              <div className="mt-5 space-y-4">
+                {linhas.map((linha,index)=>{
+                  const profs=profissionaisDoServico(linha.servicoId);
+                  return <div key={linha.idLocal} className="rounded-2xl border border-border-dark bg-slate-950/20 p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-[.12em] text-slate-500">Serviço {index+1}</p>
+                      <button type="button" onClick={()=>setLinhas(a=>a.length===1?[novaLinha()]:a.filter(l=>l.idLocal!==linha.idLocal))} className="rounded-lg border border-rose-500/15 bg-rose-500/5 p-2 text-rose-300"><Trash2 size={14}/></button>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <Field label="Serviço"><select value={linha.servicoId} onChange={e=>selecionarServico(linha,e.target.value)} className={INPUT}><option value="">Selecione...</option>{servicos.map(s=>{const ocupado=servicosSelecionados.has(s.id)&&linha.servicoId!==s.id;return <option key={s.id} value={s.id} disabled={ocupado}>{s.nome}{s.sigla?` (${s.sigla})`:''}</option>})}</select></Field>
+                      <Field label="Profissional"><select value={linha.profissionalId} disabled={!linha.servicoId} onChange={e=>selecionarProfissional(linha,e.target.value)} className={`${INPUT} disabled:opacity-50`}><option value="">Selecione...</option>{profs.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></Field>
+                      <div className="sm:col-span-2"><Field label="Observação do serviço"><input value={linha.observacao} onChange={e=>atualizarLinha(linha.idLocal,{observacao:e.target.value})} className={INPUT} placeholder="Opcional"/></Field></div>
+                    </div>
+                  </div>
+                })}
+              </div>
+            )}
           </section>
 
           <section className="rounded-[18px] border border-border-dark bg-slate-900/20 p-4 sm:p-5">
@@ -232,95 +314,104 @@ export default function NovoAgendamentoModal({ aberto, onClose, onCriado }: Prop
               <div>
                 <div className="flex items-center gap-2">
                   <CalendarDays size={16} className="text-primary"/>
-                  <h3 className="text-sm font-bold text-white">Datas disponíveis</h3>
+                  <h3 className="text-sm font-bold text-white">3. Datas e horários disponíveis</h3>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  Destaque azul indica data com vaga em todos os serviços configurados.
+                  Selecione uma data disponível e depois escolha os horários de cada serviço.
                 </p>
               </div>
               {carregandoCalendario&&<Loader2 size={17} className="animate-spin text-primary"/>}
             </div>
 
             {linhasConfiguradas.length===0?(
-              <div className="mt-5 rounded-xl border border-border-dark bg-slate-950/20 p-5 text-center text-xs leading-5 text-slate-500">
-                Escolha primeiro o serviço e o profissional para consultar o calendário.
+              <div className="mt-5 rounded-xl border border-border-dark bg-slate-950/20 p-6 text-center text-sm text-slate-500">
+                Configure pelo menos um serviço e profissional para visualizar a disponibilidade.
               </div>
             ):(
-              <>
-                <div className="mt-5 flex items-center justify-between gap-2">
-                  <button type="button" onClick={()=>trocarMes(-1)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-dark text-slate-400 hover:text-white">
-                    <ChevronLeft size={16}/>
-                  </button>
-                  <div className="text-center">
-                    <p className="text-sm font-bold capitalize text-white">{tituloMes(mesCalendario)}</p>
-                    <p className="mt-0.5 text-[10px] text-slate-500">{datasDisponiveis.length} dia(s) com disponibilidade</p>
+              <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(360px,.9fr)_minmax(0,1.1fr)]">
+                <div className="rounded-2xl border border-border-dark bg-slate-950/20 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <button type="button" onClick={()=>trocarMes(-1)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-dark text-slate-400 hover:text-white"><ChevronLeft size={16}/></button>
+                    <div className="text-center">
+                      <p className="text-sm font-bold capitalize text-white">{tituloMes(mesCalendario)}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-500">{datasDisponiveis.length} dia(s) com disponibilidade</p>
+                    </div>
+                    <button type="button" onClick={()=>trocarMes(1)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-dark text-slate-400 hover:text-white"><ChevronRight size={16}/></button>
                   </div>
-                  <button type="button" onClick={()=>trocarMes(1)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-dark text-slate-400 hover:text-white">
-                    <ChevronRight size={16}/>
-                  </button>
-                </div>
 
-                <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-[.08em] text-slate-600">
-                  {['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(label=><div key={label} className="py-1">{label}</div>)}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1">
-                  {diasCalendario.map(dia=>{
-                    const info=mapaDatasDisponiveis.get(dia.data);
-                    const passado=dia.data<hojeLocal();
-                    const selecionado=data===dia.data;
-                    const disponivel=Boolean(info)&&!passado&&!dia.fimDeSemana;
-
-                    return <button
-                      key={dia.data}
-                      type="button"
-                      disabled={!dia.noMes||!disponivel}
-                      onClick={()=>selecionarDataCalendario(dia.data)}
-                      title={info?`${info.quantidade} vaga(s) disponível(is)`:undefined}
-                      className={`relative aspect-square rounded-lg text-xs font-semibold transition ${
-                        !dia.noMes
-                          ? 'invisible'
-                          : selecionado
-                            ? 'bg-primary text-white ring-2 ring-primary/30'
-                            : disponivel
-                              ? 'border border-primary/25 bg-primary/10 text-blue-200 hover:bg-primary/20'
-                              : 'cursor-not-allowed border border-transparent text-slate-700'
-                      }`}
-                    >
-                      {dia.dia}
-                      {disponivel&&!selecionado&&<span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary"/>}
-                    </button>;
-                  })}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-slate-500">
-                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary"/>Com vaga</span>
-                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-slate-700"/>Sem vaga</span>
-                </div>
-
-                {datasDisponiveis.length>0&&(
-                  <button type="button" onClick={irProximaDisponibilidade} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-xs font-bold text-primary hover:bg-primary/15">
-                    <CalendarPlus2 size={14}/>
-                    Próxima data disponível
-                  </button>
-                )}
-
-                {data&&mapaDatasDisponiveis.get(data)&&(
-                  <div className="mt-3 rounded-xl border border-primary/20 bg-primary/[.06] p-3">
-                    <p className="text-xs font-bold text-white">{parseIsoLocal(data).toLocaleDateString('pt-BR')}</p>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      {mapaDatasDisponiveis.get(data)?.quantidade||0} vaga(s) disponíveis por serviço nesta data.
-                    </p>
+                  <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-[.08em] text-slate-600">
+                    {['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(label=><div key={label} className="py-1">{label}</div>)}
                   </div>
-                )}
-              </>
+
+                  <div className="grid grid-cols-7 gap-1">
+                    {diasCalendario.map(dia=>{
+                      const info=mapaDatasDisponiveis.get(dia.data);
+                      const passado=dia.data<hojeLocal();
+                      const selecionado=data===dia.data;
+                      const disponivel=Boolean(info)&&!passado&&!dia.fimDeSemana;
+                      return <button key={dia.data} type="button" disabled={!dia.noMes||!disponivel} onClick={()=>selecionarDataCalendario(dia.data)} title={info?`${info.quantidade} vaga(s) disponível(is)`:undefined} className={`relative aspect-square rounded-lg text-xs font-semibold transition ${!dia.noMes?'invisible':selecionado?'bg-primary text-white ring-2 ring-primary/30':disponivel?'border border-primary/25 bg-primary/10 text-blue-200 hover:bg-primary/20':'cursor-not-allowed border border-transparent text-slate-700'}`}>{dia.dia}{disponivel&&!selecionado&&<span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary"/>}</button>;
+                    })}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                    <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary"/>Com vaga</span>
+                    <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-slate-700"/>Sem vaga</span>
+                  </div>
+
+                  {datasDisponiveis.length>0&&(
+                    <button type="button" onClick={irProximaDisponibilidade} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-xs font-bold text-primary hover:bg-primary/15">
+                      <CalendarPlus2 size={14}/>Próxima data disponível
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {!data?(
+                    <div className="flex min-h-[260px] items-center justify-center rounded-2xl border border-border-dark bg-slate-950/20 p-6 text-center">
+                      <div>
+                        <CalendarDays size={24} className="mx-auto text-slate-600"/>
+                        <p className="mt-3 text-sm font-semibold text-slate-300">Escolha uma data no calendário</p>
+                        <p className="mt-1 text-xs text-slate-500">Os horários disponíveis aparecerão aqui.</p>
+                      </div>
+                    </div>
+                  ):(
+                    <>
+                      <div className="rounded-2xl border border-primary/20 bg-primary/[.06] p-4">
+                        <p className="text-xs font-bold uppercase tracking-[.12em] text-primary">Data selecionada</p>
+                        <p className="mt-1 text-lg font-bold text-white">{parseIsoLocal(data).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</p>
+                      </div>
+
+                      {linhas.map((linha,index)=>(
+                        <div key={linha.idLocal} className="rounded-2xl border border-border-dark bg-slate-950/20 p-4">
+                          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                            <div>
+                              <p className="text-sm font-bold text-white">{servicos.find(s=>s.id===linha.servicoId)?.nome||`Serviço ${index+1}`}</p>
+                              <p className="mt-1 text-xs text-slate-500">{profissionais.find(p=>p.id===linha.profissionalId)?.nome||'Profissional não selecionado'}</p>
+                            </div>
+                            {linha.carregandoSlots&&<Loader2 size={16} className="animate-spin text-primary"/>}
+                          </div>
+
+                          {linha.erroSlots?(
+                            <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">{linha.erroSlots}</p>
+                          ):linha.slots.length===0?(
+                            <p className="mt-4 text-xs text-slate-500">Nenhum horário disponível.</p>
+                          ):(
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {linha.slots.map(slot=>{
+                                const ativo=linha.horaInicio===slot.horaInicio&&linha.horaFim===slot.horaFim;
+                                return <button key={`${slot.horaInicio}-${slot.horaFim}`} type="button" onClick={()=>selecionarSlot(linha,`${slot.horaInicio}|${slot.horaFim}`)} className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${ativo?'border-primary bg-primary text-white':'border-border-dark bg-slate-900/40 text-slate-300 hover:border-primary/30 hover:text-white'}`}>{horaCurta(slot.horaInicio)}–{horaCurta(slot.horaFim)}</button>;
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </section>
-
-          <section className="rounded-[18px] border border-border-dark bg-slate-900/20 p-4 sm:p-5"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h3 className="text-sm font-bold text-white">Serviços do agendamento</h3><p className="mt-1 text-xs text-slate-500">Um agendamento pode conter vários serviços.</p></div><button type="button" onClick={()=>setLinhas(a=>[...a,novaLinha()])} className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary"><Plus size={14}/>Adicionar serviço</button></div>
-            {carregandoCatalogo?<div className="flex min-h-[260px] items-center justify-center"><Loader2 size={25} className="animate-spin text-primary"/></div>:<div className="mt-5 space-y-4">{linhas.map((l,i)=>{const profs=profissionaisDoServico(l.servicoId);return <div key={l.idLocal} className="rounded-2xl border border-border-dark bg-slate-950/20 p-4"><div className="mb-4 flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[.12em] text-slate-500">Serviço {i+1}</p><button type="button" onClick={()=>setLinhas(a=>a.length===1?[novaLinha()]:a.filter(x=>x.idLocal!==l.idLocal))} className="rounded-lg border border-rose-500/15 bg-rose-500/5 p-2 text-rose-300"><Trash2 size={14}/></button></div><div className="grid gap-4 sm:grid-cols-2"><Field label="Serviço"><select value={l.servicoId} onChange={e=>selecionarServico(l,e.target.value)} className={INPUT}><option value="">Selecione...</option>{servicos.map(s=><option key={s.id} value={s.id} disabled={servicosSelecionados.has(s.id)&&l.servicoId!==s.id}>{s.nome}{s.sigla?` (${s.sigla})`:''}</option>)}</select></Field><Field label="Profissional"><select value={l.profissionalId} disabled={!l.servicoId} onChange={e=>selecionarProfissional(l,e.target.value)} className={`${INPUT} disabled:opacity-50`}><option value="">Selecione...</option>{profs.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></Field><Field label="Horário disponível"><select value={l.horaInicio&&l.horaFim?`${l.horaInicio}|${l.horaFim}`:''} disabled={!data||!l.servicoId||!l.profissionalId||l.carregandoSlots} onChange={e=>selecionarSlot(l,e.target.value)} className={`${INPUT} disabled:opacity-50`}><option value="">{l.carregandoSlots?'Consultando...':'Selecione...'}</option>{l.slots.map(s=><option key={`${s.horaInicio}-${s.horaFim}`} value={`${s.horaInicio}|${s.horaFim}`}>{horaCurta(s.horaInicio)}–{horaCurta(s.horaFim)}{s.turno?` • ${s.turno}`:''}</option>)}</select>{l.erroSlots&&<p className="mt-2 text-[11px] text-amber-300">{l.erroSlots}</p>}</Field><Field label="Observação do serviço"><input value={l.observacao} onChange={e=>atualizarLinha(l.idLocal,{observacao:e.target.value})} className={INPUT} placeholder="Opcional"/></Field></div></div>})}</div>}
-          </section>
-        </div>
+        </div>        </div>
       </div>
       <footer className="flex flex-col-reverse gap-2 border-t border-border-dark px-5 py-4 sm:flex-row sm:justify-end sm:px-6"><button type="button" onClick={onClose} disabled={salvando} className="rounded-xl border border-border-dark bg-slate-900/40 px-4 py-2.5 text-sm font-semibold text-slate-300">Cancelar</button><button type="button" onClick={salvar} disabled={salvando||carregandoCatalogo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-hover disabled:opacity-50">{salvando?<Loader2 size={16} className="animate-spin"/>:<CalendarPlus2 size={16}/>} {salvando?'Agendando...':'Confirmar agendamento'}</button></footer>
     </motion.div>
