@@ -5,6 +5,7 @@ import {
   Clock3,
   FilterX,
   Loader2,
+  Plus,
   Search,
   Stethoscope,
   UserCog,
@@ -15,6 +16,7 @@ import { motion } from 'motion/react';
 
 import { saeAgendamentosService } from '../services/saeAgendamentosService';
 import GerenciarProfissionaisModal from '../components/agendamentos/GerenciarProfissionaisModal';
+import NovoAgendamentoModal from '../components/agendamentos/NovoAgendamentoModal';
 
 import type {
   SaeAgendamentoFiltros,
@@ -81,6 +83,7 @@ export default function SaeAgendamentosPage() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [profissionaisAberto, setProfissionaisAberto] = useState(false);
+  const [novoAgendamentoAberto, setNovoAgendamentoAberto] = useState(false);
   const [filtros, setFiltros] =
     useState<SaeAgendamentoFiltros>(FILTROS_INICIAIS);
 
@@ -230,14 +233,14 @@ export default function SaeAgendamentosPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setProfissionaisAberto(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white"
-        >
-          <UserCog size={18} className="text-primary" />
-          Profissionais
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="button" onClick={() => setProfissionaisAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white">
+            <UserCog size={18} className="text-primary" /> Profissionais
+          </button>
+          <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover">
+            <Plus size={18} /> Novo agendamento
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -468,6 +471,12 @@ export default function SaeAgendamentosPage() {
       <GerenciarProfissionaisModal
         aberto={profissionaisAberto}
         onClose={() => setProfissionaisAberto(false)}
+      />
+
+      <NovoAgendamentoModal
+        aberto={novoAgendamentoAberto}
+        onClose={() => setNovoAgendamentoAberto(false)}
+        onCriado={carregarAgendamentos}
       />
     </motion.section>
   );
