@@ -14,6 +14,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 
 import { SaeAgendaApiError, saeAgendaService } from '../../services/saeAgendaService';
+import { saeAgendamentosService } from '../../services/saeAgendamentosService';
 import type {
   SaeAgendaListResponse,
   SaeAgendaPeriodo,
@@ -22,6 +23,7 @@ import type {
   SaeSolicitacaoAgenda,
   SaeSolicitacaoAgendaAcao,
 } from '../../types/saeAgenda';
+import type { SaeProfissionalAgendamentoResumo } from '../../types/saeAgendamento';
 
 interface Props {
   aberto: boolean;
@@ -38,11 +40,17 @@ const DIAS: Array<{ value: SaeDiaSemana; label: string }> = [
 
 const hora = (value?: string | null) => (value ? String(value).slice(0, 5) : '—');
 const dataHora = (value?: string | null) => value ? new Date(value).toLocaleString('pt-BR') : '—';
+const dataCurta = (value?: string | null) => {
+  if (!value) return '—';
+  const [ano, mes, dia] = value.split('-');
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : value;
+};
 const diaLabel = (dia?: number | null) => DIAS.find((item) => item.value === dia)?.label || '—';
 
 export default function MinhaAgendaModal({ aberto, onClose }: Props) {
   const [dados, setDados] = useState<SaeAgendaListResponse | null>(null);
   const [solicitacoes, setSolicitacoes] = useState<SaeSolicitacaoAgenda[]>([]);
+  const [proximosAtendimentos, setProximosAtendimentos] = useState<SaeProfissionalAgendamentoResumo[]>([]);
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>('agenda');
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -69,18 +77,22 @@ export default function MinhaAgendaModal({ aberto, onClose }: Props) {
       setErro(null);
       setSemVinculo(false);
 
-      const [agendaResponse, solicitacoesResponse] = await Promise.all([
-        saeAgendaService.minhaAgenda(),
-        saeAgendaService.minhasSolicitacoes(),
-      ]);
+      const [agendaResponse, solicitacoesResponse, atendimentosResponse] =
+        await Promise.all([
+          saeAgendaService.minhaAgenda(),
+          saeAgendaService.minhasSolicitacoes(),
+          saeAgendamentosService.minhaAgendaProfissional(),
+        ]);
 
       setDados(agendaResponse);
       setSolicitacoes(solicitacoesResponse.solicitacoes || []);
+      setProximosAtendimentos(atendimentosResponse.agendamentos || []);
     } catch (error) {
       if (error instanceof SaeAgendaApiError && error.status === 404) {
         setSemVinculo(true);
         setDados(null);
         setSolicitacoes([]);
+        setProximosAtendimentos([]);
       } else {
         setErro(error instanceof Error ? error.message : 'Não foi possível carregar sua agenda.');
       }
@@ -321,7 +333,64 @@ export default function MinhaAgendaModal({ aberto, onClose }: Props) {
                 )}
 
                 {aba === 'agenda' ? (
-                  <div className="grid gap-3">
+                  <div className="space-y-5">
+                    <section className="overflow-hidden rounded-[18px] border border-border-dark bg-slate-900/20">
+                      <div className="flex flex-col gap-1 border-b border-border-dark px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-white">Próximos atendimentos</h4>
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            Pacientes já agendados para este profissional.
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold text-primary">
+                          {proximosAtendimentos.length}
+                        </span>
+                      </div>
+
+                      {proximosAtendimentos.length === 0 ? (
+                        <p className="px-4 py-5 text-sm text-slate-600">
+                          Nenhum paciente agendado.
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-border-dark">
+                          {proximosAtendimentos.map((item) => (
+                            <div
+                              key={item.agendamentoServicoId}
+                              className="grid gap-3 px-4 py-4 sm:grid-cols-[120px_120px_minmax(0,1fr)] sm:items-center"
+                            >
+                              <div>
+                                <p className="text-xs font-bold text-slate-300">
+                                  {dataCurta(item.data)}
+                                </p>
+                                <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-white">
+                                  <Clock3 size={14} className="text-primary" />
+                                  {hora(item.horaInicio)}–{hora(item.horaFim)}
+                                </p>
+                              </div>
+
+                              <div className="text-xs text-slate-500">
+                                {item.tipoAtendimento || 'Atendimento'}
+                              </div>
+
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-white">
+                                  {item.nomePaciente}
+                                </p>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                                  <span>Prontuário {item.prontuario || '—'}</span>
+                                  <span>
+                                    {item.servicoNome}
+                                    {item.servicoSigla ? ` (${item.servicoSigla})` : ''}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+
+                    <div className="grid gap-3">
                     {DIAS.map((dia) => {
                       const periodos = periodosAtivos.filter((item) => item.diaSemana === dia.value);
                       return (
@@ -346,6 +415,7 @@ export default function MinhaAgendaModal({ aberto, onClose }: Props) {
                         </section>
                       );
                     })}
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
