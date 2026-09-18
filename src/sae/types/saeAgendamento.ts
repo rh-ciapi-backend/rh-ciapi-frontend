@@ -153,3 +153,24 @@ export interface SaeCancelarAgendamentoResponse {
   };
 }
 
+export interface SaeDisponibilidadeDataResumo {
+  data: string;
+  quantidade: number;
+  primeiroHorario?: string | null;
+  ultimoHorario?: string | null;
+}
+
+export interface SaeAgendamentoDisponibilidadePeriodoResponse {
+  profissional: {
+    id: string;
+    nome: string;
+    ativo: boolean;
+  };
+  servico: SaeAgendamentoCatalogoServico & {
+    ativo?: boolean;
+  };
+  inicio: string;
+  fim: string;
+  datas: SaeDisponibilidadeDataResumo[];
+}
+
