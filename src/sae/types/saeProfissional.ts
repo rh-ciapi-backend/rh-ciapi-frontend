@@ -5,6 +5,19 @@ export interface SaeServicoOpcao {
   ativo: boolean;
 }
 
+
+export interface SaeUsuarioSistemaOpcao {
+  id: string;
+  authUserId: string;
+  nomeCompleto: string;
+  email: string;
+  perfil?: string | null;
+  status?: string | null;
+  setorNome?: string | null;
+  vinculadoProfissionalId?: string | null;
+  vinculadoProfissionalNome?: string | null;
+}
+
 export interface SaeProfissional {
   id: string;
   authUserId?: string | null;
@@ -40,5 +53,6 @@ export type SaeProfissionaisAction =
 export interface SaeProfissionaisListResponse {
   profissionais: SaeProfissional[];
   servicos: SaeServicoOpcao[];
+  usuariosSistema?: SaeUsuarioSistemaOpcao[];
   permissions: SaeProfissionaisAction[];
 }
