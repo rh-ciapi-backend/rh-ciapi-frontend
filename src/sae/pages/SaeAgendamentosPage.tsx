@@ -183,7 +183,41 @@ export default function SaeAgendamentosPage() {
         filtros.status === 'TODOS' ||
         agendamento.status === filtros.status;
 
-      const abrirCancelamento = (agendamento: SaeAgendamentoResumo) => {
+      return (
+        atendeBusca &&
+        atendeData &&
+        atendeTipoUsuario &&
+        atendeTipoAtendimento &&
+        atendeServico &&
+        atendeTurno &&
+        atendeStatus
+      );
+    });
+  }, [agendamentos, filtros]);
+
+  const totais = useMemo(() => {
+    const contar = (tipo: SaeTipoUsuario) =>
+      agendamentos.filter(
+        (agendamento) => agendamento.tipoUsuario === tipo,
+      ).length;
+
+    return {
+      total: agendamentos.length,
+      matriculados: contar('MATRICULADO'),
+      triagem: contar('TRIAGEM'),
+      servidores: contar('SERVIDOR'),
+      externos: contar('EXTERNO'),
+    };
+  }, [agendamentos]);
+
+  const atualizarFiltro = <K extends keyof SaeAgendamentoFiltros>(
+    campo: K,
+    valor: SaeAgendamentoFiltros[K],
+  ) => {
+    setFiltros((atuais) => ({ ...atuais, [campo]: valor }));
+  };
+
+  const abrirCancelamento = (agendamento: SaeAgendamentoResumo) => {
     setCancelando(agendamento);
     setMotivoCancelamento('');
     setErroCancelamento(null);
@@ -218,40 +252,6 @@ export default function SaeAgendamentosPage() {
     } finally {
       setCancelamentoEmAndamento(false);
     }
-  };
-
-  return (
-        atendeBusca &&
-        atendeData &&
-        atendeTipoUsuario &&
-        atendeTipoAtendimento &&
-        atendeServico &&
-        atendeTurno &&
-        atendeStatus
-      );
-    });
-  }, [agendamentos, filtros]);
-
-  const totais = useMemo(() => {
-    const contar = (tipo: SaeTipoUsuario) =>
-      agendamentos.filter(
-        (agendamento) => agendamento.tipoUsuario === tipo,
-      ).length;
-
-    return {
-      total: agendamentos.length,
-      matriculados: contar('MATRICULADO'),
-      triagem: contar('TRIAGEM'),
-      servidores: contar('SERVIDOR'),
-      externos: contar('EXTERNO'),
-    };
-  }, [agendamentos]);
-
-  const atualizarFiltro = <K extends keyof SaeAgendamentoFiltros>(
-    campo: K,
-    valor: SaeAgendamentoFiltros[K],
-  ) => {
-    setFiltros((atuais) => ({ ...atuais, [campo]: valor }));
   };
 
   return (
@@ -493,6 +493,7 @@ export default function SaeAgendamentosPage() {
                 <AgendamentoRow
                   key={agendamento.id}
                   agendamento={agendamento}
+                  onCancelar={abrirCancelamento}
                 />
               ))}
             </div>
@@ -502,6 +503,7 @@ export default function SaeAgendamentosPage() {
                 <AgendamentoCard
                   key={agendamento.id}
                   agendamento={agendamento}
+                  onCancelar={abrirCancelamento}
                 />
               ))}
             </div>
