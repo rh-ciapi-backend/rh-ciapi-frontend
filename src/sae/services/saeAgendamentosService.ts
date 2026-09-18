@@ -1,9 +1,93 @@
 import { supabase } from '../../lib/supabaseClient';
+import { API_BASE_URL } from '../../config/api';
 
 import type {
+  SaeAgendamentoCatalogoResponse,
+  SaeAgendamentoDisponibilidadeResponse,
   SaeAgendamentoResumo,
   SaeAgendamentoServicoResumo,
+  SaeAgendamentoUsuarioOpcao,
+  SaeNovoAgendamentoPayload,
+  SaeNovoAgendamentoResponse,
 } from '../types/saeAgendamento';
+
+
+export class SaeAgendamentosApiError extends Error {
+  status?: number;
+  details?: unknown;
+
+  constructor(message: string, status?: number, details?: unknown) {
+    super(message);
+    this.name = 'SaeAgendamentosApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
+const buildApiUrl = (
+  path = '',
+  query?: Record<string, string | number | undefined | null>,
+) => {
+  const base = String(API_BASE_URL || '').replace(/\/$/, '');
+  const normalizedPath = path
+    ? path.startsWith('/')
+      ? path
+      : `/${path}`
+    : '';
+
+  const url = new URL(`${base}/api/sae/agendamentos${normalizedPath}`);
+
+  Object.entries(query || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  return url.toString();
+};
+
+async function getAccessToken() {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) throw error;
+
+  const token = data.session?.access_token;
+
+  if (!token) {
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  return token;
+}
+
+async function apiRequest<T>(
+  path = '',
+  options?: RequestInit,
+  query?: Record<string, string | number | undefined | null>,
+): Promise<T> {
+  const token = await getAccessToken();
+
+  const response = await fetch(buildApiUrl(path, query), {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(options?.headers || {}),
+    },
+  });
+
+  const json = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new SaeAgendamentosApiError(
+      json?.error || 'Erro ao processar o agendamento.',
+      response.status,
+      json?.details,
+    );
+  }
+
+  return json as T;
+}
 
 const PAGE_SIZE = 1000;
 const IN_CHUNK_SIZE = 200;
@@ -77,6 +161,42 @@ const listarPaginado = async (
 };
 
 export const saeAgendamentosService = {
+
+  async listarCatalogo(): Promise<SaeAgendamentoCatalogoResponse> {
+    return apiRequest<SaeAgendamentoCatalogoResponse>('/catalogo');
+  },
+
+  async buscarUsuarios(
+    busca: string,
+  ): Promise<{ usuarios: SaeAgendamentoUsuarioOpcao[] }> {
+    return apiRequest<{ usuarios: SaeAgendamentoUsuarioOpcao[] }>(
+      '/usuarios',
+      { method: 'GET' },
+      { busca, limit: 20 },
+    );
+  },
+
+  async consultarDisponibilidade(
+    profissionalId: string,
+    servicoId: string,
+    data: string,
+  ): Promise<SaeAgendamentoDisponibilidadeResponse> {
+    return apiRequest<SaeAgendamentoDisponibilidadeResponse>(
+      '/disponibilidade',
+      { method: 'GET' },
+      { profissionalId, servicoId, data },
+    );
+  },
+
+  async criar(
+    payload: SaeNovoAgendamentoPayload,
+  ): Promise<SaeNovoAgendamentoResponse> {
+    return apiRequest<SaeNovoAgendamentoResponse>('', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   async listar(): Promise<SaeAgendamentoResumo[]> {
     try {
       const [agendamentosRows, agendamentoServicosRows, servicosRows, profissionaisRows] =
