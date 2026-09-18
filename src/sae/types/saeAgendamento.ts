@@ -114,3 +114,42 @@ export interface SaeNovoAgendamentoResponse {
   agendamento: { id: string; status: string; data: string; servicos: unknown[] };
 }
 
+export interface SaeProfissionalAgendamentoResumo {
+  agendamentoId: string;
+  agendamentoServicoId: string;
+  data?: string | null;
+  horaInicio?: string | null;
+  horaFim?: string | null;
+  turno?: string | null;
+  status: string;
+  statusServico: string;
+  tipoUsuario: string;
+  tipoAtendimento?: string | null;
+  usuarioId?: string | null;
+  prontuario?: string | null;
+  nomePaciente: string;
+  servicoId?: string | null;
+  servicoNome: string;
+  servicoSigla?: string | null;
+  observacao?: string | null;
+}
+
+export interface SaeMinhaAgendaProfissionalResponse {
+  profissional: {
+    id: string;
+    nome: string;
+    ativo: boolean;
+    authUserId?: string | null;
+  };
+  agendamentos: SaeProfissionalAgendamentoResumo[];
+}
+
+export interface SaeCancelarAgendamentoResponse {
+  ok: true;
+  agendamento: {
+    id: string;
+    status: 'CANCELADO';
+    motivo: string;
+  };
+}
+
