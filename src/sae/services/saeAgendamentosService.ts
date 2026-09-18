@@ -7,6 +7,8 @@ import type {
   SaeAgendamentoResumo,
   SaeAgendamentoServicoResumo,
   SaeAgendamentoUsuarioOpcao,
+  SaeCancelarAgendamentoResponse,
+  SaeMinhaAgendaProfissionalResponse,
   SaeNovoAgendamentoPayload,
   SaeNovoAgendamentoResponse,
 } from '../types/saeAgendamento';
@@ -195,6 +197,24 @@ export const saeAgendamentosService = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+
+  async minhaAgendaProfissional(): Promise<SaeMinhaAgendaProfissionalResponse> {
+    return apiRequest<SaeMinhaAgendaProfissionalResponse>('/minha-agenda');
+  },
+
+  async cancelar(
+    agendamentoId: string,
+    motivo: string,
+  ): Promise<SaeCancelarAgendamentoResponse> {
+    return apiRequest<SaeCancelarAgendamentoResponse>(
+      `/${agendamentoId}/cancelar`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ motivo }),
+      },
+    );
   },
 
   async listar(): Promise<SaeAgendamentoResumo[]> {
