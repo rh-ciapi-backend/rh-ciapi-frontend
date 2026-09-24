@@ -78,13 +78,13 @@ const BATCH_STRATEGY_OPTIONS: Array<{ value: FrequenciaBatchStrategy; label: str
 
 function StatsCard({ title, value, subtitle, icon }: StatsCardProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#101826] p-5 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
+    <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-4">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
           <h3 className="mt-2 text-2xl font-semibold text-white">{value}</h3>
         </div>
-        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-cyan-300">
+        <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400">
           {icon}
         </div>
       </div>
@@ -162,7 +162,7 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('feriado')) {
     return {
-      card: 'border-violet-400/20 bg-[linear-gradient(180deg,rgba(139,92,246,0.12),rgba(15,23,42,0.92))]',
+      card: 'border-[#26344a] bg-[#1e293b]',
       accent: 'text-violet-200',
       muted: 'text-violet-300/80',
       pill: 'border-violet-400/20 bg-violet-500/12 text-violet-200',
@@ -172,7 +172,7 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('ponto') || text.includes('facultativo')) {
     return {
-      card: 'border-sky-400/20 bg-[linear-gradient(180deg,rgba(14,165,233,0.12),rgba(15,23,42,0.92))]',
+      card: 'border-[#26344a] bg-[#1e293b]',
       accent: 'text-sky-200',
       muted: 'text-sky-300/80',
       pill: 'border-sky-400/20 bg-sky-500/12 text-sky-200',
@@ -182,7 +182,7 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('atestado')) {
     return {
-      card: 'border-amber-400/20 bg-[linear-gradient(180deg,rgba(245,158,11,0.12),rgba(15,23,42,0.92))]',
+      card: 'border-[#26344a] bg-[#1e293b]',
       accent: 'text-amber-200',
       muted: 'text-amber-300/80',
       pill: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
@@ -192,7 +192,7 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('falta')) {
     return {
-      card: 'border-rose-400/20 bg-[linear-gradient(180deg,rgba(244,63,94,0.12),rgba(15,23,42,0.92))]',
+      card: 'border-[#26344a] bg-[#1e293b]',
       accent: 'text-rose-200',
       muted: 'text-rose-300/80',
       pill: 'border-rose-400/20 bg-rose-500/12 text-rose-200',
@@ -202,7 +202,7 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('ferias') || text.includes('férias')) {
     return {
-      card: 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.12),rgba(15,23,42,0.92))]',
+      card: 'border-[#26344a] bg-[#1e293b]',
       accent: 'text-emerald-200',
       muted: 'text-emerald-300/80',
       pill: 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200',
@@ -212,7 +212,7 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
     return {
-      card: 'border-slate-500/20 bg-[linear-gradient(180deg,rgba(100,116,139,0.10),rgba(15,23,42,0.92))]',
+      card: 'border-[#26344a] bg-[#1e293b]',
       accent: 'text-slate-200',
       muted: 'text-slate-400',
       pill: 'border-slate-500/20 bg-slate-500/12 text-slate-300',
@@ -222,16 +222,16 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text) {
     return {
-      card: 'border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.10),rgba(15,23,42,0.92))]',
-      accent: 'text-cyan-200',
-      muted: 'text-cyan-300/80',
-      pill: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
-      dot: 'bg-cyan-300',
+      card: 'border-[#26344a] bg-[#1e293b]',
+      accent: 'text-blue-300',
+      muted: 'text-blue-400/80',
+      pill: 'border-blue-400/20 bg-blue-500/10 text-blue-300',
+      dot: 'bg-blue-400',
     };
   }
 
   return {
-    card: 'border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(15,23,42,0.94))]',
+    card: 'border-[#26344a] bg-[#1e293b]',
     accent: 'text-white',
     muted: 'text-slate-400',
     pill: 'border-white/10 bg-white/[0.04] text-slate-400',
@@ -265,7 +265,7 @@ function buildStatusPill(day: FrequenciaDayItem) {
 
 function CalendarMiniField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-black/10 px-3 py-2">
+    <div className="rounded-lg border border-[#26344a] bg-[#172033] px-3 py-2">
       <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className="mt-1 truncate text-[13px] font-medium text-slate-100">{value}</p>
     </div>
@@ -626,168 +626,23 @@ export default function FrequenciaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-slate-100">
-      <div className="mx-auto max-w-[1700px] p-4 md:p-6 xl:p-8">
-        <div className="mb-6 rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_34%),linear-gradient(135deg,#0b1320_0%,#0f1d31_55%,#12243c_100%)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
-                  <ShieldCheck className="h-4 w-4" />
-                  Dashboard Executivo
-                </div>
-
-                <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-                  Gestão de Frequência
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                  Painel consolidado para análise mensal da frequência dos servidores, com filtros,
-                  estatísticas, calendário individual e exportações integradas.
-                </p>
-
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsEventosModalOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/12 px-4 py-2.5 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/18"
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                    Gerenciar feriados
-                  </button>
-
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300">
-                    {eventosCount} ocorrência(s) de calendário detectada(s) na competência
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <button
-                  onClick={() => handleExport('docx')}
-                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting === `${exportMode}-docx` ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : exportMode === 'lote' && batchStrategy === 'zip' ? (
-                    <FileArchive className="h-4 w-4" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-                  )}
-                  {exportMode === 'lote'
-                    ? batchStrategy === 'documento_unico'
-                      ? 'Exportar DOCX único'
-                      : 'Exportar lote DOCX'
-                    : 'Exportar DOCX'}
-                </button>
-
-                <button
-                  onClick={() => handleExport('pdf')}
-                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting === `${exportMode}-pdf` ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : exportMode === 'lote' ? (
-                    <Layers3 className="h-4 w-4" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {exportMode === 'lote' ? 'Exportar lote PDF' : 'Exportar PDF'}
-                </button>
-
-                <button
-                  onClick={() => handleExport('csv')}
-                  disabled={!!exporting || !selectedServidor || exportMode === 'lote'}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting === 'individual-csv' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileSpreadsheet className="h-4 w-4" />
-                  )}
-                  Exportar CSV
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_520px]">
-              <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
-                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em] text-slate-400">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-cyan-200">
-                    <Layers3 className="h-3.5 w-3.5" />
-                    Exportação inteligente
-                  </span>
-                  <span>{exportPreviewLabel}</span>
-                </div>
-                <p className="mt-3 text-sm text-slate-300">{exportStrategyHint}</p>
-              </div>
-
-              <div className="rounded-[24px] border border-white/10 bg-black/10 p-4">
-                <div
-                  className={`grid grid-cols-1 gap-3 ${
-                    exportMode === 'lote' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
-                  }`}
-                >
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Tipo de exportação
-                    </label>
-                    <select
-                      value={exportMode}
-                      onChange={(e) => setExportMode(e.target.value as ExportMode)}
-                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                    >
-                      <option value="individual">Individual</option>
-                      <option value="lote">Lote</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Escopo
-                    </label>
-                    <select
-                      value={exportMode === 'individual' ? 'servidor_selecionado' : exportScope}
-                      onChange={(e) => setExportScope(e.target.value as ExportScope)}
-                      disabled={exportMode === 'individual'}
-                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {EXPORT_SCOPE_OPTIONS.filter((option) =>
-                        exportMode === 'individual'
-                          ? option.value === 'servidor_selecionado'
-                          : option.value !== 'servidor_selecionado'
-                      ).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {exportMode === 'lote' ? (
-                    <div>
-                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                        Saída do lote
-                      </label>
-                      <select
-                        value={batchStrategy}
-                        onChange={(e) => setBatchStrategy(e.target.value as FrequenciaBatchStrategy)}
-                        className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                      >
-                        {BATCH_STRATEGY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#0b1220] text-slate-100">
+      <div className="mx-auto max-w-[1600px] px-4 py-6 md:px-6 lg:px-8">
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-400">FREQUÊNCIA</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">Frequência Mensal</h1>
+            <p className="mt-1 text-sm text-slate-400">Gere, acompanhe e exporte a frequência dos servidores.</p>
           </div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setIsEventosModalOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-[#26344a] bg-[#172033] px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-[#1e293b]">
+              <CalendarDays className="h-4 w-4" /> Gerenciar feriados
+            </button>
+            <a href="#exportacao-frequencia" className="inline-flex items-center gap-2 rounded-xl bg-[#3b82f6] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563eb]">
+              <Download className="h-4 w-4" /> Exportar
+            </a>
+          </div>
+        </header>
 
         {error ? (
           <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-100">
@@ -798,6 +653,113 @@ export default function FrequenciaPage() {
             </div>
           </div>
         ) : null}
+        <section aria-label="Filtros da frequência" className="mb-6 rounded-2xl border border-[#26344a] bg-[#172033] p-4 md:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-white"><Filter className="h-4 w-4 text-blue-400" /> Filtros</h2>
+            <span className="text-xs text-slate-400">{MONTHS[mes - 1]} de {ano}</span>
+          </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="xl:col-span-2">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Busca
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Nome, CPF, matrícula..."
+                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      Mês
+                    </label>
+                    <select
+                      value={mes}
+                      onChange={(e) => setMes(Number(e.target.value))}
+                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                    >
+                      {MONTHS.map((label, index) => (
+                        <option key={label} value={index + 1}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      Ano
+                    </label>
+                    <input
+                      type="number"
+                      min={2020}
+                      max={2100}
+                      value={ano}
+                      onChange={(e) => setAno(Number(e.target.value) || today.getFullYear())}
+                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Categoria
+                  </label>
+                  <select
+                    value={filterCategoria}
+                    onChange={(e) => setFilterCategoria(e.target.value)}
+                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                  >
+                    <option value="TODAS">Todas</option>
+                    {categorias.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Setor
+                  </label>
+                  <select
+                    value={filterSetor}
+                    onChange={(e) => setFilterSetor(e.target.value)}
+                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                  >
+                    <option value="TODOS">Todos</option>
+                    {setores.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                  >
+                    <option value="TODOS">Todos</option>
+                    <option value="ATIVO">ATIVO</option>
+                    <option value="INATIVO">INATIVO</option>
+                    <option value="AFASTADO">AFASTADO</option>
+                  </select>
+                </div>
+              </div>
+        </section>
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatsCard
@@ -825,128 +787,140 @@ export default function FrequenciaPage() {
             icon={<Hash className="h-5 w-5" />}
           />
         </div>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="space-y-6">
-            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
-              <div className="mb-5 flex items-center gap-2 text-sm font-medium text-white">
-                <Filter className="h-4 w-4 text-cyan-300" />
-                Filtros
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Busca
-                  </label>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Nome, CPF, matrícula..."
-                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/40"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+        <section id="exportacao-frequencia" aria-label="Exportação da frequência" className="mb-6 rounded-2xl border border-[#26344a] bg-[#172033] p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Exportação</h2>
+              <p className="mt-1 text-xs text-slate-400">{exportPreviewLabel} · {exportStrategyHint}</p>
+            </div>
+            <span className="text-xs text-slate-400">{eventosCount} ocorrência(s) de calendário detectada(s)</span>
+          </div>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0 flex-1">
+                <div
+                  className={`grid grid-cols-1 gap-3 ${
+                    exportMode === 'lote' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+                  }`}
+                >
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Mês
+                      Tipo de exportação
                     </label>
                     <select
-                      value={mes}
-                      onChange={(e) => setMes(Number(e.target.value))}
-                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                      value={exportMode}
+                      onChange={(e) => setExportMode(e.target.value as ExportMode)}
+                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                     >
-                      {MONTHS.map((label, index) => (
-                        <option key={label} value={index + 1}>
-                          {label}
-                        </option>
-                      ))}
+                      <option value="individual">Individual</option>
+                      <option value="lote">Lote</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Ano
+                      Escopo
                     </label>
-                    <input
-                      type="number"
-                      min={2020}
-                      max={2100}
-                      value={ano}
-                      onChange={(e) => setAno(Number(e.target.value) || today.getFullYear())}
-                      className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                    />
+                    <select
+                      value={exportMode === 'individual' ? 'servidor_selecionado' : exportScope}
+                      onChange={(e) => setExportScope(e.target.value as ExportScope)}
+                      disabled={exportMode === 'individual'}
+                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {EXPORT_SCOPE_OPTIONS.filter((option) =>
+                        exportMode === 'individual'
+                          ? option.value === 'servidor_selecionado'
+                          : option.value !== 'servidor_selecionado'
+                      ).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
 
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Categoria
-                  </label>
-                  <select
-                    value={filterCategoria}
-                    onChange={(e) => setFilterCategoria(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                  >
-                    <option value="TODAS">Todas</option>
-                    {categorias.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Setor
-                  </label>
-                  <select
-                    value={filterSetor}
-                    onChange={(e) => setFilterSetor(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                  >
-                    <option value="TODOS">Todos</option>
-                    {setores.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Status
-                  </label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                  >
-                    <option value="TODOS">Todos</option>
-                    <option value="ATIVO">ATIVO</option>
-                    <option value="INATIVO">INATIVO</option>
-                    <option value="AFASTADO">AFASTADO</option>
-                  </select>
+                  {exportMode === 'lote' ? (
+                    <div>
+                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                        Saída do lote
+                      </label>
+                      <select
+                        value={batchStrategy}
+                        onChange={(e) => setBatchStrategy(e.target.value as FrequenciaBatchStrategy)}
+                        className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                      >
+                        {BATCH_STRATEGY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
                 </div>
               </div>
-            </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:w-auto">
+                <button
+                  onClick={() => handleExport('docx')}
+                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting === `${exportMode}-docx` ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : exportMode === 'lote' && batchStrategy === 'zip' ? (
+                    <FileArchive className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                  {exportMode === 'lote'
+                    ? batchStrategy === 'documento_unico'
+                      ? 'Exportar DOCX único'
+                      : 'Exportar lote DOCX'
+                    : 'Exportar DOCX'}
+                </button>
 
-            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+                <button
+                  onClick={() => handleExport('pdf')}
+                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting === `${exportMode}-pdf` ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : exportMode === 'lote' ? (
+                    <Layers3 className="h-4 w-4" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {exportMode === 'lote' ? 'Exportar lote PDF' : 'Exportar PDF'}
+                </button>
+
+                <button
+                  onClick={() => handleExport('csv')}
+                  disabled={!!exporting || !selectedServidor || exportMode === 'lote'}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-100 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting === 'individual-csv' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4" />
+                  )}
+                  Exportar CSV
+                </button>
+              </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+          <aside className="min-w-0">
+            <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-white">Servidores</h2>
                   <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
                 </div>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : null}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
               </div>
 
-              <div className="max-h-[620px] space-y-3 overflow-y-auto pr-1">
+              <div className="max-h-[680px] space-y-2 overflow-y-auto pr-1">
                 {!loading && !filteredItems.length ? (
                   <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
                     <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
@@ -965,9 +939,9 @@ export default function FrequenciaPage() {
                       key={String(servidor.id ?? servidor.cpf ?? servidor.nome)}
                       onClick={() => setSelectedId(String(servidor.id ?? ''))}
                       className={[
-                        'w-full rounded-2xl border p-4 text-left transition',
+                        'w-full rounded-xl border p-3 text-left transition',
                         active
-                          ? 'border-cyan-400/30 bg-cyan-500/10'
+                          ? 'border-blue-500/50 bg-blue-500/10'
                           : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
                       ].join(' ')}
                     >
@@ -1011,12 +985,12 @@ export default function FrequenciaPage() {
           </aside>
 
           <section className="space-y-6">
-            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+            <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
               {selectedServidor ? (
                 <>
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 text-cyan-200">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-blue-300">
                         <UserRound className="h-8 w-8" />
                       </div>
 
@@ -1038,7 +1012,7 @@ export default function FrequenciaPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                         <div className="mb-2 flex items-center gap-2 text-slate-400">
                           <Hash className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Matrícula</span>
@@ -1048,7 +1022,7 @@ export default function FrequenciaPage() {
                         </p>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                         <div className="mb-2 flex items-center gap-2 text-slate-400">
                           <ShieldCheck className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">CPF</span>
@@ -1056,7 +1030,7 @@ export default function FrequenciaPage() {
                         <p className="text-sm font-medium text-white">{formatCpf(selectedServidor.cpf)}</p>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                         <div className="mb-2 flex items-center gap-2 text-slate-400">
                           <Building2 className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Setor</span>
@@ -1064,7 +1038,7 @@ export default function FrequenciaPage() {
                         <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.setor)}</p>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                         <div className="mb-2 flex items-center gap-2 text-slate-400">
                           <FileText className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Cargo</span>
@@ -1075,21 +1049,21 @@ export default function FrequenciaPage() {
                   </div>
 
                   <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                    <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Dias com registro</p>
                       <p className="mt-2 text-2xl font-semibold text-white">
                         {countDiasComRegistro(selectedDias)}
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                    <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Dias com rubrica</p>
                       <p className="mt-2 text-2xl font-semibold text-white">
                         {countDiasComRubrica(selectedDias)}
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-[#09111d] p-4">
+                    <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Ocorrências de turno</p>
                       <p className="mt-2 text-2xl font-semibold text-white">
                         {countDiasComOcorrencia(selectedDias)}
@@ -1107,14 +1081,14 @@ export default function FrequenciaPage() {
               )}
             </div>
 
-            <div className="rounded-[28px] border border-white/10 bg-[#0d1624] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+            <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-base font-semibold text-white">
                     Calendário mensal · {MONTHS[mes - 1]} / {ano}
                   </h3>
                   <p className="mt-1 text-xs text-slate-400">
-                    Visualização diária premium da rubrica e das ocorrências do servidor selecionado.
+                    Rubricas e ocorrências do servidor selecionado.
                   </p>
                 </div>
 
@@ -1122,7 +1096,7 @@ export default function FrequenciaPage() {
                   <button
                     type="button"
                     onClick={() => setIsEventosModalOpen(true)}
-                    className="rounded-full border border-cyan-400/20 bg-cyan-500/12 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-cyan-500/18"
+                    className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-100 transition hover:bg-blue-500/20"
                   >
                     Gerenciar feriados
                   </button>
@@ -1151,15 +1125,15 @@ export default function FrequenciaPage() {
                       <div
                         key={`${selectedServidor?.id}-${day.dia}-${day.data}`}
                         className={[
-                          'group rounded-[22px] border p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition duration-200',
-                          'hover:-translate-y-[1px] hover:border-white/15 hover:shadow-[0_14px_30px_rgba(0,0,0,0.26)]',
+                          'group rounded-xl border p-3.5 transition-colors duration-200',
+                          'hover:border-[#3b82f6]/40',
                           tone.card,
                         ].join(' ')}
                       >
                         <div className="mb-3 flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-start gap-3">
                             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/15 shadow-inner">
-                              <span className={`text-lg font-semibold leading-none ${tone.accent}`}>
+                              <span className={`text-lg font-semibold leading-none text-white`}>
                                 {String(day.dia).padStart(2, '0')}
                               </span>
                             </div>
@@ -1167,7 +1141,7 @@ export default function FrequenciaPage() {
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <span
-                                  className={`text-xs font-semibold uppercase tracking-[0.18em] ${tone.muted}`}
+                                  className={`text-xs font-semibold uppercase tracking-[0.18em] text-slate-400`}
                                 >
                                   {getWeekdayLabel(day.data)}
                                 </span>
@@ -1185,7 +1159,7 @@ export default function FrequenciaPage() {
                           </span>
                         </div>
 
-                        <div className="rounded-2xl border border-white/8 bg-black/10 px-3 py-3">
+                        <div className="rounded-xl border border-[#26344a] bg-[#172033] px-3 py-3">
                           <div className="mb-1 flex items-center gap-2">
                             <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
                             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Rubrica</p>
@@ -1194,7 +1168,7 @@ export default function FrequenciaPage() {
                             className={`truncate text-sm font-semibold ${
                               compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica) === '—'
                                 ? 'text-slate-400'
-                                : tone.accent
+                                : 'text-slate-100'
                             }`}
                             title={compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica)}
                           >
