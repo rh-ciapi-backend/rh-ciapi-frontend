@@ -25,6 +25,7 @@ type AppTab =
   | 'ferias'
   | 'frequencia'
   | 'mapas'
+  | 'requerimentos'
   | 'admin'
   | 'admin-usuarios'
   | 'admin-categorias'
@@ -51,6 +52,7 @@ const mainItems: NavItem[] = [
   { id: 'ferias', label: 'Férias', icon: CalendarDays },
   { id: 'frequencia', label: 'Frequência', icon: Clock3 },
   { id: 'mapas', label: 'Mapas', icon: Map },
+  { id: 'requerimentos', label: 'Requerimentos', icon: FileText },
 ];
 
 const adminItems: NavItem[] = [
