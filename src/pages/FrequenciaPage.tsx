@@ -4,6 +4,8 @@ import {
   BadgeCheck,
   Building2,
   CalendarDays,
+  ChevronDown,
+  ChevronUp,
   Download,
   FileArchive,
   FileSpreadsheet,
@@ -294,6 +296,7 @@ export default function FrequenciaPage() {
   const [error, setError] = useState<string>('');
   const [isEventosModalOpen, setIsEventosModalOpen] = useState(false);
   const [isServidoresExpanded, setIsServidoresExpanded] = useState(true);
+  const [isCalendarioExpanded, setIsCalendarioExpanded] = useState(true);
   const [eventosCount, setEventosCount] = useState(0);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -1105,7 +1108,7 @@ export default function FrequenciaPage() {
             </div>
 
             <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${isCalendarioExpanded ? 'mb-4' : ''}`}>
                 <div>
                   <h3 className="text-base font-semibold text-white">
                     Calendário mensal · {MONTHS[mes - 1]} / {ano}
@@ -1127,9 +1130,21 @@ export default function FrequenciaPage() {
                   <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
                     {selectedDias.length} dia(s) carregado(s)
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCalendarioExpanded((expanded) => !expanded)}
+                    aria-label={isCalendarioExpanded ? 'Minimizar calendário' : 'Maximizar calendário'}
+                    aria-expanded={isCalendarioExpanded}
+                    aria-controls="calendario-mensal-conteudo"
+                    title={isCalendarioExpanded ? 'Minimizar calendário' : 'Maximizar calendário'}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
+                  >
+                    {isCalendarioExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
+              <div id="calendario-mensal-conteudo" hidden={!isCalendarioExpanded}>
               {!selectedDias.length ? (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
                   <CalendarDays className="mx-auto h-10 w-10 text-slate-600" />
@@ -1214,6 +1229,7 @@ export default function FrequenciaPage() {
                   })}
                 </div>
               )}
+              </div>
             </div>
           </section>
         </div>
