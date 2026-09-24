@@ -23,6 +23,7 @@ import AdminSetoresPage from './pages/AdminSetoresPage';
 import AdminLogsPage from './pages/AdminLogsPage';
 import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
+import RequerimentosPage from './pages/RequerimentosPage';
 import SaeApp from './sae/SaeApp';
 
 type AppTab =
@@ -72,15 +73,7 @@ export default function App() {
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage />;
       case 'mapas': return <MapasPage />;
-      case 'requerimentos': return (
-        <section className="rounded-2xl border border-border-dark bg-[#172033] p-6 text-slate-200">
-          <h1 className="text-xl font-bold text-white">Requerimentos</h1>
-          <p className="mt-2 text-sm text-slate-400">Área de gestão dos requerimentos dos servidores.</p>
-          <div className="mt-6 rounded-xl border border-dashed border-border-dark bg-[#0b1220] px-5 py-10 text-center text-sm text-slate-400">
-            Nenhum requerimento cadastrado. O formulário e a lista serão adicionados na próxima etapa.
-          </div>
-        </section>
-      );
+      case 'requerimentos': return <RequerimentosPage />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;
       case 'admin-categorias': return <AdminCategoriasPage />;
