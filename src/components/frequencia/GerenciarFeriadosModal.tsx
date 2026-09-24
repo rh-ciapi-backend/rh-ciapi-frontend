@@ -73,9 +73,9 @@ function buildInitialDate(ano: number, mes: number): string {
 }
 
 function getTypeClasses(tipo: TipoEvento): string {
-  if (tipo === 'FERIADO') return 'border-violet-400/20 bg-violet-500/10 text-violet-200';
-  if (tipo === 'PONTO_FACULTATIVO') return 'border-sky-400/20 bg-sky-500/10 text-sky-200';
-  return 'border-amber-400/20 bg-amber-500/10 text-amber-200';
+  if (tipo === 'FERIADO') return 'border-blue-400/20 bg-blue-500/10 text-blue-200';
+  if (tipo === 'PONTO_FACULTATIVO') return 'border-amber-400/20 bg-amber-500/10 text-amber-200';
+  return 'border-slate-400/20 bg-slate-500/10 text-slate-200';
 }
 
 export default function GerenciarFeriadosModal({
@@ -191,32 +191,28 @@ export default function GerenciarFeriadosModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-[#020617]/80 p-4 backdrop-blur-sm">
-      <div className="flex min-h-full items-start justify-center py-4">
-        <div className="my-auto flex w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#08111d] shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center justify-between border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_32%),linear-gradient(135deg,#0b1320_0%,#0f1d31_55%,#12243c_100%)] px-6 py-5">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#020617]/80 p-3 backdrop-blur-sm sm:p-4">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#26344a] bg-[#172033] shadow-xl sm:max-h-[calc(100dvh-2rem)]">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#26344a] px-4 py-4 sm:px-6 sm:py-5">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-cyan-200">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Calendário institucional
-              </div>
-              <h2 className="mt-3 text-xl font-semibold text-white">{title}</h2>
-              <p className="mt-1 text-sm text-slate-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">FREQUÊNCIA</p>
+              <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">{title}</h2>
+              <p className="mt-1 text-sm text-slate-400">
                 Cadastre feriados, pontos facultativos e eventos para refletir na frequência mensal.
               </p>
             </div>
 
             <button
               onClick={handleClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#1e293b] text-slate-300 transition hover:text-white"
               aria-label="Fechar modal"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="grid max-h-[calc(100vh-120px)] min-h-0 grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <aside className="min-h-0 overflow-y-auto border-r border-white/10 bg-[#0b1524] p-6">
+          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto xl:grid-cols-[380px_minmax(0,1fr)] xl:overflow-hidden">
+            <aside className="min-h-0 border-b border-[#26344a] p-4 sm:p-6 xl:overflow-y-auto xl:border-b-0 xl:border-r">
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Novo cadastro</h3>
@@ -228,7 +224,7 @@ export default function GerenciarFeriadosModal({
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-white/[0.08]"
+                  className="rounded-xl border border-[#26344a] bg-[#1e293b] px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-[#26344a]"
                 >
                   Limpar
                 </button>
@@ -243,7 +239,7 @@ export default function GerenciarFeriadosModal({
                     type="date"
                     value={form.data}
                     onChange={(e) => handleChange('data', e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-blue-500/30"
                     required
                   />
                 </div>
@@ -255,7 +251,7 @@ export default function GerenciarFeriadosModal({
                   <select
                     value={form.tipo}
                     onChange={(e) => handleChange('tipo', e.target.value as TipoEvento)}
-                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-blue-500/30"
                   >
                     <option value="FERIADO">Feriado</option>
                     <option value="PONTO_FACULTATIVO">Ponto Facultativo</option>
@@ -272,7 +268,7 @@ export default function GerenciarFeriadosModal({
                     value={form.titulo}
                     onChange={(e) => handleChange('titulo', e.target.value)}
                     placeholder="Ex.: Dia do Trabalhador"
-                    className="w-full rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-[#3b82f6] focus:ring-1 focus:ring-blue-500/30"
                   />
                 </div>
 
@@ -285,16 +281,16 @@ export default function GerenciarFeriadosModal({
                     onChange={(e) => handleChange('descricao', e.target.value)}
                     rows={4}
                     placeholder="Observações internas do evento"
-                    className="w-full resize-none rounded-2xl border border-white/10 bg-[#09111d] px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                    className="w-full resize-none rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-[#3b82f6] focus:ring-1 focus:ring-blue-500/30"
                   />
                 </div>
 
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <label className="flex items-center gap-3 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3">
                   <input
                     type="checkbox"
                     checked={form.ativo}
                     onChange={(e) => handleChange('ativo', e.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-[#09111d] text-cyan-400 focus:ring-cyan-400"
+                    className="h-4 w-4 rounded border-[#26344a] bg-[#0b1220] text-blue-500 focus:ring-blue-500"
                   />
                   <div>
                     <p className="text-sm font-medium text-white">Ativo no calendário</p>
@@ -317,7 +313,7 @@ export default function GerenciarFeriadosModal({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/12 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/18 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3b82f6] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -329,7 +325,7 @@ export default function GerenciarFeriadosModal({
               </form>
             </aside>
 
-            <section className="min-h-0 overflow-y-auto p-6">
+            <section className="min-h-0 p-4 sm:p-6 xl:overflow-y-auto">
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Eventos do mês</h3>
@@ -342,7 +338,7 @@ export default function GerenciarFeriadosModal({
                   type="button"
                   onClick={carregarEventos}
                   disabled={loading}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-60"
+                  className="rounded-xl border border-[#26344a] bg-[#1e293b] px-3 py-2 text-sm text-slate-200 transition hover:bg-[#26344a] disabled:opacity-60"
                 >
                   {loading ? 'Atualizando...' : 'Atualizar lista'}
                 </button>
@@ -351,7 +347,7 @@ export default function GerenciarFeriadosModal({
               {loading ? (
                 <div className="flex min-h-[300px] items-center justify-center rounded-[24px] border border-white/10 bg-white/[0.03]">
                   <div className="flex items-center gap-3 text-slate-300">
-                    <Loader2 className="h-5 w-5 animate-spin text-cyan-300" />
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
                     Carregando eventos...
                   </div>
                 </div>
@@ -369,7 +365,7 @@ export default function GerenciarFeriadosModal({
                   {eventos.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(15,23,42,0.94))] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+                      className="rounded-xl border border-[#26344a] bg-[#1e293b] p-4"
                     >
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0">
@@ -404,7 +400,7 @@ export default function GerenciarFeriadosModal({
                             type="button"
                             onClick={() => handleDelete(item.id)}
                             disabled={deletingId === item.id}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {deletingId === item.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -421,7 +417,6 @@ export default function GerenciarFeriadosModal({
               )}
             </section>
           </div>
-        </div>
       </div>
     </div>
   );
