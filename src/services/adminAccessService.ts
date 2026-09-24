@@ -9,6 +9,13 @@ import type {
   AdminUsersListResponse,
 } from '../types/adminAccess';
 
+export type AdminCurrentUser = {
+  id: string | null;
+  perfil: string;
+  status: string;
+  is_master: boolean;
+};
+
 function buildUrl(path: string, query?: Record<string, string | number | undefined | null>) {
   const base = String(API_BASE_URL || '').replace(/\/$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -59,6 +66,10 @@ async function request<T>(path: string, options?: RequestInit, query?: Record<st
 }
 
 export const adminAccessService = {
+  async getMe(): Promise<{ user: AdminCurrentUser }> {
+    return request<{ user: AdminCurrentUser }>('/api/admin/me', { method: 'GET' });
+  },
+
   async listUsers(filters: AdminUserFilters = {}): Promise<AdminUsersListResponse> {
     return request<AdminUsersListResponse>('/api/admin/users', { method: 'GET' }, filters);
   },
