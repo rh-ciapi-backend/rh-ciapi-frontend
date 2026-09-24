@@ -650,7 +650,430 @@ export const ServidoresPage = ({
             Inativos
           </p>
           <p className="mt-2 text-2xl font-bold text-slate-300">{summary.inativos}</p>
-          <p className="mt-1 text-xs text-slate-600"> scale: 0.9, opacity: 0, y: 20 }}
+          <p className="mt-1 text-xs text-slate-600">em situação inativa</p>
+        </div>
+
+        <div className="app-subtle-surface p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Exibidos
+          </p>
+          <p className="mt-2 text-2xl font-bold text-primary">{summary.filtrados}</p>
+          <p className="mt-1 text-xs text-slate-600">após busca e filtros</p>
+        </div>
+      </section>
+
+      <section className="app-surface overflow-hidden">
+        <div className="border-b border-border-dark/70 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou matrícula..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-border-dark bg-slate-900/35 pl-11 pr-4 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:flex xl:items-center">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todas categorias</option>
+                {filterOptions.categorias.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterSetor}
+                onChange={(e) => setFilterSetor(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todos setores</option>
+                {filterOptions.setores.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todos status</option>
+                {filterOptions.status.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterSexo}
+                onChange={(e) => setFilterSexo(e.target.value)}
+                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
+              >
+                <option value="">Todos sexos</option>
+                {filterOptions.sexo.map((s) => (
+                  <option key={s} value={s}>
+                    {s === 'M' ? 'MASCULINO' : s === 'F' ? 'FEMININO' : s === 'OUTRO' ? 'OUTRO' : s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => fetchEmployees()}
+              className="flex h-11 items-center justify-center rounded-xl border border-border-dark bg-slate-900/35 px-4 text-sm font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              title="Recarregar lista"
+            >
+              <motion.div
+                animate={isLoading ? { rotate: 360 } : {}}
+                transition={isLoading ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
+              >
+                <MoreHorizontal size={18} />
+              </motion.div>
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {(error || loadTimeout) && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mx-4 mt-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-400 sm:mx-5 sm:flex-row"
+            >
+              <div className="flex items-center gap-3">
+                <X
+                  size={18}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setError(null);
+                    setLoadTimeout(false);
+                  }}
+                />
+                <span>{error}</span>
+              </div>
+
+              <button
+                onClick={() => fetchEmployees()}
+                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-600"
+              >
+                Tentar novamente
+              </button>
+            </motion.div>
+          )}
+
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400 sm:mx-5"
+            >
+              <UserPlus size={18} />
+              {successMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative min-h-[220px]">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-card-dark/55 backdrop-blur-[2px]">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          )}
+
+          {displayedEmployees.length === 0 && !isLoading ? (
+            <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-12 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/70 text-slate-500">
+                <Search size={20} />
+              </div>
+              <p className="text-sm font-semibold text-slate-300">
+                Nenhum servidor encontrado
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Ajuste a busca ou os filtros para ver outros resultados.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border-dark/60">
+              {displayedEmployees.map((emp) => {
+                const safeName = getEmployeeName(emp);
+                const safeMatricula = getEmployeeMatricula(emp);
+                const categoria = getEmployeeCategoria(emp);
+                const setor = getEmployeeSetor(emp);
+                const status = getEmployeeStatus(emp);
+
+                return (
+                  <div
+                    key={emp.id}
+                    className="group flex flex-col gap-4 px-4 py-4 transition hover:bg-slate-800/20 sm:px-5 lg:flex-row lg:items-center"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDetails(emp)}
+                      className="flex min-w-0 flex-1 items-center gap-4 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      title={`Abrir detalhes de ${safeName}`}
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-sm font-bold text-primary ring-1 ring-primary/15">
+                        {getInitials(safeName)}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="truncate text-[15px] font-semibold text-white transition group-hover:text-primary">
+                            {safeName}
+                          </span>
+                          {getStatusBadge(status)}
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                          <span>
+                            {safeMatricula ? `Matrícula ${safeMatricula}` : 'Matrícula não informada'}
+                          </span>
+                          <span className="text-slate-700">•</span>
+                          <span>{categoria}</span>
+                          <span className="text-slate-700">•</span>
+                          <span>{setor}</span>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center justify-end gap-1 lg:pl-4">
+                      <button
+                        type="button"
+                        onClick={() => handleEditEmployee(emp)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-primary/10 hover:text-primary"
+                        title="Editar"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteEmployee(emp.id)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-400"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border-dark/70 bg-slate-900/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <p className="text-xs text-slate-500">
+            Mostrando <span className="font-semibold text-slate-300">{displayedEmployees.length}</span> servidor(es)
+          </p>
+
+          <div className="flex items-center gap-1">
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 disabled:opacity-40"
+              disabled
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <button className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 text-xs font-bold text-white">
+              1
+            </button>
+
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 disabled:opacity-40"
+              disabled
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <AnimatePresence>
+        {isDetailsModalOpen && detailEmployee && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeDetailsModal}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 20 }}
+              className="relative z-[61] w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-dark bg-card-dark shadow-2xl"
+            >
+              <div className="border-b border-border-dark bg-slate-900/60 px-6 py-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-inner shrink-0">
+                      {getInitials(detailEmployee.nomeCompleto)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">
+                        Ficha do Servidor
+                      </p>
+                      <h2 className="text-2xl font-bold text-white truncate">
+                        {detailEmployee.nomeCompleto}
+                      </h2>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border-dark bg-slate-800 text-slate-300">
+                          Matrícula: {displayValue(detailEmployee.matricula)}
+                        </span>
+                        {getStatusBadge(detailEmployee.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-2 self-end md:self-start">
+                    <button
+                      type="button"
+                      disabled
+                      title="O convite será ativado após o vínculo seguro entre a conta e o cadastro do servidor"
+                      className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-300 opacity-60"
+                    >
+                      <Link2 size={16} />
+                      Gerar link (em preparação)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleEditFromDetails}
+                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold transition-all shadow-lg shadow-primary/20"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteFromDetails}
+                      className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-sm font-bold transition-all"
+                    >
+                      Excluir
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeDetailsModal}
+                      className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                      title="Fechar"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-h-[calc(90vh-110px)] overflow-y-auto px-6 py-6 space-y-8">
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Dados Pessoais
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <DetailItem label="Nome Completo" value={displayValue(detailEmployee.nomeCompleto)} />
+                    <DetailItem label="Matrícula" value={displayValue(detailEmployee.matricula)} mono />
+                    <DetailItem label="Sexo" value={formatSexoLabel(detailEmployee.sexo)} />
+                    <DetailItem label="Data de Nascimento" value={formatDate(detailEmployee.dataNascimento)} />
+                    <DetailItem
+                      label="Aniversário"
+                      value={formatDate(detailEmployee.aniversario, { day: '2-digit', month: '2-digit' })}
+                    />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Documentação
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <DetailItem label="CPF" value={displayValue(detailEmployee.cpf)} mono />
+                    <DetailItem label="RG Número" value={displayValue(detailEmployee.rgNumero)} />
+                    <DetailItem label="Órgão Emissor" value={displayValue(detailEmployee.rgOrgaoEmissor)} />
+                    <DetailItem label="UF do RG" value={displayValue(detailEmployee.rgUf)} />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Contato
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DetailItem label="Telefone" value={displayValue(detailEmployee.telefone)} />
+                    <DetailItem label="Email" value={displayValue(detailEmployee.email)} />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Dados Funcionais
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <DetailItem label="Categoria" value={displayValue(detailEmployee.categoria)} />
+                    <DetailItem label="Setor" value={displayValue(detailEmployee.setor)} />
+                    <DetailItem label="Cargo" value={displayValue(detailEmployee.cargo)} />
+                    <DetailItem label="Função" value={displayValue(detailEmployee.funcao)} />
+                    <DetailItem label="Vínculo" value={displayValue(detailEmployee.vinculo)} />
+                    <DetailItem label="Profissão" value={displayValue(detailEmployee.profissao)} />
+                    <DetailItem label="Escolaridade" value={displayValue(detailEmployee.escolaridade)} />
+                    <DetailItem label="Carga Horária" value={displayValue(detailEmployee.cargaHoraria)} />
+                    <DetailItem label="Início de Exercício" value={formatDate(detailEmployee.inicioExercicio)} />
+                    <DetailItem label="Lotação Interna" value={displayValue(detailEmployee.lotacaoInterna)} />
+                    <DetailItem label="Turno" value={displayValue(detailEmployee.turno)} />
+                    <DetailItem label="Status">
+                      {getStatusBadge(detailEmployee.status)}
+                    </DetailItem>
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="border-b border-border-dark pb-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
+                      Observações
+                    </h3>
+                  </div>
+                  <DetailItem label="Observação" value={displayValue(detailEmployee.observacao)} />
+                </section>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isConfirmSaveOpen) closeEditModal();
+              }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative z-[71] bg-card-dark border border-border-dark rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden"
