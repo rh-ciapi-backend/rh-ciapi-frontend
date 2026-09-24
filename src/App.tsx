@@ -32,6 +32,7 @@ type AppTab =
   | 'ferias'
   | 'frequencia'
   | 'mapas'
+  | 'requerimentos'
   | 'admin'
   | 'admin-usuarios'
   | 'admin-categorias'
@@ -40,7 +41,7 @@ type AppTab =
   | 'diagnostico';
 
 const VALID_TABS: AppTab[] = [
-  'dashboard','servidores','atestados','ferias','frequencia','mapas','admin',
+  'dashboard','servidores','atestados','ferias','frequencia','mapas','requerimentos','admin',
   'admin-usuarios','admin-categorias','admin-setores','admin-logs','diagnostico',
 ];
 
@@ -71,6 +72,15 @@ export default function App() {
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage />;
       case 'mapas': return <MapasPage />;
+      case 'requerimentos': return (
+        <section className="rounded-2xl border border-border-dark bg-[#172033] p-6 text-slate-200">
+          <h1 className="text-xl font-bold text-white">Requerimentos</h1>
+          <p className="mt-2 text-sm text-slate-400">Área de gestão dos requerimentos dos servidores.</p>
+          <div className="mt-6 rounded-xl border border-dashed border-border-dark bg-[#0b1220] px-5 py-10 text-center text-sm text-slate-400">
+            Nenhum requerimento cadastrado. O formulário e a lista serão adicionados na próxima etapa.
+          </div>
+        </section>
+      );
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;
       case 'admin-categorias': return <AdminCategoriasPage />;
@@ -89,6 +99,7 @@ export default function App() {
       case 'ferias': return 'Controle de Férias';
       case 'frequencia': return 'Frequência Mensal';
       case 'mapas': return 'Mapas Institucionais';
+      case 'requerimentos': return 'Requerimentos';
       case 'admin': return 'Administração do Sistema';
       case 'admin-usuarios': return 'Usuários do Sistema';
       case 'admin-categorias': return 'Gestão de Categorias';
