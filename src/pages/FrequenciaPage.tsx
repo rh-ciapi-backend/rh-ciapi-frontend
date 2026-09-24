@@ -12,6 +12,8 @@ import {
   Hash,
   Layers3,
   Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   ShieldCheck,
   UserRound,
@@ -291,6 +293,7 @@ export default function FrequenciaPage() {
   const [exporting, setExporting] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isEventosModalOpen, setIsEventosModalOpen] = useState(false);
+  const [isServidoresExpanded, setIsServidoresExpanded] = useState(true);
   const [eventosCount, setEventosCount] = useState(0);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -909,18 +912,38 @@ export default function FrequenciaPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div
+          className={`grid grid-cols-1 gap-5 ${
+            isServidoresExpanded
+              ? 'xl:grid-cols-[300px_minmax(0,1fr)]'
+              : 'xl:grid-cols-[64px_minmax(0,1fr)]'
+          }`}
+        >
           <aside className="min-w-0">
-            <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-white">Servidores</h2>
-                  <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
+            <div className={`rounded-2xl border border-[#26344a] bg-[#172033] ${isServidoresExpanded ? 'p-4' : 'p-2'}`}>
+              <div className={`flex items-center ${isServidoresExpanded ? 'mb-4 justify-between gap-2' : 'justify-center'}`}>
+                {isServidoresExpanded ? (
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-white">Servidores</h2>
+                    <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
+                  </div>
+                ) : null}
+                <div className="flex items-center gap-2">
+                  {loading && isServidoresExpanded ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
+                  <button
+                    type="button"
+                    onClick={() => setIsServidoresExpanded((expanded) => !expanded)}
+                    aria-label={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
+                    aria-expanded={isServidoresExpanded}
+                    title={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
+                  >
+                    {isServidoresExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                  </button>
                 </div>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
               </div>
 
-              <div className="max-h-[680px] space-y-2 overflow-y-auto pr-1">
+              {isServidoresExpanded ? <div className="max-h-[680px] space-y-2 overflow-y-auto pr-1">
                 {!loading && !filteredItems.length ? (
                   <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
                     <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
@@ -980,7 +1003,7 @@ export default function FrequenciaPage() {
                     </button>
                   );
                 })}
-              </div>
+              </div> : null}
             </div>
           </aside>
 
