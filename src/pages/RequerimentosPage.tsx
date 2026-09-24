@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { ClipboardList, FilePlus2, Info } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ClipboardList, FilePlus2, Info, Search } from 'lucide-react';
+import { servidoresService } from '../services/servidoresService';
+import type { Servidor } from '../types';
 
 const TIPOS = [
   'Certidão de tempo de serviço e ficha financeira',
@@ -62,7 +64,14 @@ const contato: Campo[] = [
   { name: 'celular', label: 'Celular', type: 'tel' },
 ];
 
-function GrupoCampos({ titulo, campos }: { titulo: string; campos: Campo[] }) {
+function GrupoCampos({
+  titulo, campos, valores, atualizar,
+}: {
+  titulo: string;
+  campos: Campo[];
+  valores: Record<string, string>;
+  atualizar: (name: string, value: string) => void;
+}) {
   return (
     <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
       <legend className="px-2 text-sm font-semibold text-white">{titulo}</legend>
@@ -74,6 +83,8 @@ function GrupoCampos({ titulo, campos }: { titulo: string; campos: Campo[] }) {
               name={name}
               type={type ?? 'text'}
               autoComplete="off"
+              value={valores[name] ?? ''}
+              onChange={(event) => atualizar(name, event.target.value)}
               className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
             />
           </label>
@@ -83,9 +94,61 @@ function GrupoCampos({ titulo, campos }: { titulo: string; campos: Campo[] }) {
   );
 }
 
+function dataParaInput(value: string | null | undefined) {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
+}
+
 export default function RequerimentosPage() {
   const [aba, setAba] = useState<'lista' | 'novo'>('lista');
   const [tipo, setTipo] = useState('');
+  const [busca, setBusca] = useState('');
+  const [sugestoes, setSugestoes] = useState<Servidor[]>([]);
+  const [erroBusca, setErroBusca] = useState('');
+  const [selecionado, setSelecionado] = useState<Servidor | null>(null);
+  const [valores, setValores] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (aba !== 'novo' || selecionado || busca.trim().length < 3) {
+      setSugestoes([]);
+      return;
+    }
+    let ativo = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        const dados = await servidoresService.buscarSugestoes(busca.trim(), 8);
+        if (ativo) { setSugestoes(dados); setErroBusca(''); }
+      } catch {
+        if (ativo) { setSugestoes([]); setErroBusca('Não foi possível buscar servidores.'); }
+      }
+    }, 300);
+    return () => { ativo = false; window.clearTimeout(timer); };
+  }, [aba, busca, selecionado]);
+
+  const atualizar = (name: string, value: string) => {
+    setValores((anterior) => ({ ...anterior, [name]: value }));
+  };
+
+  const escolherServidor = (servidor: Servidor) => {
+    setSelecionado(servidor);
+    setBusca(servidor.nomeCompleto || servidor.nome);
+    setSugestoes([]);
+    setValores({
+      nome: servidor.nomeCompleto || servidor.nome || '',
+      cpf: servidor.cpf || '',
+      rg: servidor.rgNumero || '',
+      orgaoExpedidor: servidor.rgOrgaoEmissor || '',
+      dataNascimento: dataParaInput(servidor.dataNascimento),
+      cargo: servidor.cargo || '',
+      matricula: servidor.matricula || '',
+      funcao: servidor.funcao || '',
+      lotacao: servidor.setor || '',
+      unidadeExercicio: servidor.lotacaoInterna || '',
+      celular: servidor.telefone || '',
+    });
+  };
 
   return (
     <div className="space-y-6 text-slate-200">
@@ -116,10 +179,45 @@ export default function RequerimentosPage() {
         <div className="space-y-5">
           <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100">
             <Info size={18} className="mt-0.5 shrink-0" />
-            <p>Prévia do formulário. O preenchimento automático e o envio serão ativados nas próximas etapas.</p>
+            <p>Os dados conhecidos são preenchidos ao escolher um servidor. O envio e a gravação serão ativados após a integração com o banco de dados.</p>
           </div>
-          <GrupoCampos titulo="Identificação do servidor" campos={identificacao} />
-          <GrupoCampos titulo="Dados funcionais" campos={funcionais} />
+          <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+            <h2 className="text-sm font-semibold text-white">Selecionar servidor</h2>
+            <div className="relative mt-3 max-w-xl">
+              <Search size={18} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
+              <input
+                type="search"
+                value={busca}
+                onChange={(event) => {
+                  setBusca(event.target.value);
+                  setSelecionado(null);
+                  setSugestoes([]);
+                  setErroBusca('');
+                }}
+                placeholder="Busque pelo nome, CPF ou matrícula"
+                className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-blue-500"
+              />
+              {sugestoes.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#26344a] bg-[#1e293b] p-1 shadow-xl">
+                  {sugestoes.map((servidor) => (
+                    <button
+                      key={servidor.id}
+                      type="button"
+                      onClick={() => escolherServidor(servidor)}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-blue-600/20"
+                    >
+                      <span className="block font-medium">{servidor.nomeCompleto || servidor.nome}</span>
+                      <span className="text-xs text-slate-400">Matrícula: {servidor.matricula || 'não informada'}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {erroBusca && <p className="mt-2 text-xs text-rose-400">{erroBusca}</p>}
+            {selecionado && <p className="mt-2 text-xs text-emerald-400">Dados encontrados. Complete os campos que faltam.</p>}
+          </section>
+          <GrupoCampos titulo="Identificação do servidor" campos={identificacao} valores={valores} atualizar={atualizar} />
+          <GrupoCampos titulo="Dados funcionais" campos={funcionais} valores={valores} atualizar={atualizar} />
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <legend className="px-2 text-sm font-semibold text-white">Vínculo</legend>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -138,7 +236,7 @@ export default function RequerimentosPage() {
               </label>
             </div>
           </fieldset>
-          <GrupoCampos titulo="Endereço e contato" campos={contato} />
+          <GrupoCampos titulo="Endereço e contato" campos={contato} valores={valores} atualizar={atualizar} />
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <legend className="px-2 text-sm font-semibold text-white">Pedido</legend>
             <label className="block text-xs font-medium text-slate-300">Tipo de requerimento
