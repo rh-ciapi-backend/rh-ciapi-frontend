@@ -42,8 +42,9 @@ type AppTab =
   | 'diagnostico';
 
 const VALID_TABS: AppTab[] = [
-  'dashboard','servidores','atestados','ferias','frequencia','mapas','requerimentos','admin',
-  'admin-usuarios','admin-categorias','admin-setores','admin-logs','diagnostico',
+  'dashboard', 'servidores', 'atestados', 'ferias', 'frequencia',
+  'mapas', 'requerimentos', 'admin', 'admin-usuarios',
+  'admin-categorias', 'admin-setores', 'admin-logs', 'diagnostico',
 ];
 
 function isValidTab(tab: string): tab is AppTab {
@@ -51,12 +52,16 @@ function isValidTab(tab: string): tab is AppTab {
 }
 
 export default function App() {
-  const { signOut, ambiente, perfil, statusAcesso, erroPerfil, isLoading } = useAuth();
+  const { signOut, ambiente } = useAuth();
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [initialAction, setInitialAction] = useState<string | null>(null);
 
   const handleLogout = useCallback(async () => {
-    try { await signOut(); } catch (error) { console.error('Erro ao sair da sessão:', error); }
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erro ao sair da sessão:', error);
+    }
   }, [signOut]);
 
   const navigateWithAction = useCallback((tab: string, action?: string) => {
@@ -67,20 +72,39 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
-      case 'servidores': return <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
-      case 'atestados': return <AtestadosPage />;
-      case 'ferias': return <FeriasPage />;
-      case 'frequencia': return <FrequenciaPage />;
-      case 'mapas': return <MapasPage />;
-      case 'requerimentos': return <RequerimentosPage />;
-      case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
-      case 'admin-usuarios': return <AdminUsuariosPage />;
-      case 'admin-categorias': return <AdminCategoriasPage />;
-      case 'admin-setores': return <AdminSetoresPage />;
-      case 'admin-logs': return <AdminLogsPage />;
-      case 'diagnostico': return <DiagnosticoPage />;
-      default: return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'dashboard':
+        return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'servidores':
+        return (
+          <ServidoresPage
+            initialAction={initialAction}
+            onActionHandled={() => setInitialAction(null)}
+          />
+        );
+      case 'atestados':
+        return <AtestadosPage />;
+      case 'ferias':
+        return <FeriasPage />;
+      case 'frequencia':
+        return <FrequenciaPage />;
+      case 'mapas':
+        return <MapasPage />;
+      case 'requerimentos':
+        return <RequerimentosPage />;
+      case 'admin':
+        return <AdminPage onNavigate={navigateWithAction} />;
+      case 'admin-usuarios':
+        return <AdminUsuariosPage />;
+      case 'admin-categorias':
+        return <AdminCategoriasPage />;
+      case 'admin-setores':
+        return <AdminSetoresPage />;
+      case 'admin-logs':
+        return <AdminLogsPage />;
+      case 'diagnostico':
+        return <DiagnosticoPage />;
+      default:
+        return <DashboardPage onNavigate={navigateWithAction} />;
     }
   };
 
@@ -105,46 +129,27 @@ export default function App() {
 
   return (
     <ProtectedRoute>
-      {isLoading ? (
-        <div className="flex min-h-screen items-center justify-center bg-[#0b1220] text-sm text-slate-300">
-          Verificando acesso...
-        </div>
-      ) : erroPerfil || !perfil || statusAcesso !== 'ATIVO' ? (
-        <div className="flex min-h-screen items-center justify-center bg-[#0b1220] px-4">
-          <div className="w-full max-w-md rounded-2xl border border-[#26344a] bg-[#172033] p-6 text-center">
-            <h1 className="text-lg font-semibold text-white">Acesso indisponível</h1>
-            <p className="mt-2 text-sm text-slate-400">
-              {erroPerfil || (statusAcesso !== 'ATIVO' ? 'Seu usuário não está ativo.' : 'Não foi possível identificar seu perfil.')}
-            </p>
-            <button type="button" onClick={handleLogout} className="mt-5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Sair</button>
-          </div>
-        </div>
-      ) : perfil === 'SERVIDOR_LIMITADO' ? (
-        <div className="min-h-screen bg-[#0b1220] text-slate-200">
-          <header className="flex items-center justify-between border-b border-[#26344a] bg-[#172033] px-4 py-4 sm:px-8">
-            <span className="text-lg font-bold text-white">CIAPI · Requerimentos</span>
-            <button type="button" onClick={handleLogout} className="rounded-xl border border-[#26344a] px-4 py-2 text-sm hover:bg-slate-800">Sair</button>
-          </header>
-          <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8">
-            <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-6">
-              <h1 className="text-2xl font-bold text-white">Meus requerimentos</h1>
-              <p className="mt-3 text-sm text-slate-400">
-                Seu acesso está reservado para requerimentos. O formulário será liberado após o vínculo seguro com seu cadastro de servidor.
-              </p>
-            </section>
-          </main>
-        </div>
-      ) : ambiente === 'sae' ? (
+      {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
         <div className="flex min-h-screen bg-bg-dark">
-          <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={(tab: string) => navigateWithAction(tab)}
+            onLogout={handleLogout}
+          />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
             <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
               <div className="app-page">
                 <AnimatePresence mode="wait">
-                  <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.18 }}
+                  >
                     {renderContent()}
                   </motion.div>
                 </AnimatePresence>
