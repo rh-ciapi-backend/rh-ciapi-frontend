@@ -1,5 +1,17 @@
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../lib/supabaseClient';
 import { MapaFilters, MapaPreviewResponse } from '../types/mapas';
+
+async function getAccessToken(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) throw error;
+
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  return token;
+}
 
 function normalizeArrayPayload(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
@@ -78,11 +90,14 @@ async function parseErrorResponse(response: Response) {
 }
 
 async function requestJson(path: string, init?: RequestInit) {
+  const token = await getAccessToken();
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       ...(init?.headers || {}),
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -103,9 +118,14 @@ async function requestJson(path: string, init?: RequestInit) {
 }
 
 async function downloadFile(path: string, body: Record<string, any>, defaultName: string) {
+  const token = await getAccessToken();
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(body),
   });
 
