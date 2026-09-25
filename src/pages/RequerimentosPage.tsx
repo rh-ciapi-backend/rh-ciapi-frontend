@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ClipboardList, FilePlus2, Info, Search } from 'lucide-react';
 import { servidoresService } from '../services/servidoresService';
 import { requerimentosService, type Requerimento } from '../services/requerimentosService';
@@ -116,23 +116,17 @@ export default function RequerimentosPage() {
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState('');
   const [sucesso, setSucesso] = useState('');
+  const [carregandoFormulario, setCarregandoFormulario] = useState(false);
+  const [formularioPronto, setFormularioPronto] = useState(false);
+  const consultaFormulario = useRef(0);
 
   useEffect(() => {
     let ativo = true;
     setCarregando(true);
     requerimentosService.listar()
-      .then((dados) => {
-        if (ativo) {
-          setRequerimentos(dados);
-          setErroEnvio('');
-        }
-      })
-      .catch((error) => {
-        if (ativo) setErroEnvio(error.message || 'Erro ao carregar requerimentos.');
-      })
-      .finally(() => {
-        if (ativo) setCarregando(false);
-      });
+      .then((dados) => { if (ativo) { setRequerimentos(dados); setErroEnvio(''); } })
+      .catch((error) => { if (ativo) setErroEnvio(error.message || 'Erro ao carregar requerimentos.'); })
+      .finally(() => { if (ativo) setCarregando(false); });
     return () => { ativo = false; };
   }, []);
 
@@ -141,27 +135,16 @@ export default function RequerimentosPage() {
       setSugestoes([]);
       return;
     }
-
     let ativo = true;
     const timer = window.setTimeout(async () => {
       try {
         const dados = await servidoresService.buscarSugestoes(busca.trim(), 8);
-        if (ativo) {
-          setSugestoes(dados);
-          setErroBusca('');
-        }
+        if (ativo) { setSugestoes(dados); setErroBusca(''); }
       } catch {
-        if (ativo) {
-          setSugestoes([]);
-          setErroBusca('Não foi possível buscar servidores.');
-        }
+        if (ativo) { setSugestoes([]); setErroBusca('Não foi possível buscar servidores.'); }
       }
     }, 300);
-
-    return () => {
-      ativo = false;
-      window.clearTimeout(timer);
-    };
+    return () => { ativo = false; window.clearTimeout(timer); };
   }, [aba, busca, selecionado]);
 
   const atualizar = (name: string, value: string) => {
@@ -169,11 +152,13 @@ export default function RequerimentosPage() {
   };
 
   const escolherServidor = async (servidor: Servidor) => {
+    const consultaAtual = ++consultaFormulario.current;
     setSelecionado(servidor);
     setBusca(servidor.nomeCompleto || servidor.nome);
     setSugestoes([]);
     setErroEnvio('');
-
+    setCarregandoFormulario(true);
+    setFormularioPronto(false);
     const conhecidos = {
       nome: servidor.nomeCompleto || servidor.nome || '',
       cpf: servidor.cpf || '',
@@ -187,51 +172,47 @@ export default function RequerimentosPage() {
       unidadeExercicio: servidor.lotacaoInterna || '',
       celular: servidor.telefone || '',
     };
-
     setValores(conhecidos);
-
     try {
       const formulario = await requerimentosService.obterFormulario(servidor.id);
+      if (consultaAtual !== consultaFormulario.current) return;
       const preenchidos = Object.fromEntries(
         Object.entries(conhecidos).filter(([, valor]) => Boolean(valor)),
       );
-      setValores({ ...formulario.complemento, ...preenchidos });
+      setValores((atuais) => ({
+        ...formulario.complemento,
+        ...preenchidos,
+        ...Object.fromEntries(Object.entries(atuais).filter(([, valor]) => Boolean(valor))),
+      }));
+      setFormularioPronto(true);
     } catch (error) {
-      setErroEnvio(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar os dados adicionais.'
-      );
+      if (consultaAtual === consultaFormulario.current) {
+        setErroEnvio(error instanceof Error ? error.message : 'Não foi possível carregar os dados adicionais.');
+      }
+    } finally {
+      if (consultaAtual === consultaFormulario.current) setCarregandoFormulario(false);
     }
   };
 
   const enviar = async () => {
-    if (!selecionado || !tipo || enviando) {
+    if (!selecionado || !tipo || enviando || !formularioPronto) {
       setErroEnvio('Selecione o servidor e o tipo de requerimento.');
       return;
     }
-
     setEnviando(true);
     setErroEnvio('');
     setSucesso('');
-
     try {
       const novo = await requerimentosService.criar({
-        servidorId: selecionado.id,
-        tipo,
-        detalhes,
-        dados: valores,
+        servidorId: selecionado.id, tipo, detalhes, dados: valores,
       });
-
       setRequerimentos((anteriores) => [novo, ...anteriores]);
       setSucesso(`Requerimento enviado: ${novo.id}`);
       setAba('lista');
       setTipo('');
       setDetalhes('');
     } catch (error) {
-      setErroEnvio(
-        error instanceof Error ? error.message : 'Falha ao enviar requerimento.'
-      );
+      setErroEnvio(error instanceof Error ? error.message : 'Falha ao enviar requerimento.');
     } finally {
       setEnviando(false);
     }
@@ -242,9 +223,7 @@ export default function RequerimentosPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Requerimentos</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Solicitações dos servidores e formulário estadual.
-          </p>
+          <p className="mt-1 text-sm text-slate-400">Solicitações dos servidores e formulário estadual.</p>
         </div>
         <button
           type="button"
@@ -256,58 +235,27 @@ export default function RequerimentosPage() {
         </button>
       </div>
 
-      {sucesso && (
-        <p role="status" className="rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-300">
-          {sucesso}
-        </p>
-      )}
-      {erroEnvio && (
-        <p role="alert" className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-300">
-          {erroEnvio}
-        </p>
-      )}
+      {sucesso && <p role="status" className="rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-300">{sucesso}</p>}
+      {erroEnvio && <p role="alert" className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-300">{erroEnvio}</p>}
 
       {aba === 'lista' ? (
         <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
-            <ClipboardList size={21} /> Solicitações recebidas
-          </h2>
-          {carregando ? (
-            <p className="mt-4 text-sm text-slate-400">Carregando...</p>
-          ) : requerimentos.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-400">Nenhum requerimento recebido.</p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {requerimentos.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-medium text-white">{item.tipo}</p>
-                    <p className="text-xs text-slate-400">
-                      Servidor: {item.servidor_id} ·{' '}
-                      {new Date(item.criado_em).toLocaleDateString('pt-BR')}
-                    </p>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white"><ClipboardList size={21} /> Solicitações recebidas</h2>
+          {carregando ? <p className="mt-4 text-sm text-slate-400">Carregando...</p> :
+            requerimentos.length === 0 ? <p className="mt-4 text-sm text-slate-400">Nenhum requerimento recebido.</p> : (
+              <div className="mt-4 space-y-2">
+                {requerimentos.map((item) => (
+                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm">
+                    <div><p className="font-medium text-white">{item.tipo}</p><p className="text-xs text-slate-400">Servidor: {item.servidor_id} · {new Date(item.criado_em).toLocaleDateString('pt-BR')}</p></div>
+                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">{item.status.replace('_', ' ')}</span>
                   </div>
-                  <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">
-                    {item.status.replace('_', ' ')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </section>
       ) : (
         <div className="space-y-5">
-          <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100">
-            <Info size={18} className="mt-0.5 shrink-0" />
-            <p>
-              Os dados conhecidos são preenchidos ao escolher um servidor.
-              Complete os campos restantes antes de enviar.
-            </p>
-          </div>
-
+          <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100"><Info size={18} className="mt-0.5 shrink-0" /><p>Os dados conhecidos são preenchidos ao escolher um servidor. Complete os campos restantes antes de enviar.</p></div>
           <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <h2 className="text-sm font-semibold text-white">Selecionar servidor</h2>
             <div className="relative mt-3 max-w-xl">
@@ -318,6 +266,10 @@ export default function RequerimentosPage() {
                 onChange={(event) => {
                   setBusca(event.target.value);
                   setSelecionado(null);
+                  consultaFormulario.current++;
+                  setFormularioPronto(false);
+                  setCarregandoFormulario(false);
+                  setValores({});
                   setSugestoes([]);
                   setErroBusca('');
                 }}
@@ -333,125 +285,52 @@ export default function RequerimentosPage() {
                       onClick={() => escolherServidor(servidor)}
                       className="block w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-blue-600/20"
                     >
-                      <span className="block font-medium">
-                        {servidor.nomeCompleto || servidor.nome}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        Matrícula: {servidor.matricula || 'não informada'}
-                      </span>
+                      <span className="block font-medium">{servidor.nomeCompleto || servidor.nome}</span>
+                      <span className="text-xs text-slate-400">Matrícula: {servidor.matricula || 'não informada'}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
             {erroBusca && <p className="mt-2 text-xs text-rose-400">{erroBusca}</p>}
-            {selecionado && (
-              <p className="mt-2 text-xs text-emerald-400">
-                Dados encontrados. Complete os campos que faltam.
-              </p>
-            )}
+            {carregandoFormulario && <p className="mt-2 text-xs text-blue-300">Carregando dados anteriores...</p>}
+            {selecionado && formularioPronto && <p className="mt-2 text-xs text-emerald-400">Dados encontrados. Complete os campos que faltam.</p>}
           </section>
-
-          <GrupoCampos
-            titulo="Identificação do servidor"
-            campos={identificacao}
-            valores={valores}
-            atualizar={atualizar}
-          />
-          <GrupoCampos
-            titulo="Dados funcionais"
-            campos={funcionais}
-            valores={valores}
-            atualizar={atualizar}
-          />
-
+          <GrupoCampos titulo="Identificação do servidor" campos={identificacao} valores={valores} atualizar={atualizar} />
+          <GrupoCampos titulo="Dados funcionais" campos={funcionais} valores={valores} atualizar={atualizar} />
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <legend className="px-2 text-sm font-semibold text-white">Vínculo</legend>
             <div className="grid gap-4 sm:grid-cols-3">
-              <label className="text-xs font-medium text-slate-300">
-                Regime de contrato
-                <select
-                  name="regime"
-                  value={valores.regime || ''}
-                  onChange={(event) => atualizar('regime', event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white"
-                >
-                  <option value="">Selecione</option>
-                  <option>Efetivo</option>
-                  <option>Cargo comissionado</option>
-                  <option>Temporário</option>
+              <label className="text-xs font-medium text-slate-300">Regime de contrato
+                <select name="regime" value={valores.regime || ''} onChange={(event) => atualizar('regime', event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
+                  <option value="">Selecione</option><option>Efetivo</option><option>Cargo comissionado</option><option>Temporário</option>
                 </select>
               </label>
-
-              <label className="text-xs font-medium text-slate-300">
-                Situação funcional
-                <select
-                  name="situacao"
-                  value={valores.situacao || ''}
-                  onChange={(event) => atualizar('situacao', event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white"
-                >
-                  <option value="">Selecione</option>
-                  <option>Ativo</option>
-                  <option>Inativo</option>
-                  <option>Pensionista</option>
-                  <option>Exonerado</option>
+              <label className="text-xs font-medium text-slate-300">Situação funcional
+                <select name="situacao" value={valores.situacao || ''} onChange={(event) => atualizar('situacao', event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
+                  <option value="">Selecione</option><option>Ativo</option><option>Inativo</option><option>Pensionista</option><option>Exonerado</option>
                 </select>
               </label>
-
-              <label className="text-xs font-medium text-slate-300">
-                Data de exoneração, se houver
-                <input
-                  name="dataExoneracao"
-                  type="date"
-                  value={valores.dataExoneracao || ''}
-                  onChange={(event) => atualizar('dataExoneracao', event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white"
-                />
+              <label className="text-xs font-medium text-slate-300">Data de exoneração, se houver
+                <input name="dataExoneracao" type="date" value={valores.dataExoneracao || ''} onChange={(event) => atualizar('dataExoneracao', event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white" />
               </label>
             </div>
           </fieldset>
-
-          <GrupoCampos
-            titulo="Endereço e contato"
-            campos={contato}
-            valores={valores}
-            atualizar={atualizar}
-          />
-
+          <GrupoCampos titulo="Endereço e contato" campos={contato} valores={valores} atualizar={atualizar} />
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <legend className="px-2 text-sm font-semibold text-white">Pedido</legend>
-            <label className="block text-xs font-medium text-slate-300">
-              Tipo de requerimento
-              <select
-                value={tipo}
-                onChange={(event) => setTipo(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white"
-              >
+            <label className="block text-xs font-medium text-slate-300">Tipo de requerimento
+              <select value={tipo} onChange={(event) => setTipo(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
                 <option value="">Selecione o pedido</option>
-                {TIPOS.map((item) => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
+                {TIPOS.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
-            <label className="mt-4 block text-xs font-medium text-slate-300">
-              Detalhes ou outra solicitação
-              <textarea
-                rows={4}
-                value={detalhes}
-                onChange={(event) => setDetalhes(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
-              />
+            <label className="mt-4 block text-xs font-medium text-slate-300">Detalhes ou outra solicitação
+              <textarea rows={4} value={detalhes} onChange={(event) => setDetalhes(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
             </label>
           </fieldset>
-
           <div className="flex justify-end">
-            <button
-              type="button"
-              disabled={!selecionado || !tipo || enviando}
-              onClick={enviar}
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto} onClick={enviar} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               {enviando ? 'Enviando...' : 'Enviar requerimento'}
             </button>
           </div>
