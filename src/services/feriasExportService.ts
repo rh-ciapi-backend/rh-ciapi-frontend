@@ -308,9 +308,12 @@ export async function exportFeriasFile(
   if (!response.ok) throw new Error(await parseError(response));
 
   const blob = await response.blob();
-  const filename = resolveFilename(
+const signature = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+const isDocx = signature[0] === 0x50 && signature[1] === 0x4b;
+
+const filename = resolveFilename(
   response,
-  `ferias_${filters.ano}.doc`,
+  `ferias_${filters.ano}.${isDocx ? 'docx' : 'doc'}`,
 );
 
   const url = URL.createObjectURL(blob);
