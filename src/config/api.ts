@@ -2,8 +2,14 @@
  * Configuração central da API do RH CIAPI
  */
 
-export const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_BACKEND_URL || 'https://api.rhciapi.com.br';
+const API_PRODUCAO = 'https://api.rhciapi.com.br';
+const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+const dominioProducao =
+  hostname === 'rhciapi.com.br' || hostname === 'www.rhciapi.com.br';
+
+export const API_BASE_URL = dominioProducao
+  ? API_PRODUCAO
+  : (import.meta as any).env?.VITE_API_BACKEND_URL || API_PRODUCAO;
 
 let healthCheckDone = false;
 
@@ -34,7 +40,10 @@ export interface FetchOptions extends RequestInit {
   retry?: boolean;
 }
 
-export async function fetchJson<T>(path: string, options: FetchOptions = {}): Promise<T> {
+export async function fetchJson<T>(
+  path: string,
+  options: FetchOptions = {}
+): Promise<T> {
   const { timeout = 15000, retry = true, ...fetchOptions } = options;
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
 
@@ -65,7 +74,7 @@ export async function fetchJson<T>(path: string, options: FetchOptions = {}): Pr
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || errorMessage;
         } catch {
-          // ignora fallback
+          // Usa a mensagem HTTP quando não há JSON.
         }
         throw new Error(errorMessage);
       }
@@ -83,7 +92,9 @@ export async function fetchJson<T>(path: string, options: FetchOptions = {}): Pr
         throw new Error(finalError);
       }
 
-      console.warn(`[API] Falha na tentativa ${attempts} para ${path}. Tentando novamente...`);
+      console.warn(
+        `[API] Falha na tentativa ${attempts} para ${path}. Tentando novamente...`
+      );
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
