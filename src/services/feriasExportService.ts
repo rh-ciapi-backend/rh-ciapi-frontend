@@ -313,7 +313,7 @@ const isDocx = signature[0] === 0x50 && signature[1] === 0x4b;
 
 const filename = resolveFilename(
   response,
-  `ferias_${filters.ano}.${isDocx ? 'docx' : 'doc'}`,
+  `ferias_${filters.ano}.${filters.formato === 'CSV' ? 'csv' : isDocx ? 'docx' : 'doc'}`,
 );
 
   const url = URL.createObjectURL(blob);
