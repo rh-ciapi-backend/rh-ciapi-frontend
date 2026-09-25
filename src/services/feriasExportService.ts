@@ -1,127 +1,271 @@
 import { API_BASE_URL } from '../config/api';
 import { supabase } from '../lib/supabaseClient';
 
-export type FeriasExportFormato = 'docx' | 'pdf' | 'csv';
-export type ExportCategoria = 'TODOS' | 'EFETIVO' | 'SELETIVADO' | 'FEDERAL' | 'COMISSIONADO';
+export type ExportFormato = 'DOCX' | 'PDF' | 'CSV';
+export type ExportCategoria = string;
+export type ExportStatus = 'TODOS' | 'ATIVO' | 'INATIVO';
+export type ExportTipoExtracao =
+  | 'TODOS_SERVIDORES'
+  | 'COM_FERIAS'
+  | 'NO_MES'
+  | 'PLANEJAMENTO_ANUAL'
+  | 'APENAS_1_PERIODO'
+  | 'APENAS_2_PERIODO'
+  | 'APENAS_3_PERIODO';
+export type ExportOrdenacao = 'NOME' | 'MATRICULA' | 'CATEGORIA' | 'SETOR';
 
 export interface FeriasExportRowInput {
+  id?: string;
+  servidorId?: string;
+  servidorNome?: string;
+  nome?: string;
+  cpf?: string;
+  matricula?: string;
+  categoria?: string;
+  setor?: string;
+  statusServidor?: string;
+  inicio?: string;
+  fim?: string;
+  ano?: number;
+  slot?: number;
+}
+
+export interface FeriasExportServidorInput {
+  id?: string;
   nome?: string;
   cpf?: string;
   matricula?: string;
   categoria?: string;
   setor?: string;
   status?: string;
-  periodo1_inicio?: string;
-  periodo1_fim?: string;
-  periodo2_inicio?: string;
-  periodo2_fim?: string;
-  periodo3_inicio?: string;
-  periodo3_fim?: string;
-}
-
-export interface FeriasExportServidorInput {
-  servidorCpf?: string;
-  servidorId?: string;
-  nome?: string;
 }
 
 export interface ExportFeriasFilters {
-  formato: FeriasExportFormato;
-  mes?: number;
-  ano?: number;
-  categoria?: string;
-  setor?: string;
-  status?: string;
-  servidorCpf?: string;
-  servidorId?: string;
-  incluirInativos?: boolean;
+  formato: ExportFormato;
+  mes: number | 'TODOS';
+  ano: number;
+  categoria: ExportCategoria;
+  setor: string;
+  status: ExportStatus;
+  tipoExtracao: ExportTipoExtracao;
+  ordenacao: ExportOrdenacao;
 }
 
-export interface FeriasExportPayload extends ExportFeriasFilters {
-  rows?: FeriasExportRowInput[];
+export interface FeriasExportPreview {
+  sections: Array<{
+    categoria: string;
+    servidores: FeriasExportServidorInput[];
+  }>;
+  totalLinhas: number;
+  totalComFerias: number;
+  totalSemFerias: number;
 }
 
-export const feriasExportLabels: Record<string, string> = {
-  formato: 'Formato',
-  mes: 'Mês',
-  ano: 'Ano',
-  categoria: 'Categoria',
-  setor: 'Setor',
-  status: 'Status',
-  servidorCpf: 'CPF do servidor',
-  servidorId: 'ID do servidor',
-  incluirInativos: 'Incluir inativos',
+export const feriasExportLabels = {
+  categorias: [
+    'TODOS',
+    'EFETIVO SESAU',
+    'SELETIVO SESAU',
+    'EFETIVO SETRABES',
+    'SELETIVO SETRABES',
+    'FEDERAIS SETRABES',
+    'COMISSIONADOS',
+  ],
+  meses: [
+    'Todos os meses',
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
+  ],
+  tiposExtracao: {
+    TODOS_SERVIDORES: 'Todos os servidores',
+    COM_FERIAS: 'Somente servidores com férias cadastradas',
+    NO_MES: 'Somente servidores com férias no mês selecionado',
+    PLANEJAMENTO_ANUAL: 'Planejamento anual completo',
+    APENAS_1_PERIODO: 'Apenas 1º período',
+    APENAS_2_PERIODO: 'Apenas 2º período',
+    APENAS_3_PERIODO: 'Apenas 3º período',
+  } as Record<ExportTipoExtracao, string>,
+  ordenacao: {
+    NOME: 'Nome A-Z',
+    MATRICULA: 'Matrícula',
+    CATEGORIA: 'Categoria',
+    SETOR: 'Setor',
+  } as Record<ExportOrdenacao, string>,
 };
 
-function normalizeBaseUrl(url: string): string {
-  return String(url || '').replace(/\/+$/, '');
-}
+const BASE_URL = String(API_BASE_URL || '').replace(/\/+$/, '');
+const EXPORT_URL = `${BASE_URL}/api/ferias/exportar`;
 
-const BASE_URL = normalizeBaseUrl(API_BASE_URL || '');
-const FERIAS_EXPORT_URL = `${BASE_URL}/api/ferias/exportar`;
+const texto = (value: unknown) => String(value ?? '').trim();
+const chave = (value: unknown) => texto(value).toLocaleUpperCase('pt-BR');
 
-function asString(value: unknown): string {
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
-  return '';
-}
-
-function sanitizeMes(mes?: number): number | undefined {
-  const value = Number(mes);
-  if (!Number.isFinite(value) || value < 1 || value > 12) return undefined;
-  return Math.trunc(value);
-}
-
-function sanitizeAno(ano?: number): number | undefined {
-  const value = Number(ano);
-  if (!Number.isFinite(value) || value < 2000 || value > 2100) return undefined;
-  return Math.trunc(value);
-}
-
-export function getDefaultFeriasExportFilters(): ExportFeriasFilters {
-  const now = new Date();
-
+export function getDefaultFeriasExportFilters(
+  ano = new Date().getFullYear(),
+): ExportFeriasFilters {
   return {
-    formato: 'docx',
-    mes: now.getMonth() + 1,
-    ano: now.getFullYear(),
-    categoria: '',
-    setor: '',
+    formato: 'DOCX',
+    mes: 'TODOS',
+    ano,
+    categoria: 'TODOS',
+    setor: 'TODOS',
     status: 'ATIVO',
-    servidorCpf: '',
-    servidorId: '',
-    incluirInativos: false,
+    tipoExtracao: 'TODOS_SERVIDORES',
+    ordenacao: 'NOME',
   };
 }
 
+function correspondeServidor(
+  registro: FeriasExportRowInput,
+  servidor: FeriasExportServidorInput,
+): boolean {
+  const cpfRegistro = texto(registro.cpf).replace(/\D/g, '');
+  const cpfServidor = texto(servidor.cpf).replace(/\D/g, '');
+
+  if (cpfRegistro && cpfServidor && cpfRegistro === cpfServidor) return true;
+
+  if (
+    registro.servidorId &&
+    servidor.id &&
+    texto(registro.servidorId) === texto(servidor.id)
+  ) {
+    return true;
+  }
+
+  return Boolean(
+    registro.servidorNome &&
+      servidor.nome &&
+      chave(registro.servidorNome) === chave(servidor.nome),
+  );
+}
+
+function registroNoPeriodo(
+  registro: FeriasExportRowInput,
+  filtros: ExportFeriasFilters,
+): boolean {
+  const inicio = texto(registro.inicio);
+  const fim = texto(registro.fim || registro.inicio);
+
+  if (!inicio) return Number(registro.ano) === filtros.ano;
+
+  const primeiroDiaAno = `${filtros.ano}-01-01`;
+  const ultimoDiaAno = `${filtros.ano}-12-31`;
+
+  if (inicio > ultimoDiaAno || fim < primeiroDiaAno) return false;
+
+  if (filtros.mes === 'TODOS') return true;
+
+  const mes = String(filtros.mes).padStart(2, '0');
+  const primeiroDiaMes = `${filtros.ano}-${mes}-01`;
+  const ultimoDiaMes = `${filtros.ano}-${mes}-31`;
+
+  return inicio <= ultimoDiaMes && fim >= primeiroDiaMes;
+}
+
 export function buildFeriasExportData(
-  filters: Partial<ExportFeriasFilters> = {},
-  rows: FeriasExportRowInput[] = [],
-): FeriasExportPayload {
-  const defaults = getDefaultFeriasExportFilters();
+  filtros: ExportFeriasFilters,
+  registros: FeriasExportRowInput[] = [],
+  servidores: FeriasExportServidorInput[] = [],
+): FeriasExportPreview {
+  const listaServidores = Array.isArray(servidores) ? servidores : [];
+  const listaRegistros = Array.isArray(registros) ? registros : [];
+
+  const filtrados = listaServidores
+    .filter((servidor) => {
+      if (filtros.status !== 'TODOS' && chave(servidor.status) !== filtros.status) {
+        return false;
+      }
+
+      if (filtros.categoria !== 'TODOS' && chave(servidor.categoria) !== chave(filtros.categoria)) {
+        return false;
+      }
+
+      if (filtros.setor !== 'TODOS' && chave(servidor.setor) !== chave(filtros.setor)) {
+        return false;
+      }
+
+      return true;
+    })
+    .map((servidor) => {
+      const registrosServidor = listaRegistros.filter((registro) =>
+        correspondeServidor(registro, servidor),
+      );
+
+      const registrosNoPeriodo = registrosServidor.filter((registro) =>
+        registroNoPeriodo(registro, filtros),
+      );
+
+      return { servidor, registrosServidor, registrosNoPeriodo };
+    })
+    .filter(({ registrosServidor, registrosNoPeriodo }) => {
+      switch (filtros.tipoExtracao) {
+        case 'COM_FERIAS':
+          return registrosServidor.length > 0;
+        case 'NO_MES':
+          return registrosNoPeriodo.length > 0;
+        case 'APENAS_1_PERIODO':
+          return registrosNoPeriodo.some((registro) => Number(registro.slot) === 1);
+        case 'APENAS_2_PERIODO':
+          return registrosNoPeriodo.some((registro) => Number(registro.slot) === 2);
+        case 'APENAS_3_PERIODO':
+          return registrosNoPeriodo.some((registro) => Number(registro.slot) === 3);
+        default:
+          return true;
+      }
+    });
+
+  const campoOrdenacao: keyof FeriasExportServidorInput = {
+    NOME: 'nome',
+    MATRICULA: 'matricula',
+    CATEGORIA: 'categoria',
+    SETOR: 'setor',
+  }[filtros.ordenacao] as keyof FeriasExportServidorInput;
+
+  filtrados.sort((a, b) =>
+    texto(a.servidor[campoOrdenacao]).localeCompare(
+      texto(b.servidor[campoOrdenacao]),
+      'pt-BR',
+    ),
+  );
+
+  const grupos = new Map<string, FeriasExportServidorInput[]>();
+
+  for (const { servidor } of filtrados) {
+    const categoria = texto(servidor.categoria) || 'Sem categoria';
+    const grupo = grupos.get(categoria) || [];
+    grupo.push(servidor);
+    grupos.set(categoria, grupo);
+  }
+
+  const totalComFerias = filtrados.filter(
+    ({ registrosServidor }) => registrosServidor.length > 0,
+  ).length;
 
   return {
-    formato: (filters.formato as FeriasExportFormato) || defaults.formato,
-    mes: sanitizeMes(filters.mes ?? defaults.mes),
-    ano: sanitizeAno(filters.ano ?? defaults.ano),
-    categoria: asString(filters.categoria ?? defaults.categoria),
-    setor: asString(filters.setor ?? defaults.setor),
-    status: asString(filters.status ?? defaults.status),
-    servidorCpf: asString(filters.servidorCpf ?? defaults.servidorCpf),
-    servidorId: asString(filters.servidorId ?? defaults.servidorId),
-    incluirInativos:
-      typeof filters.incluirInativos === 'boolean'
-        ? filters.incluirInativos
-        : Boolean(defaults.incluirInativos),
-    rows: Array.isArray(rows) ? rows : [],
+    sections: Array.from(grupos, ([categoria, servidoresDoGrupo]) => ({
+      categoria,
+      servidores: servidoresDoGrupo,
+    })),
+    totalLinhas: filtrados.length,
+    totalComFerias,
+    totalSemFerias: filtrados.length - totalComFerias,
   };
 }
 
 function resolveFilename(response: Response, fallback: string): string {
   const disposition = response.headers.get('content-disposition') || '';
-  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-  const asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
-  const raw = utf8Match?.[1] || asciiMatch?.[1] || fallback;
+  const utf8 = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const simple = disposition.match(/filename="?([^";]+)"?/i);
+  const raw = utf8?.[1] || simple?.[1] || fallback;
 
   try {
     return decodeURIComponent(raw);
@@ -131,22 +275,20 @@ function resolveFilename(response: Response, fallback: string): string {
 }
 
 async function parseError(response: Response): Promise<string> {
-  const contentType = response.headers.get('content-type') || '';
+  const body = await response.text();
 
   try {
-    if (contentType.includes('application/json')) {
-      const json = await response.json();
-      return String(json?.error || json?.message || `Falha na exportação (${response.status})`);
-    }
-
-    const text = await response.text();
-    return text?.trim() || `Falha na exportação (${response.status})`;
+    const json = JSON.parse(body);
+    return texto(json?.details || json?.error || json?.message) ||
+      `Falha na exportação (${response.status}).`;
   } catch {
-    return `Falha na exportação (${response.status})`;
+    return body || `Falha na exportação (${response.status}).`;
   }
 }
 
-export async function exportarFerias(payload: FeriasExportPayload): Promise<void> {
+export async function exportFeriasFile(
+  filters: ExportFeriasFilters,
+): Promise<{ filename: string }> {
   const { data, error } = await supabase.auth.getSession();
 
   if (error) throw error;
@@ -154,25 +296,22 @@ export async function exportarFerias(payload: FeriasExportPayload): Promise<void
   const token = data.session?.access_token;
   if (!token) throw new Error('Sessão expirada. Faça login novamente.');
 
-  const safePayload = buildFeriasExportData(payload, payload.rows || []);
-
-  const fallbackName = `ferias_${safePayload.ano || 'geral'}_${String(safePayload.mes || '00')}.${safePayload.formato}`;
-
-  const response = await fetch(FERIAS_EXPORT_URL, {
+  const response = await fetch(EXPORT_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(safePayload),
+    body: JSON.stringify(filters),
   });
 
-  if (!response.ok) {
-    throw new Error(await parseError(response));
-  }
+  if (!response.ok) throw new Error(await parseError(response));
 
   const blob = await response.blob();
-  const filename = resolveFilename(response, fallbackName);
+  const filename = resolveFilename(
+    response,
+    `ferias_${filters.ano}.${filters.formato.toLowerCase()}`,
+  );
 
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -182,15 +321,15 @@ export async function exportarFerias(payload: FeriasExportPayload): Promise<void
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+
+  return { filename };
 }
 
-export async function exportFeriasFile(payload: FeriasExportPayload): Promise<void> {
-  return exportarFerias(payload);
-}
+export const exportarFerias = exportFeriasFile;
 
 const feriasExportService = {
-  exportarFerias,
   exportFeriasFile,
+  exportarFerias,
   buildFeriasExportData,
   getDefaultFeriasExportFilters,
   feriasExportLabels,
