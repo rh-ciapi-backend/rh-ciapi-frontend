@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../lib/supabaseClient';
 
 export type FeriasExportFormato = 'docx' | 'pdf' | 'csv';
 export type ExportCategoria = 'TODOS' | 'EFETIVO' | 'SELETIVADO' | 'FEDERAL' | 'COMISSIONADO';
@@ -146,6 +147,13 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function exportarFerias(payload: FeriasExportPayload): Promise<void> {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) throw error;
+
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
   const safePayload = buildFeriasExportData(payload, payload.rows || []);
 
   const fallbackName = `ferias_${safePayload.ano || 'geral'}_${String(safePayload.mes || '00')}.${safePayload.formato}`;
@@ -154,6 +162,7 @@ export async function exportarFerias(payload: FeriasExportPayload): Promise<void
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(safePayload),
   });
