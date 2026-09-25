@@ -308,12 +308,17 @@ export async function exportFeriasFile(
   if (!response.ok) throw new Error(await parseError(response));
 
   const blob = await response.blob();
-const signature = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
 const isDocx = signature[0] === 0x50 && signature[1] === 0x4b;
+  const isPdf =
+  signature[0] === 0x25 &&
+  signature[1] === 0x50 &&
+  signature[2] === 0x44 &&
+  signature[3] === 0x46;
 
 const filename = resolveFilename(
   response,
-  `ferias_${filters.ano}.${filters.formato === 'CSV' ? 'csv' : isDocx ? 'docx' : 'doc'}`,
+  `ferias_${filters.ano}.${filters.formato === 'CSV' ? 'csv' : isPdf ? 'pdf' : isDocx ? 'docx' : 'doc'}`,
 );
 
   const url = URL.createObjectURL(blob);
