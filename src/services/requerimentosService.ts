@@ -9,6 +9,7 @@ export type Requerimento = {
   status: 'RECEBIDO' | 'EM_ANALISE' | 'CONCLUIDO' | 'INDEFERIDO';
   criado_em: string;
   atualizado_em?: string;
+  servidor_nome?: string;
 };
 
 export type FormularioServidor = {
