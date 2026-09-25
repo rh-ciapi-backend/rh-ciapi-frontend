@@ -206,7 +206,10 @@ export default function RequerimentosPage() {
       const novo = await requerimentosService.criar({
         servidorId: selecionado.id, tipo, detalhes, dados: valores,
       });
-      setRequerimentos((anteriores) => [novo, ...anteriores]);
+      setRequerimentos((anteriores) => [
+  { ...novo, servidor_nome: valores.nome || selecionado.nomeCompleto || selecionado.nome },
+  ...anteriores,
+]);
       setSucesso(`Requerimento enviado: ${novo.id}`);
       setAba('lista');
       setTipo('');
@@ -246,7 +249,7 @@ export default function RequerimentosPage() {
               <div className="mt-4 space-y-2">
                 {requerimentos.map((item) => (
                   <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm">
-                    <div><p className="font-medium text-white">{item.tipo}</p><p className="text-xs text-slate-400">Servidor: {item.servidor_id} · {new Date(item.criado_em).toLocaleDateString('pt-BR')}</p></div>
+                    <div><p className="font-medium text-white">{item.tipo}</p><p className="text-xs text-slate-400">Servidor: {item.servidor_nome || item.servidor_id} · {new Date(item.criado_em).toLocaleDateString('pt-BR')}</p></div>
                     <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">{item.status.replace('_', ' ')}</span>
                   </div>
                 ))}
