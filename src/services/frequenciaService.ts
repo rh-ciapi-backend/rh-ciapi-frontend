@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../lib/supabaseClient';
 import type {
   FrequenciaBatchStrategy,
   FrequenciaExportFormat,
@@ -87,6 +88,16 @@ export type FrequenciaExportPayload = FrequenciaExportPayloadType;
 
 function getBaseUrl(): string {
   return String(API_BASE_URL || '').replace(/\/+$/, '');
+}
+
+async function getAccessToken(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+  return token;
 }
 
 function onlyDigits(value: unknown): string {
@@ -374,10 +385,13 @@ export async function listarFrequenciaMensal(
     status: filtros.status,
   });
 
+  const token = await getAccessToken();
+
   const response = await fetch(`${baseUrl}/api/frequencia${query}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -465,11 +479,14 @@ export async function baixarFrequenciaArquivo(
       ? 'application/pdf,application/zip,application/json'
       : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/json';
 
+  const token = await getAccessToken();
+
   const response = await fetch(`${baseUrl}/api/frequencia/exportar`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: acceptHeader,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       ano: payload.ano,
