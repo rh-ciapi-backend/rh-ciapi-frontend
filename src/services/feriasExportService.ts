@@ -316,10 +316,15 @@ const isDocx = signature[0] === 0x50 && signature[1] === 0x4b;
   signature[2] === 0x44 &&
   signature[3] === 0x46;
 
-const filename = resolveFilename(
-  response,
-  `ferias_${filters.ano}.${filters.formato === 'CSV' ? 'csv' : isPdf ? 'pdf' : isDocx ? 'docx' : 'doc'}`,
-);
+const extension = isPdf
+  ? 'pdf'
+  : isDocx
+    ? 'docx'
+    : filters.formato === 'CSV'
+      ? 'csv'
+      : 'doc';
+
+const filename = `ferias_${filters.ano}.${extension}`;
 
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
