@@ -309,9 +309,9 @@ export async function exportFeriasFile(
 
   const blob = await response.blob();
   const filename = resolveFilename(
-    response,
-    `ferias_${filters.ano}.${filters.formato.toLowerCase()}`,
-  );
+  response,
+  `ferias_${filters.ano}.doc`,
+);
 
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
