@@ -290,22 +290,27 @@ export default function RequerimentosPage() {
                 {requerimentos.map((item) => (
                   <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm">
                     <div><p className="font-medium text-white">{item.tipo}</p><p className="text-xs text-slate-400">Servidor: {item.servidor_nome || item.servidor_id} · {new Date(item.criado_em).toLocaleDateString('pt-BR')}</p></div>
-                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">{item.status.replace('_', ' ')}</span><button
-  type="button"
-  onClick={async () => {
-    setErroEnvio('');
-    try {
-      await requerimentosService.baixarDocx(item.id);
-    } catch (error) {
-      setErroEnvio(
-        error instanceof Error ? error.message : 'Não foi possível baixar o requerimento.'
-      );
-    }
-  }}
-  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
->
-  Baixar Word
-</button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">{item.status.replace('_', ' ')}</span>
+                      {(['docx', 'pdf'] as const).map((formato) => (
+                        <button
+                          key={formato}
+                          type="button"
+                          onClick={async () => {
+                            setErroEnvio('');
+                            try {
+                              if (formato === 'pdf') await requerimentosService.baixarPdf(item.id);
+                              else await requerimentosService.baixarDocx(item.id);
+                            } catch (error) {
+                              setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o requerimento.');
+                            }
+                          }}
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                        >
+                          Baixar {formato === 'pdf' ? 'PDF' : 'Word'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
