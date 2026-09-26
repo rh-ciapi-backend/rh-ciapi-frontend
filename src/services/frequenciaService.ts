@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../lib/supabaseClient';
 import type {
   FrequenciaBatchStrategy,
   FrequenciaExportFormat,
@@ -87,6 +88,14 @@ export type FrequenciaExportPayload = FrequenciaExportPayloadType;
 
 function getBaseUrl(): string {
   return String(API_BASE_URL || '').replace(/\/+$/, '');
+}
+
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.access_token) {
+    throw new Error('Sua sessão expirou. Entre novamente para consultar a frequência.');
+  }
+  return { Authorization: `Bearer ${data.session.access_token}` };
 }
 
 function onlyDigits(value: unknown): string {
@@ -378,6 +387,7 @@ export async function listarFrequenciaMensal(
     method: 'GET',
     headers: {
       Accept: 'application/json',
+      ...(await getAuthHeader()),
     },
   });
 
@@ -470,6 +480,7 @@ export async function baixarFrequenciaArquivo(
     headers: {
       'Content-Type': 'application/json',
       Accept: acceptHeader,
+      ...(await getAuthHeader()),
     },
     body: JSON.stringify({
       ano: payload.ano,
