@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Sidebar } from './components/Sidebar';
@@ -24,6 +24,8 @@ import AdminLogsPage from './pages/AdminLogsPage';
 import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
 import RequerimentosPage from './pages/RequerimentosPage';
+import ServidorRequerimentoPortal from './pages/ServidorRequerimentoPortal';
+import { API_BASE_URL } from './config/api';
 import SaeApp from './sae/SaeApp';
 
 type AppTab =
@@ -42,9 +44,8 @@ type AppTab =
   | 'diagnostico';
 
 const VALID_TABS: AppTab[] = [
-  'dashboard', 'servidores', 'atestados', 'ferias', 'frequencia',
-  'mapas', 'requerimentos', 'admin', 'admin-usuarios',
-  'admin-categorias', 'admin-setores', 'admin-logs', 'diagnostico',
+  'dashboard','servidores','atestados','ferias','frequencia','mapas','requerimentos','admin',
+  'admin-usuarios','admin-categorias','admin-setores','admin-logs','diagnostico',
 ];
 
 function isValidTab(tab: string): tab is AppTab {
@@ -52,16 +53,31 @@ function isValidTab(tab: string): tab is AppTab {
 }
 
 export default function App() {
-  const { signOut, ambiente } = useAuth();
+  const { signOut, ambiente, session, isLoading } = useAuth();
+  const [acessoAtual, setAcessoAtual] = useState<{ uid: string; perfil: string } | null>(null);
+
+  useEffect(() => {
+    if (!session) { setAcessoAtual(null); return; }
+    let ativo = true;
+    setAcessoAtual(null);
+    const base = String(API_BASE_URL || '').replace(/\/$/, '');
+    fetch(`${base}/api/admin/me`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    }).then(async (res) => {
+      if (!res.ok) throw new Error('Não foi possível verificar o acesso.');
+      return res.json();
+    }).then(({ user }) => {
+      if (ativo) setAcessoAtual({ uid: session.user.id, perfil: user.perfil });
+    }).catch(() => {
+      if (ativo) setAcessoAtual({ uid: session.user.id, perfil: 'ERRO' });
+    });
+    return () => { ativo = false; };
+  }, [session?.user.id, session?.access_token]);
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [initialAction, setInitialAction] = useState<string | null>(null);
 
   const handleLogout = useCallback(async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Erro ao sair da sessão:', error);
-    }
+    try { await signOut(); } catch (error) { console.error('Erro ao sair da sessão:', error); }
   }, [signOut]);
 
   const navigateWithAction = useCallback((tab: string, action?: string) => {
@@ -72,39 +88,20 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return <DashboardPage onNavigate={navigateWithAction} />;
-      case 'servidores':
-        return (
-          <ServidoresPage
-            initialAction={initialAction}
-            onActionHandled={() => setInitialAction(null)}
-          />
-        );
-      case 'atestados':
-        return <AtestadosPage />;
-      case 'ferias':
-        return <FeriasPage />;
-      case 'frequencia':
-        return <FrequenciaPage />;
-      case 'mapas':
-        return <MapasPage />;
-      case 'requerimentos':
-        return <RequerimentosPage />;
-      case 'admin':
-        return <AdminPage onNavigate={navigateWithAction} />;
-      case 'admin-usuarios':
-        return <AdminUsuariosPage />;
-      case 'admin-categorias':
-        return <AdminCategoriasPage />;
-      case 'admin-setores':
-        return <AdminSetoresPage />;
-      case 'admin-logs':
-        return <AdminLogsPage />;
-      case 'diagnostico':
-        return <DiagnosticoPage />;
-      default:
-        return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
+      case 'servidores': return <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
+      case 'atestados': return <AtestadosPage />;
+      case 'ferias': return <FeriasPage />;
+      case 'frequencia': return <FrequenciaPage />;
+      case 'mapas': return <MapasPage />;
+      case 'requerimentos': return <RequerimentosPage />;
+      case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
+      case 'admin-usuarios': return <AdminUsuariosPage />;
+      case 'admin-categorias': return <AdminCategoriasPage />;
+      case 'admin-setores': return <AdminSetoresPage />;
+      case 'admin-logs': return <AdminLogsPage />;
+      case 'diagnostico': return <DiagnosticoPage />;
+      default: return <DashboardPage onNavigate={navigateWithAction} />;
     }
   };
 
@@ -127,29 +124,29 @@ export default function App() {
     }
   };
 
+  if (isLoading || (session && acessoAtual?.uid !== session.user.id)) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] text-white">Carregando acesso...</div>;
+  }
+  if (session && acessoAtual?.perfil === 'ERRO') {
+    return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] p-4 text-white"><div>Acesso indisponível. <button className="text-blue-300" onClick={handleLogout}>Sair</button></div></div>;
+  }
+  if (acessoAtual?.perfil === 'SERVIDOR_LIMITADO' || window.location.hash.startsWith('#/requerimento')) {
+    return <ServidorRequerimentoPortal perfil={acessoAtual?.perfil || null} />;
+  }
+
   return (
     <ProtectedRoute>
       {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
         <div className="flex min-h-screen bg-bg-dark">
-          <Sidebar
-            activeTab={activeTab}
-            setActiveTab={(tab: string) => navigateWithAction(tab)}
-            onLogout={handleLogout}
-          />
+          <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
             <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
               <div className="app-page">
                 <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.18 }}
-                  >
+                  <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
                     {renderContent()}
                   </motion.div>
                 </AnimatePresence>
