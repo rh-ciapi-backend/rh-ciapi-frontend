@@ -38,6 +38,9 @@ type StatsCardProps = {
   value: string | number;
   subtitle: string;
   icon: React.ReactNode;
+  action: string;
+  onClick: () => void;
+  active?: boolean;
 };
 
 type ExportMode = 'individual' | 'lote';
@@ -80,9 +83,15 @@ const BATCH_STRATEGY_OPTIONS: Array<{ value: FrequenciaBatchStrategy; label: str
   { value: 'zip', label: 'Arquivos separados (ZIP)' },
 ];
 
-function StatsCard({ title, value, subtitle, icon }: StatsCardProps) {
+function StatsCard({ title, value, subtitle, icon, action, onClick, active = false }: StatsCardProps) {
   return (
-    <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-4">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={subtitle}
+      className={`w-full rounded-2xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${active ? 'border-blue-500 bg-blue-500/10' : 'border-[#26344a] bg-[#172033] hover:border-blue-500/40 hover:bg-[#1e293b]'}`}
+    >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
@@ -92,8 +101,9 @@ function StatsCard({ title, value, subtitle, icon }: StatsCardProps) {
           {icon}
         </div>
       </div>
-      <p className="text-sm text-slate-400">{subtitle}</p>
-    </div>
+      <p className="min-h-[2.5rem] text-sm text-slate-400">{subtitle}</p>
+      <p className="mt-2 text-xs font-medium text-blue-300">{action}</p>
+    </button>
   );
 }
 
@@ -143,14 +153,19 @@ function countDiasComOcorrencia(dias: FrequenciaDayItem[]) {
   return dias.filter((day) => day.turno1?.ocorrencia || day.turno2?.ocorrencia).length;
 }
 
+function countTurnosComOcorrencia(dias: FrequenciaDayItem[]) {
+  return dias.reduce((total, day) =>
+    total + Number(Boolean(day.turno1?.ocorrencia)) + Number(Boolean(day.turno2?.ocorrencia)), 0);
+}
+
 function countDiasComRubrica(dias: FrequenciaDayItem[]) {
   return dias.filter((day) => day.turno1?.rubrica || day.turno2?.rubrica).length;
 }
 
 function statusColor(status: string) {
   const s = normalizeText(status);
-  if (s.includes('ativo')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
   if (s.includes('inativo')) return 'bg-rose-500/15 text-rose-300 border-rose-400/20';
+  if (s.includes('ativo')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
   if (s.includes('afast')) return 'bg-amber-500/15 text-amber-300 border-amber-400/20';
   return 'bg-slate-500/15 text-slate-300 border-slate-400/20';
 }
@@ -297,6 +312,7 @@ export default function FrequenciaPage() {
   const [isEventosModalOpen, setIsEventosModalOpen] = useState(false);
   const [isServidoresExpanded, setIsServidoresExpanded] = useState(true);
   const [isCalendarioExpanded, setIsCalendarioExpanded] = useState(true);
+  const [calendarioFiltro, setCalendarioFiltro] = useState<'todos' | 'registro' | 'ocorrencia'>('todos');
   const [eventosCount, setEventosCount] = useState(0);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -443,18 +459,35 @@ export default function FrequenciaPage() {
 
   const selectedServidor = selectedItem?.servidor || null;
   const selectedDias = selectedItem?.dayItems || [];
+  const calendarioDias = calendarioFiltro === 'todos' ? selectedDias : selectedDias.filter((day) =>
+    calendarioFiltro === 'registro'
+      ? Boolean(day.turno1?.rubrica || day.turno2?.rubrica || day.turno1?.ocorrencia || day.turno2?.ocorrencia || day.statusFinal)
+      : Boolean(day.turno1?.ocorrencia || day.turno2?.ocorrencia)
+  );
+
+  const mostrarCalendario = (filtro: 'registro' | 'ocorrencia') => {
+    setCalendarioFiltro((atual) => atual === filtro ? 'todos' : filtro);
+    setIsCalendarioExpanded(true);
+    window.requestAnimationFrame(() => document.getElementById('calendario-mensal')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
+  const mostrarServidores = (status: 'TODOS' | 'ATIVO') => {
+    setFilterStatus(status);
+    setIsServidoresExpanded(true);
+    window.requestAnimationFrame(() => document.getElementById('lista-servidores-frequencia')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   const stats = useMemo(() => {
     const totalServidores = filteredItems.length;
     const ativos = filteredItems.filter((item) =>
-      normalizeText(item.servidor?.status || '').includes('ativo')
+      normalizeText(item.servidor?.status || '') === 'ativo'
     ).length;
     const totalDiasComRegistro = filteredItems.reduce(
       (sum, item) => sum + countDiasComRegistro(item.dayItems || []),
       0
     );
     const totalOcorrencias = filteredItems.reduce(
-      (sum, item) => sum + countDiasComOcorrencia(item.dayItems || []),
+      (sum, item) => sum + countTurnosComOcorrencia(item.dayItems || []),
       0
     );
 
@@ -769,28 +802,40 @@ export default function FrequenciaPage() {
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatsCard
-            title="Servidores"
-            value={stats.totalServidores}
-            subtitle="Registros após filtros aplicados"
-            icon={<Users className="h-5 w-5" />}
-          />
-          <StatsCard
             title="Ativos"
             value={stats.ativos}
-            subtitle="Servidores com status ativo"
+            subtitle="Servidores ativos dentro dos filtros atuais."
             icon={<BadgeCheck className="h-5 w-5" />}
+            action="Ver servidores ativos"
+            active={filterStatus === 'ATIVO'}
+            onClick={() => mostrarServidores('ATIVO')}
+          />
+          <StatsCard
+            title="Servidores"
+            value={stats.totalServidores}
+            subtitle="Cadastros encontrados após os filtros aplicados."
+            icon={<Users className="h-5 w-5" />}
+            action="Ver todos os status"
+            active={filterStatus === 'TODOS'}
+            onClick={() => mostrarServidores('TODOS')}
           />
           <StatsCard
             title="Dias com registro"
             value={stats.totalDiasComRegistro}
-            subtitle="Rubricas e ocorrências consolidadas"
+            subtitle="Soma dos dias com rubrica, ocorrência ou status; inclui os servidores filtrados."
             icon={<CalendarDays className="h-5 w-5" />}
+            action="Ver dias preenchidos no calendário"
+            active={calendarioFiltro === 'registro'}
+            onClick={() => mostrarCalendario('registro')}
           />
           <StatsCard
-            title="Ocorrências"
+            title="Ocorrências de turno"
             value={stats.totalOcorrencias}
-            subtitle="Turnos com marcações detectadas"
+            subtitle="Total de turnos com ocorrência; um dia pode contar duas vezes."
             icon={<Hash className="h-5 w-5" />}
+            action="Ver dias com ocorrência"
+            active={calendarioFiltro === 'ocorrencia'}
+            onClick={() => mostrarCalendario('ocorrencia')}
           />
         </div>
         <section id="exportacao-frequencia" aria-label="Exportação da frequência" className="mb-6 rounded-2xl border border-[#26344a] bg-[#172033] p-4 md:p-5">
@@ -1018,7 +1063,7 @@ export default function FrequenciaPage() {
               : 'xl:grid-cols-[64px_minmax(0,1fr)]'
           }`}
         >
-          <aside className="min-w-0 self-start">
+          <aside id="lista-servidores-frequencia" className="min-w-0 self-start scroll-mt-24">
             <div className={`rounded-2xl border border-[#26344a] bg-[#172033] ${isServidoresExpanded ? 'p-4' : 'p-2'}`}>
               <div className={`flex items-center ${isServidoresExpanded ? 'mb-4 justify-between gap-2' : 'justify-center'}`}>
                 {isServidoresExpanded ? (
@@ -1106,7 +1151,7 @@ export default function FrequenciaPage() {
             </div>
           </aside>
 
-            <div className="min-w-0 self-start rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+            <div id="calendario-mensal" className="min-w-0 self-start scroll-mt-24 rounded-2xl border border-[#26344a] bg-[#172033] p-5">
               <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${isCalendarioExpanded ? 'mb-4' : ''}`}>
                 <div>
                   <h3 className="text-base font-semibold text-white">
@@ -1127,7 +1172,7 @@ export default function FrequenciaPage() {
                   </button>
 
                   <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
-                    {selectedDias.length} dia(s) carregado(s)
+                    {calendarioDias.length} de {selectedDias.length} dia(s)
                   </div>
                   <button
                     type="button"
@@ -1144,17 +1189,17 @@ export default function FrequenciaPage() {
               </div>
 
               <div id="calendario-mensal-conteudo" hidden={!isCalendarioExpanded}>
-              {!selectedDias.length ? (
+              {!calendarioDias.length ? (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
                   <CalendarDays className="mx-auto h-10 w-10 text-slate-600" />
                   <p className="mt-4 text-base font-medium text-white">Sem dias carregados</p>
                   <p className="mt-2 text-sm text-slate-400">
-                    O servidor selecionado não trouxe registros de dias nesse retorno da API.
+                    {selectedDias.length ? 'Nenhum dia corresponde ao indicador selecionado.' : 'O servidor selecionado não trouxe registros de dias nesse retorno da API.'}
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {selectedDias.map((day) => {
+                  {calendarioDias.map((day) => {
                     const tone = resolveDayTone(day);
                     const pill = buildStatusPill(day);
 
