@@ -915,103 +915,7 @@ export default function FrequenciaPage() {
           </div>
         </section>
 
-        <div
-          className={`grid grid-cols-1 gap-5 ${
-            isServidoresExpanded
-              ? 'xl:grid-cols-[300px_minmax(0,1fr)]'
-              : 'xl:grid-cols-[64px_minmax(0,1fr)]'
-          }`}
-        >
-          <aside className="min-w-0">
-            <div className={`rounded-2xl border border-[#26344a] bg-[#172033] ${isServidoresExpanded ? 'p-4' : 'p-2'}`}>
-              <div className={`flex items-center ${isServidoresExpanded ? 'mb-4 justify-between gap-2' : 'justify-center'}`}>
-                {isServidoresExpanded ? (
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-semibold text-white">Servidores</h2>
-                    <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
-                  </div>
-                ) : null}
-                <div className="flex items-center gap-2">
-                  {loading && isServidoresExpanded ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
-                  <button
-                    type="button"
-                    onClick={() => setIsServidoresExpanded((expanded) => !expanded)}
-                    aria-label={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
-                    aria-expanded={isServidoresExpanded}
-                    title={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
-                  >
-                    {isServidoresExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {isServidoresExpanded ? <div className="max-h-[680px] space-y-2 overflow-y-auto pr-1">
-                {!loading && !filteredItems.length ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
-                    <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Ajuste os filtros ou confira o retorno da API.
-                    </p>
-                  </div>
-                ) : null}
-
-                {filteredItems.map((item) => {
-                  const servidor = item.servidor || ({} as FrequenciaServidor);
-                  const active = String(servidor.id ?? '') === String(selectedId);
-
-                  return (
-                    <button
-                      key={String(servidor.id ?? servidor.cpf ?? servidor.nome)}
-                      onClick={() => setSelectedId(String(servidor.id ?? ''))}
-                      className={[
-                        'w-full rounded-xl border p-3 text-left transition',
-                        active
-                          ? 'border-blue-500/50 bg-blue-500/10'
-                          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
-                      ].join(' ')}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">{servidor.nome}</p>
-                          <p className="mt-1 truncate text-xs text-slate-400">
-                            {safeDisplay(servidor.categoria, 'NÃO INFORMADA')}
-                          </p>
-                        </div>
-                        <span
-                          className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${statusColor(
-                            servidor.status || ''
-                          )}`}
-                        >
-                          {safeDisplay(servidor.status, 'NÃO INFORMADO')}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
-                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
-                            CPF
-                          </span>
-                          <span className="mt-1 block text-slate-200">{formatCpf(servidor.cpf)}</span>
-                        </div>
-                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
-                            Matrícula
-                          </span>
-                          <span className="mt-1 block text-slate-200">
-                            {safeDisplay(servidor.matricula)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div> : null}
-            </div>
-          </aside>
-
-          <section className="space-y-6">
-            <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+        <div className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-5 md:p-6">
               {selectedServidor ? (
                 <>
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -1107,7 +1011,102 @@ export default function FrequenciaPage() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+        <div
+          className={`grid grid-cols-1 items-start gap-5 ${
+            isServidoresExpanded
+              ? 'xl:grid-cols-[300px_minmax(0,1fr)]'
+              : 'xl:grid-cols-[64px_minmax(0,1fr)]'
+          }`}
+        >
+          <aside className="min-w-0 self-start">
+            <div className={`rounded-2xl border border-[#26344a] bg-[#172033] ${isServidoresExpanded ? 'p-4' : 'p-2'}`}>
+              <div className={`flex items-center ${isServidoresExpanded ? 'mb-4 justify-between gap-2' : 'justify-center'}`}>
+                {isServidoresExpanded ? (
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-white">Servidores</h2>
+                    <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
+                  </div>
+                ) : null}
+                <div className="flex items-center gap-2">
+                  {loading && isServidoresExpanded ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
+                  <button
+                    type="button"
+                    onClick={() => setIsServidoresExpanded((expanded) => !expanded)}
+                    aria-label={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
+                    aria-expanded={isServidoresExpanded}
+                    title={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
+                  >
+                    {isServidoresExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {isServidoresExpanded ? <div className="max-h-[680px] space-y-2 overflow-y-auto pr-1">
+                {!loading && !filteredItems.length ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
+                    <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Ajuste os filtros ou confira o retorno da API.
+                    </p>
+                  </div>
+                ) : null}
+
+                {filteredItems.map((item) => {
+                  const servidor = item.servidor || ({} as FrequenciaServidor);
+                  const active = String(servidor.id ?? '') === String(selectedId);
+
+                  return (
+                    <button
+                      key={String(servidor.id ?? servidor.cpf ?? servidor.nome)}
+                      onClick={() => setSelectedId(String(servidor.id ?? ''))}
+                      className={[
+                        'w-full rounded-xl border p-3 text-left transition',
+                        active
+                          ? 'border-blue-500/50 bg-blue-500/10'
+                          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
+                      ].join(' ')}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">{servidor.nome}</p>
+                          <p className="mt-1 truncate text-xs text-slate-400">
+                            {safeDisplay(servidor.categoria, 'NÃO INFORMADA')}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${statusColor(
+                            servidor.status || ''
+                          )}`}
+                        >
+                          {safeDisplay(servidor.status, 'NÃO INFORMADO')}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
+                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                            CPF
+                          </span>
+                          <span className="mt-1 block text-slate-200">{formatCpf(servidor.cpf)}</span>
+                        </div>
+                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                            Matrícula
+                          </span>
+                          <span className="mt-1 block text-slate-200">
+                            {safeDisplay(servidor.matricula)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div> : null}
+            </div>
+          </aside>
+
+            <div className="min-w-0 self-start rounded-2xl border border-[#26344a] bg-[#172033] p-5">
               <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${isCalendarioExpanded ? 'mb-4' : ''}`}>
                 <div>
                   <h3 className="text-base font-semibold text-white">
@@ -1231,7 +1230,6 @@ export default function FrequenciaPage() {
               )}
               </div>
             </div>
-          </section>
         </div>
       </div>
 
