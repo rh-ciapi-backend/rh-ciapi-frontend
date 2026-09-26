@@ -142,8 +142,8 @@ function dataParaInput(value: string | null | undefined) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
 }
 
-export default function RequerimentosPage() {
-  const [aba, setAba] = useState<'lista' | 'novo'>('lista');
+export default function RequerimentosPage({ modoServidor = false }: { modoServidor?: boolean }) {
+  const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : 'lista');
   const [tipo, setTipo] = useState('');
   const [busca, setBusca] = useState('');
   const [sugestoes, setSugestoes] = useState<Servidor[]>([]);
@@ -158,9 +158,12 @@ export default function RequerimentosPage() {
   const [sucesso, setSucesso] = useState('');
   const [carregandoFormulario, setCarregandoFormulario] = useState(false);
   const [formularioPronto, setFormularioPronto] = useState(false);
+  const [ultimoSalvo, setUltimoSalvo] = useState<Requerimento | null>(null);
+  const [linkServidor, setLinkServidor] = useState('');
   const consultaFormulario = useRef(0);
 
   useEffect(() => {
+    if (modoServidor) return;
     let ativo = true;
     setCarregando(true);
     requerimentosService.listar()
@@ -168,10 +171,39 @@ export default function RequerimentosPage() {
       .catch((error) => { if (ativo) setErroEnvio(error.message || 'Erro ao carregar requerimentos.'); })
       .finally(() => { if (ativo) setCarregando(false); });
     return () => { ativo = false; };
-  }, []);
+  }, [modoServidor]);
 
   useEffect(() => {
-    if (aba !== 'novo' || selecionado || busca.trim().length < 3) {
+    if (!modoServidor) return;
+    let ativo = true;
+    setCarregandoFormulario(true);
+    requerimentosService.obterFormulario()
+      .then(({ servidor, complemento }) => {
+        if (!ativo) return;
+        const dado = (chave: string) => String(servidor[chave] ?? '');
+        setSelecionado({
+          id: dado('id') || dado('servidor') || 'proprio',
+          nomeCompleto: dado('nome_completo') || dado('nomeCompleto') || dado('nome'),
+          cpf: dado('cpf'),
+        } as Servidor);
+        setValores({
+          ...complemento,
+          nome: dado('nome_completo') || dado('nomeCompleto') || dado('nome'),
+          cpf: dado('cpf'),
+          rg: dado('rg_numero') || dado('rgNumero') || complemento.rg || '',
+          cargo: dado('cargo') || complemento.cargo || '',
+          matricula: dado('matricula') || complemento.matricula || '',
+          lotacao: dado('setor') || complemento.lotacao || '',
+        });
+        setFormularioPronto(true);
+      })
+      .catch((error) => { if (ativo) setErroEnvio(error.message || 'Erro ao carregar seus dados.'); })
+      .finally(() => { if (ativo) setCarregandoFormulario(false); });
+    return () => { ativo = false; };
+  }, [modoServidor]);
+
+  useEffect(() => {
+    if (modoServidor || aba !== 'novo' || selecionado || busca.trim().length < 3) {
       setSugestoes([]);
       return;
     }
@@ -185,15 +217,17 @@ export default function RequerimentosPage() {
       }
     }, 300);
     return () => { ativo = false; window.clearTimeout(timer); };
-  }, [aba, busca, selecionado]);
+  }, [aba, busca, selecionado, modoServidor]);
 
   const atualizar = (name: string, value: string) => {
+    setUltimoSalvo(null);
     setValores((anterior) => ({ ...anterior, [name]: value }));
   };
 
   const escolherServidor = async (servidor: Servidor) => {
     const consultaAtual = ++consultaFormulario.current;
     setSelecionado(servidor);
+    setLinkServidor('');
     setBusca(servidor.nomeCompleto || servidor.nome);
     setSugestoes([]);
     setErroEnvio('');
@@ -251,13 +285,28 @@ export default function RequerimentosPage() {
   ...anteriores,
 ]);
       setSucesso(`Requerimento enviado: ${novo.id}`);
-      setAba('lista');
-      setTipo('');
-      setDetalhes('');
+      setUltimoSalvo(novo);
+      if (!modoServidor) {
+        setAba('lista');
+        setTipo('');
+        setDetalhes('');
+      }
     } catch (error) {
       setErroEnvio(error instanceof Error ? error.message : 'Falha ao enviar requerimento.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const gerarLink = async () => {
+    if (!selecionado) return;
+    setErroEnvio('');
+    try {
+      const acesso = await requerimentosService.criarAcesso(selecionado.id);
+      setLinkServidor(acesso.url);
+      try { await navigator.clipboard.writeText(acesso.url); } catch { /* campo permite copiar */ }
+    } catch (error) {
+      setErroEnvio(error instanceof Error ? error.message : 'Não foi possível gerar o link.');
     }
   };
 
@@ -266,20 +315,26 @@ export default function RequerimentosPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Requerimentos</h1>
-          <p className="mt-1 text-sm text-slate-400">Solicitações dos servidores e formulário estadual.</p>
+          <p className="mt-1 text-sm text-slate-400">{modoServidor ? 'Preencha e salve sua solicitação.' : 'Solicitações dos servidores e formulário estadual.'}</p>
         </div>
-        <button
+        {!modoServidor && <button
           type="button"
           onClick={() => setAba(aba === 'lista' ? 'novo' : 'lista')}
           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
         >
           <FilePlus2 size={17} />
           {aba === 'lista' ? 'Ver formulário' : 'Voltar à lista'}
-        </button>
+        </button>}
       </div>
 
       {sucesso && <p role="status" className="rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-300">{sucesso}</p>}
       {erroEnvio && <p role="alert" className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-300">{erroEnvio}</p>}
+      {modoServidor && ultimoSalvo && (
+        <div className="flex flex-wrap gap-2 rounded-xl border border-blue-500/20 bg-[#172033] p-4">
+          <button type="button" onClick={() => requerimentosService.baixarPdf(ultimoSalvo.id).catch((error) => setErroEnvio(error.message))} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Baixar PDF</button>
+          <button type="button" onClick={() => requerimentosService.baixarDocx(ultimoSalvo.id).catch((error) => setErroEnvio(error.message))} className="rounded-lg border border-[#26344a] px-4 py-2 text-sm text-white">Baixar Word</button>
+        </div>
+      )}
 
       {aba === 'lista' ? (
         <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
@@ -318,8 +373,8 @@ export default function RequerimentosPage() {
         </section>
       ) : (
         <div className="space-y-5">
-          <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100"><Info size={18} className="mt-0.5 shrink-0" /><p>Os dados conhecidos são preenchidos ao escolher um servidor. Complete os campos restantes antes de enviar.</p></div>
-          <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+          <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100"><Info size={18} className="mt-0.5 shrink-0" /><p>{modoServidor ? 'Confira seus dados e complete os campos que faltam.' : 'Os dados conhecidos são preenchidos ao escolher um servidor. Complete os campos restantes antes de enviar.'}</p></div>
+          {!modoServidor && <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <h2 className="text-sm font-semibold text-white">Selecionar servidor</h2>
             <div className="relative mt-3 max-w-xl">
               <Search size={18} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
@@ -358,7 +413,10 @@ export default function RequerimentosPage() {
             {erroBusca && <p className="mt-2 text-xs text-rose-400">{erroBusca}</p>}
             {carregandoFormulario && <p className="mt-2 text-xs text-blue-300">Carregando dados anteriores...</p>}
             {selecionado && formularioPronto && <p className="mt-2 text-xs text-emerald-400">Dados encontrados. Complete os campos que faltam.</p>}
-          </section>
+            {selecionado && formularioPronto && <button type="button" onClick={gerarLink} className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Gerar e copiar link do servidor</button>}
+            {linkServidor && <input readOnly value={linkServidor} onFocus={(event) => event.currentTarget.select()} className="mt-2 w-full rounded-lg border border-[#26344a] bg-[#0b1220] p-2 text-xs text-white" aria-label="Link do servidor" />}
+          </section>}
+          {modoServidor && carregandoFormulario && <p className="text-sm text-blue-300">Carregando seus dados...</p>}
           <GrupoCampos titulo="Identificação do servidor" campos={identificacao} valores={valores} atualizar={atualizar} />
           <GrupoCampos titulo="Dados funcionais" campos={funcionais} valores={valores} atualizar={atualizar} />
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
@@ -385,6 +443,7 @@ export default function RequerimentosPage() {
             <label className="block text-xs font-medium text-slate-300">Tipo de requerimento
               <select value={tipo} onChange={(event) => {
                 const novoTipo = event.target.value;
+                setUltimoSalvo(null);
                 setTipo(novoTipo);
                 setDetalhes(TEXTOS_BASE[novoTipo] ?? '');
               }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
@@ -393,12 +452,12 @@ export default function RequerimentosPage() {
               </select>
             </label>
             <label className="mt-4 block text-xs font-medium text-slate-300">Texto da solicitação (editável)
-              <textarea rows={7} value={detalhes} onChange={(event) => setDetalhes(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
+              <textarea rows={7} value={detalhes} onChange={(event) => { setUltimoSalvo(null); setDetalhes(event.target.value); }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
             </label>
           </fieldset>
           <div className="flex justify-end">
-            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto} onClick={enviar} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-              {enviando ? 'Enviando...' : 'Enviar requerimento'}
+            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto || (modoServidor && !!ultimoSalvo)} onClick={enviar} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {enviando ? 'Salvando...' : modoServidor && ultimoSalvo ? 'Salvo' : modoServidor ? 'Salvar requerimento' : 'Enviar requerimento'}
             </button>
           </div>
         </div>
