@@ -26,6 +26,46 @@ const TIPOS = [
   'Outra solicitação',
 ] as const;
 
+// Textos iniciais: o servidor pode alterar livremente antes de enviar.
+const TEXTOS_BASE: Record<string, string> = {
+  'Certidão de tempo de serviço e ficha financeira':
+    'Requeiro a expedição de certidão de tempo de serviço e de minha ficha financeira, para esclarecimento de minha situação funcional e defesa de meus interesses, nos termos do art. 109, VIII, b, da Lei Complementar estadual nº 53/2001. Solicito que os documentos indiquem os períodos registrados e as informações financeiras disponíveis.',
+  'Pagamento de verbas rescisórias':
+    'Requeiro a apuração e o pagamento das verbas eventualmente devidas em razão do encerramento do meu vínculo funcional, inclusive férias e adicional proporcionais, quando cabíveis, observado o art. 75, § 1º, da Lei Complementar estadual nº 53/2001. Solicito demonstrativo discriminado dos valores apurados.',
+  'Averbação de tempo de contribuição':
+    'Requeiro a análise e a averbação do tempo de contribuição comprovado pela documentação anexa em meus assentamentos funcionais, para os efeitos legalmente cabíveis, observados os arts. 93 a 96 da Lei Complementar estadual nº 53/2001 e as regras previdenciárias aplicáveis.',
+  Vacância:
+    'Requeiro a análise e a declaração de vacância do meu cargo em razão do motivo informado e comprovado nos documentos anexos, com fundamento no art. 31 da Lei Complementar estadual nº 53/2001, com a publicação do ato administrativo correspondente, se cabível.',
+  Exoneração:
+    'Requeiro minha exoneração, a pedido, do cargo indicado neste formulário, nos termos dos arts. 32 e 33 da Lei Complementar estadual nº 53/2001, conforme a natureza do vínculo. Solicito a adoção das providências administrativas e a publicação do ato correspondente.',
+  'Licença para atividade política':
+    'Requeiro licença para atividade política em razão de minha candidatura a mandato eletivo, nos termos do art. 83 da Lei Complementar estadual nº 53/2001 e da legislação eleitoral aplicável. Apresento os documentos pertinentes para análise do período de afastamento.',
+  'Licença para capacitação':
+    'Requeiro licença para capacitação profissional, nos termos do art. 84 da Lei Complementar estadual nº 53/2001. Apresento as informações do curso e solicito a análise dos requisitos legais e do interesse da Administração.',
+  'Licença para cursar pós-graduação':
+    'Requeiro a análise de dispensa ou ajuste de horário para cursar pós-graduação, com fundamento no art. 91, §§ 4º a 7º, da Lei Complementar estadual nº 53/2001. Apresento comprovante de matrícula, calendário e horários do curso para avaliação das condições aplicáveis.',
+  'Licença para desempenho de mandato classista':
+    'Requeiro licença para o desempenho de mandato classista, com fundamento no art. 86 da Lei Complementar estadual nº 53/2001. Apresento os documentos relativos à eleição, à entidade e ao mandato para análise dos requisitos legais.',
+  'Licença para o serviço militar':
+    'Requeiro licença para o serviço militar, nos termos do art. 82 da Lei Complementar estadual nº 53/2001, em razão da convocação comprovada em documento anexo. Solicito a análise do período de afastamento e das condições previstas na legislação específica.',
+  'Licença para tratar de interesse particular':
+    'Requeiro licença para tratar de interesses particulares, sem remuneração, nos termos do art. 85 da Lei Complementar estadual nº 53/2001. Solicito a análise dos requisitos legais, do período pretendido e do interesse da Administração.',
+  'Licença por doença em pessoa da família':
+    'Requeiro licença por motivo de doença em pessoa da família, nos termos do art. 80 da Lei Complementar estadual nº 53/2001. Apresento a documentação pertinente e solicito a avaliação da necessidade de assistência direta, inclusive por junta médica oficial, quando exigida.',
+  'Licença por afastamento do cônjuge ou companheiro(a)':
+    'Requeiro licença para acompanhar meu cônjuge ou companheiro(a), em razão de seu deslocamento, nos termos do art. 81 da Lei Complementar estadual nº 53/2001. Apresento a documentação do deslocamento e solicito a análise do período pretendido.',
+  'Licença para tratamento da própria saúde':
+    'Requeiro licença para tratamento da própria saúde, nos termos dos arts. 180 e 181 da Lei Complementar estadual nº 53/2001. Apresento a documentação médica necessária e solicito a avaliação pela perícia médica competente.',
+  'Licença por acidente em serviço':
+    'Requeiro licença por acidente em serviço, com fundamento nos arts. 185 a 188 da Lei Complementar estadual nº 53/2001. Apresento a documentação relativa ao ocorrido e solicito a apuração do nexo com as atividades funcionais e a avaliação médica cabível.',
+  'Licença à gestante':
+    'Requeiro licença à gestante, em razão da gestação comprovada pela documentação médica apresentada. Solicito a análise do período e das condições aplicáveis à minha situação funcional, conforme a legislação vigente.',
+  'Auxílio natalidade':
+    'Requeiro a concessão do auxílio-natalidade, com fundamento no art. 179 da Lei Complementar estadual nº 53/2001, em razão do nascimento de filho(a), conforme documentação apresentada. Solicito a análise dos requisitos legais e, sendo devido, o pagamento do benefício.',
+  'Salário família':
+    'Requeiro a análise da concessão do salário-família em razão de dependente indicado na documentação apresentada. Solicito a verificação dos requisitos e a implantação do benefício, caso devido, conforme a legislação previdenciária aplicável ao meu vínculo.',
+};
+
 type Campo = { name: string; label: string; type?: string };
 
 const identificacao: Campo[] = [
@@ -250,14 +290,16 @@ export default function RequerimentosPage() {
                 {requerimentos.map((item) => (
                   <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm">
                     <div><p className="font-medium text-white">{item.tipo}</p><p className="text-xs text-slate-400">Servidor: {item.servidor_nome || item.servidor_id} · {new Date(item.criado_em).toLocaleDateString('pt-BR')}</p></div>
-                    <button
+                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">{item.status.replace('_', ' ')}</span><button
   type="button"
   onClick={async () => {
     setErroEnvio('');
     try {
       await requerimentosService.baixarDocx(item.id);
     } catch (error) {
-      setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o requerimento.');
+      setErroEnvio(
+        error instanceof Error ? error.message : 'Não foi possível baixar o requerimento.'
+      );
     }
   }}
   className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
@@ -336,13 +378,17 @@ export default function RequerimentosPage() {
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <legend className="px-2 text-sm font-semibold text-white">Pedido</legend>
             <label className="block text-xs font-medium text-slate-300">Tipo de requerimento
-              <select value={tipo} onChange={(event) => setTipo(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
+              <select value={tipo} onChange={(event) => {
+                const novoTipo = event.target.value;
+                setTipo(novoTipo);
+                setDetalhes(TEXTOS_BASE[novoTipo] ?? '');
+              }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
                 <option value="">Selecione o pedido</option>
                 {TIPOS.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
-            <label className="mt-4 block text-xs font-medium text-slate-300">Detalhes ou outra solicitação
-              <textarea rows={4} value={detalhes} onChange={(event) => setDetalhes(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
+            <label className="mt-4 block text-xs font-medium text-slate-300">Texto da solicitação (editável)
+              <textarea rows={7} value={detalhes} onChange={(event) => setDetalhes(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
             </label>
           </fieldset>
           <div className="flex justify-end">
