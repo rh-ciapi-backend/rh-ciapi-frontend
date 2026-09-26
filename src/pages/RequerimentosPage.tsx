@@ -68,6 +68,14 @@ const TEXTOS_BASE: Record<string, string> = {
 
 type Campo = { name: string; label: string; type?: string };
 
+const UNIDADE_CIAPI = 'CENTRO INTEGRADO DE ATENÇÃO À PESSOA IDOSA';
+const ESTADOS_CIVIS = ['SOLTEIRO', 'SOLTEIRA', 'CASADO', 'CASADA', 'DIVORCIADO', 'DIVORCIADA', 'SEPARADO', 'SEPARADA', 'VIÚVO', 'VIÚVA', 'UNIÃO ESTÁVEL'];
+const LOTACOES_CIAPI = ['CENTRO DIA', 'ABRIGO DE IDOSOS'];
+const comparar = (texto: string) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+const ehCiapi = (texto: string) => ['CIAPI', UNIDADE_CIAPI].some((item) => comparar(texto) === comparar(item));
+const valorOpcao = (valor: string, opcoes: string[]) =>
+  opcoes.find((opcao) => comparar(opcao) === comparar(valor)) || (valor ? '__outro__' : '');
+
 const identificacao: Campo[] = [
   { name: 'nome', label: 'Nome completo' },
   { name: 'nacionalidade', label: 'Nacionalidade' },
@@ -113,6 +121,39 @@ function GrupoCampos({
   valores: Record<string, string>;
   atualizar: (name: string, value: string) => void;
 }) {
+  const [outros, setOutros] = useState<Record<string, boolean>>({});
+  const campoSelecao = (name: string, opcoes: string[], atualizarUnidade = false) => {
+    const valor = valores[name] || '';
+    const selecionado = outros[name] ? '__outro__' : valorOpcao(valor, opcoes);
+    return (
+      <>
+        <select
+          name={name}
+          value={selecionado}
+          onChange={(event) => {
+            const novo = event.target.value;
+            setOutros((anteriores) => ({ ...anteriores, [name]: novo === '__outro__' }));
+            atualizar(name, novo === '__outro__' ? '' : novo);
+            if (atualizarUnidade && ehCiapi(novo) && !LOTACOES_CIAPI.some((item) => comparar(item) === comparar(valores.lotacao || ''))) {
+              atualizar('lotacao', '');
+            }
+          }}
+          className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white"
+        >
+          <option value="">Selecione</option>
+          {opcoes.map((opcao) => <option key={opcao} value={opcao}>{opcao}</option>)}
+          <option value="__outro__">OUTRO (DIGITAR)</option>
+        </select>
+        {selecionado === '__outro__' && <input
+          aria-label={`${name}: digite a opção`}
+          value={valor}
+          onChange={(event) => atualizar(name, event.target.value)}
+          placeholder="DIGITE AQUI"
+          className="mt-2 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white uppercase"
+        />}
+      </>
+    );
+  };
   return (
     <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
       <legend className="px-2 text-sm font-semibold text-white">{titulo}</legend>
@@ -120,14 +161,17 @@ function GrupoCampos({
         {campos.map(({ name, label, type }) => (
           <label key={name} className="block text-xs font-medium text-slate-300">
             {label}
-            <input
+            {name === 'estadoCivil' ? campoSelecao(name, ESTADOS_CIVIS) :
+            name === 'nacionalidade' ? campoSelecao(name, ['BRASILEIRO', 'BRASILEIRA']) :
+            name === 'unidadeExercicio' ? campoSelecao(name, [UNIDADE_CIAPI], true) :
+            name === 'lotacao' && ehCiapi(valores.unidadeExercicio || '') ? campoSelecao(name, LOTACOES_CIAPI) : <input
               name={name}
               type={type ?? 'text'}
               autoComplete="off"
               value={valores[name] ?? ''}
               onChange={(event) => atualizar(name, event.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
-            />
+              className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white uppercase outline-none focus:border-blue-500"
+            />}
           </label>
         ))}
       </div>
@@ -221,7 +265,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
 
   const atualizar = (name: string, value: string) => {
     setUltimoSalvo(null);
-    setValores((anterior) => ({ ...anterior, [name]: value }));
+    setValores((anterior) => ({ ...anterior, [name]: name.startsWith('data') ? value : value.toLocaleUpperCase('pt-BR') }));
   };
 
   const escolherServidor = async (servidor: Servidor) => {
@@ -278,7 +322,9 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
     setSucesso('');
     try {
       const novo = await requerimentosService.criar({
-        servidorId: selecionado.id, tipo, detalhes, dados: valores,
+        servidorId: selecionado.id, tipo, detalhes, dados: Object.fromEntries(
+          Object.entries(valores).map(([chave, valor]) => [chave, chave.startsWith('data') ? valor : valor.toLocaleUpperCase('pt-BR')]),
+        ),
       });
       setRequerimentos((anteriores) => [
   { ...novo, servidor_nome: valores.nome || selecionado.nomeCompleto || selecionado.nome },
@@ -417,8 +463,8 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
             {linkServidor && <input readOnly value={linkServidor} onFocus={(event) => event.currentTarget.select()} className="mt-2 w-full rounded-lg border border-[#26344a] bg-[#0b1220] p-2 text-xs text-white" aria-label="Link do servidor" />}
           </section>}
           {modoServidor && carregandoFormulario && <p className="text-sm text-blue-300">Carregando seus dados...</p>}
-          <GrupoCampos titulo="Identificação do servidor" campos={identificacao} valores={valores} atualizar={atualizar} />
-          <GrupoCampos titulo="Dados funcionais" campos={funcionais} valores={valores} atualizar={atualizar} />
+          <GrupoCampos key={`identificacao-${selecionado?.id || ''}`} titulo="Identificação do servidor" campos={identificacao} valores={valores} atualizar={atualizar} />
+          <GrupoCampos key={`funcionais-${selecionado?.id || ''}`} titulo="Dados funcionais" campos={funcionais} valores={valores} atualizar={atualizar} />
           <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
             <legend className="px-2 text-sm font-semibold text-white">Vínculo</legend>
             <div className="grid gap-4 sm:grid-cols-3">
