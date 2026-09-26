@@ -3,6 +3,7 @@ import type { Categoria, Servidor, Sexo, StatusServidor } from '../types';
 import type { ListarServidoresParams } from './apiTypes';
 
 type DbServidorRow = Record<string, unknown>;
+export type ServidorComVinculo = Servidor & { matriculaSegunda?: string };
 
 const TABLE_SERVIDORES = 'servidores';
 
@@ -68,7 +69,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 
 const escapeSupabaseLikeTerm = (value: string) => value.replace(/[%_,]/g, ' ').trim();
 
-const mapFromDB = (row: DbServidorRow): Servidor => {
+const mapFromDB = (row: DbServidorRow): ServidorComVinculo => {
   const nomeCompleto = firstFilled(
     row.nome_completo,
     row.nomeCompleto,
@@ -85,6 +86,7 @@ const mapFromDB = (row: DbServidorRow): Servidor => {
     nome: nomeCompleto || firstFilled(row.nome, row.apelido),
     nomeCompleto,
     matricula,
+    matriculaSegunda: firstFilled(row.matricula_segunda),
     cpf: formatCpf(cpfDigits),
     dataNascimento: firstFilled(row.data_nascimento, row.dataNascimento, row.nascimento) || null,
     sexo: normalizeSexo(firstFilled(row.sexo, row.genero)),
@@ -110,9 +112,10 @@ const mapFromDB = (row: DbServidorRow): Servidor => {
   };
 };
 
-const mapToInsert = (input: Partial<Servidor>) => ({
+const mapToInsert = (input: Partial<ServidorComVinculo>) => ({
   nome_completo: safeString(input.nomeCompleto || input.nome),
   matricula: safeString(input.matricula),
+  matricula_segunda: safeString(input.matriculaSegunda),
   cpf: normalizeCpf(input.cpf),
   data_nascimento: input.dataNascimento || null,
   sexo: safeString(input.sexo),
@@ -147,6 +150,7 @@ const buildListQuery = (params?: ListarServidoresParams) => {
     if (busca) {
       orParts.push(`nome_completo.ilike.%${busca}%`);
       orParts.push(`matricula.ilike.%${busca}%`);
+      orParts.push(`matricula_segunda.ilike.%${busca}%`);
       orParts.push(`setor.ilike.%${busca}%`);
       orParts.push(`categoria.ilike.%${busca}%`);
     }
@@ -175,13 +179,13 @@ const buildListQuery = (params?: ListarServidoresParams) => {
   return query;
 };
 
-const sortServidores = (list: Servidor[]) =>
+const sortServidores = (list: ServidorComVinculo[]) =>
   [...list].sort((a, b) =>
     safeString(a.nomeCompleto || a.nome).localeCompare(safeString(b.nomeCompleto || b.nome), 'pt-BR'),
   );
 
-const uniqueServidores = (items: Servidor[]) => {
-  const unique = new Map<string, Servidor>();
+const uniqueServidores = (items: ServidorComVinculo[]) => {
+  const unique = new Map<string, ServidorComVinculo>();
 
   for (const item of items) {
     const key = [
@@ -199,7 +203,7 @@ const uniqueServidores = (items: Servidor[]) => {
 };
 
 export const servidoresService = {
-  async listar(params?: ListarServidoresParams): Promise<Servidor[]> {
+  async listar(params?: ListarServidoresParams): Promise<ServidorComVinculo[]> {
     try {
       const query = buildListQuery(params)
         .order('nome_completo', { ascending: true })
@@ -217,7 +221,7 @@ export const servidoresService = {
     }
   },
 
-  async obterPorId(idOrCpf: string): Promise<Servidor | null> {
+  async obterPorId(idOrCpf: string): Promise<ServidorComVinculo | null> {
     try {
       const raw = safeString(idOrCpf);
       const cpfDigits = normalizeCpf(raw);
@@ -250,7 +254,7 @@ export const servidoresService = {
     }
   },
 
-  async buscarSugestoes(term: string, limite = 8): Promise<Servidor[]> {
+  async buscarSugestoes(term: string, limite = 8): Promise<ServidorComVinculo[]> {
     const rawTerm = safeString(term);
 
     if (rawTerm.length < 3) {
@@ -263,6 +267,7 @@ export const servidoresService = {
       const orParts: string[] = [
         `nome_completo.ilike.%${searchTerm}%`,
         `matricula.ilike.%${searchTerm}%`,
+        `matricula_segunda.ilike.%${searchTerm}%`,
       ];
 
       if (cpfDigits) {
@@ -291,7 +296,7 @@ export const servidoresService = {
     }
   },
 
-  async adicionar(input: Partial<Servidor>): Promise<Servidor> {
+  async adicionar(input: Partial<ServidorComVinculo>): Promise<ServidorComVinculo> {
     try {
       const payload = mapToInsert(input);
 
@@ -311,7 +316,7 @@ export const servidoresService = {
     }
   },
 
-  async editar(idOrCpf: string, input: Partial<Servidor>): Promise<Servidor> {
+  async editar(idOrCpf: string, input: Partial<ServidorComVinculo>): Promise<ServidorComVinculo> {
     try {
       const payload = mapToInsert(input);
       const raw = safeString(idOrCpf);
