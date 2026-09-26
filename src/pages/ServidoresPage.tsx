@@ -14,10 +14,10 @@ import {
   Link2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { servidoresService } from '../services/servidoresService';
+import { servidoresService, type ServidorComVinculo } from '../services/servidoresService';
 import { API_BASE_URL } from '../config/api';
 import { CATEGORIAS, SETORES, ESCOLARIDADE, VINCULOS } from '../data/servidores';
-import { Servidor, Categoria, StatusServidor, Sexo } from '../types';
+import { Categoria, StatusServidor, Sexo } from '../types';
 
 const FALLBACK_SEXO = 'NÃO INFORMADO';
 const FALLBACK_SETOR = 'NÃO INFORMADO';
@@ -36,22 +36,22 @@ const normalizeText = (value: unknown): string =>
     .toLowerCase()
     .trim();
 
-const getEmployeeName = (emp: Partial<Servidor>) =>
+const getEmployeeName = (emp: Partial<ServidorComVinculo>) =>
   asString(emp.nomeCompleto || emp.nome, 'NOME NÃO INFORMADO');
 
-const getEmployeeMatricula = (emp: Partial<Servidor>) =>
+const getEmployeeMatricula = (emp: Partial<ServidorComVinculo>) =>
   asString(emp.matricula);
 
-const getEmployeeCategoria = (emp: Partial<Servidor>) =>
+const getEmployeeCategoria = (emp: Partial<ServidorComVinculo>) =>
   asString(emp.categoria, FALLBACK_CATEGORIA);
 
-const getEmployeeSetor = (emp: Partial<Servidor>) =>
+const getEmployeeSetor = (emp: Partial<ServidorComVinculo>) =>
   asString(emp.setor, FALLBACK_SETOR);
 
-const getEmployeeStatus = (emp: Partial<Servidor>) =>
+const getEmployeeStatus = (emp: Partial<ServidorComVinculo>) =>
   asString(emp.status, FALLBACK_STATUS);
 
-const getEmployeeSexo = (emp: Partial<Servidor>) =>
+const getEmployeeSexo = (emp: Partial<ServidorComVinculo>) =>
   asString(emp.sexo, FALLBACK_SEXO);
 
 const uniqueSorted = (values: string[]) =>
@@ -171,6 +171,7 @@ type PendingEmployeePayload = {
   nome: string;
   nomeCompleto: string;
   matricula: string;
+  matriculaSegunda: string;
   cpf: string;
   dataNascimento: string | null;
   sexo: Sexo | '';
@@ -202,7 +203,7 @@ export const ServidoresPage = ({
   initialAction?: string | null;
   onActionHandled?: () => void;
 }) => {
-  const [employees, setEmployees] = useState<Servidor[]>([]);
+  const [employees, setEmployees] = useState<ServidorComVinculo[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
@@ -210,9 +211,9 @@ export const ServidoresPage = ({
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterSexo, setFilterSexo] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Servidor | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<ServidorComVinculo | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Servidor | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<ServidorComVinculo | null>(null);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [pendingEmployeeData, setPendingEmployeeData] = useState<PendingEmployeePayload | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -300,7 +301,7 @@ export const ServidoresPage = ({
 
     return employees.filter((emp) => {
       const nome = normalizeText(getEmployeeName(emp));
-      const matricula = normalizeText(getEmployeeMatricula(emp));
+      const matricula = normalizeText(`${getEmployeeMatricula(emp)} ${emp.matriculaSegunda || ''}`);
       const categoria = getEmployeeCategoria(emp);
       const setor = getEmployeeSetor(emp);
       const status = getEmployeeStatus(emp);
@@ -354,6 +355,7 @@ export const ServidoresPage = ({
     const headers = [
       'Nome Completo',
       'Matrícula',
+      'Segunda matrícula',
       'Data de Nascimento',
       'Sexo',
       'CPF',
@@ -380,6 +382,7 @@ export const ServidoresPage = ({
     const csvRows = rows.map((emp) => [
       asString(emp.nomeCompleto || emp.nome),
       asString(emp.matricula),
+      asString(emp.matriculaSegunda),
       formatCsvDate(emp.dataNascimento),
       asString(emp.sexo),
       asString(emp.cpf),
@@ -443,7 +446,7 @@ export const ServidoresPage = ({
     closeEditModal();
   };
 
-  const handleOpenDetails = (emp: Servidor) => {
+  const handleOpenDetails = (emp: ServidorComVinculo) => {
     setSelectedEmployee(emp);
     setIsDetailsModalOpen(true);
   };
@@ -454,7 +457,7 @@ export const ServidoresPage = ({
     resetConfirmSaveState();
   };
 
-  const handleEditEmployee = (emp: Servidor) => {
+  const handleEditEmployee = (emp: ServidorComVinculo) => {
     setEditingEmployee(emp);
     setIsModalOpen(true);
     resetConfirmSaveState();
@@ -494,6 +497,7 @@ export const ServidoresPage = ({
     nome: asString(formData.get('nomeCompleto')),
     nomeCompleto: asString(formData.get('nomeCompleto')),
     matricula: asString(formData.get('matricula')),
+    matriculaSegunda: asString(formData.get('matriculaSegunda')),
     cpf: asString(formData.get('cpf')),
     dataNascimento: asString(formData.get('dataNascimento')) || null,
     sexo: (asString(formData.get('sexo')) as Sexo | '') || '',
@@ -526,6 +530,11 @@ export const ServidoresPage = ({
 
     if (!dados.matricula) {
       setError('A matrícula é obrigatória.');
+      return;
+    }
+
+    if (dados.matriculaSegunda && dados.matriculaSegunda === dados.matricula) {
+      setError('A segunda matrícula deve ser diferente da primeira.');
       return;
     }
 
@@ -936,6 +945,7 @@ export const ServidoresPage = ({
                         <span className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border-dark bg-slate-800 text-slate-300">
                           Matrícula: {displayValue(detailEmployee.matricula)}
                         </span>
+                        {detailEmployee.matriculaSegunda && <span className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border-dark bg-slate-800 text-slate-300">2º vínculo: {detailEmployee.matriculaSegunda}</span>}
                         {getStatusBadge(detailEmployee.status)}
                       </div>
                     </div>
@@ -987,6 +997,7 @@ export const ServidoresPage = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <DetailItem label="Nome Completo" value={displayValue(detailEmployee.nomeCompleto)} />
                     <DetailItem label="Matrícula" value={displayValue(detailEmployee.matricula)} mono />
+                    {detailEmployee.matriculaSegunda && <DetailItem label="Segunda matrícula" value={detailEmployee.matriculaSegunda} mono />}
                     <DetailItem label="Sexo" value={formatSexoLabel(detailEmployee.sexo)} />
                     <DetailItem label="Data de Nascimento" value={formatDate(detailEmployee.dataNascimento)} />
                     <DetailItem
@@ -1223,6 +1234,16 @@ export const ServidoresPage = ({
                           type="text"
                           defaultValue={editingEmployee?.matricula || ''}
                           required
+                          className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Segunda matrícula (outro vínculo)</label>
+                        <input
+                          name="matriculaSegunda"
+                          type="text"
+                          defaultValue={editingEmployee?.matriculaSegunda || ''}
+                          placeholder="Preencha apenas se houver outro vínculo"
                           className="w-full bg-slate-800 border border-border-dark rounded-xl p-3 text-sm text-white outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
