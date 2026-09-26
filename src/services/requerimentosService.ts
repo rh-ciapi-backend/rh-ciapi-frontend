@@ -76,6 +76,37 @@ async function baixarArquivo(id: string, formato: 'docx' | 'pdf'): Promise<void>
 }
 
 export const requerimentosService = {
+  async entrarPortal(cpf: string, senha: string, acesso: string): Promise<void> {
+    const base = String(API_BASE_URL || '').replace(/\/$/, '');
+    const response = await fetch(`${base}/api/admin/portal/entrar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpf, senha, acesso }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error || 'Não foi possível entrar.');
+    const { error } = await supabase.auth.setSession({
+      access_token: body.session.access_token,
+      refresh_token: body.session.refresh_token,
+    });
+    if (error) throw error;
+  },
+
+  async criarAcesso(servidorId: string): Promise<{ url: string; cpf: string; criado: boolean }> {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    const token = data.session?.access_token;
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+    const base = String(API_BASE_URL || '').replace(/\/$/, '');
+    const response = await fetch(`${base}/api/admin/requerimentos/acesso`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ servidorId }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error || 'Não foi possível gerar o link.');
+    return body;
+  },
   async listar(): Promise<Requerimento[]> {
     const result = await chamarApi<{ requerimentos: Requerimento[] }>('');
     return result.requerimentos || [];
