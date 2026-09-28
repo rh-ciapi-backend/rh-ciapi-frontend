@@ -6,6 +6,7 @@ import SaeTopbar from './components/SaeTopbar';
 import SaeDashboardPage from './pages/SaeDashboardPage';
 import SaeUsuariosPage from './pages/SaeUsuariosPage';
 import SaeUsuarioPerfilPage from './pages/SaeUsuarioPerfilPage';
+import SaeTriagemPage from './pages/SaeTriagemPage';
 import SaeAgendamentosPage from './pages/SaeAgendamentosPage';
 
 export default function SaeApp() {
@@ -63,9 +64,10 @@ export default function SaeApp() {
 
       case 'triagem':
         return (
-          <PlaceholderPage
-            title="Triagem"
-            description="Registro e acompanhamento das triagens realizadas."
+          <SaeTriagemPage
+            onIrAgendamentos={() =>
+              setActiveTab('agendamentos')
+            }
           />
         );
 
