@@ -127,6 +127,12 @@ export const requerimentosService = {
     return result.requerimento;
   },
 
+  async arquivar(id: string): Promise<void> {
+    await chamarApi<{ ok: boolean }>(`/${encodeURIComponent(id)}/arquivar`, {
+      method: 'PATCH',
+    });
+  },
+
   baixarDocx(id: string): Promise<void> {
     return baixarArquivo(id, 'docx');
   },
