@@ -54,7 +54,7 @@ function isValidTab(tab: string): tab is AppTab {
 
 export default function App() {
   const { signOut, ambiente, session, isLoading } = useAuth();
-  const [acessoAtual, setAcessoAtual] = useState<{ uid: string; perfil: string } | null>(null);
+  const [acessoAtual, setAcessoAtual] = useState<{ uid: string; perfil: string; isMaster?: boolean } | null>(null);
 
   useEffect(() => {
     if (!session) { setAcessoAtual(null); return; }
@@ -67,7 +67,7 @@ export default function App() {
       if (!res.ok) throw new Error('Não foi possível verificar o acesso.');
       return res.json();
     }).then(({ user }) => {
-      if (ativo) setAcessoAtual({ uid: session.user.id, perfil: user.perfil });
+      if (ativo) setAcessoAtual({ uid: session.user.id, perfil: user.perfil, isMaster: user.isMaster });
     }).catch(() => {
       if (ativo) setAcessoAtual({ uid: session.user.id, perfil: 'ERRO' });
     });
@@ -94,7 +94,7 @@ export default function App() {
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage />;
       case 'mapas': return <MapasPage />;
-      case 'requerimentos': return <RequerimentosPage />;
+      case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;
       case 'admin-categorias': return <AdminCategoriasPage />;
