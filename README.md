@@ -1,73 +1,150 @@
-# Projeto RH CIAPI - Sistema de Gestão de Frequências
+[README.md](https://github.com/user-attachments/files/32774539/README.md)
+# CIAPI SAE — Módulo TRIAGEM completo
 
-Este projeto consiste em um frontend React (Vite) e um backend Node.js (Express) para gestão de servidores e geração de relatórios de frequência em DOCX.
+## Conclusão da análise da planilha
+O histórico não contém uma norma formal de sequência, mas apresenta um padrão forte:
 
-## Estrutura do Projeto
+**Serviço Social → Psicologia → Médico**
 
-- `/src`: Frontend React com Vite e Tailwind CSS.
-- `/backend`: Servidor Express para geração de documentos DOCX e ZIP.
-- `/backend/templates`: Onde deve ficar o arquivo `modelo_frequencia.docx`.
-- `/backend/exports`: Pasta temporária para arquivos gerados.
+Serviço Social e Psicologia podem ocorrer no mesmo dia.
 
-## Pré-requisitos
+Veja `ANALISE_PLANILHA_TRIAGEM.md` para os números completos.
 
-- **Node.js LTS** instalado (v18 ou superior recomendado).
-- **Supabase**: Uma conta configurada com as tabelas `servidores`, `frequencia` e `eventos`.
+---
 
-## Como Rodar Localmente (Windows)
+## 1. BANCO — executar primeiro
 
-### 1. Preparar o Backend
+No Supabase > SQL Editor, execute:
 
-1. Abra o terminal (PowerShell ou CMD) na pasta raiz do projeto.
-2. Navegue até a pasta do backend:
-   ```bash
-   cd backend
-   ```
-3. Instale as dependências:
-   ```bash
-   npm install
-   ```
-4. Configure as variáveis de ambiente:
-   - Copie o arquivo `.env.example` para `.env`:
-     ```bash
-     copy .env.example .env
-     ```
-   - Abra o arquivo `.env` e preencha `SUPABASE_URL` e `SUPABASE_SERVICE_KEY` com suas chaves do Supabase.
-5. Inicie o servidor:
-   ```bash
-   npm start
-   ```
-   O backend estará rodando em `http://localhost:5000`.
+`sql/20260928_sae_triagem.sql`
 
-### 2. Preparar o Frontend
+A migração é aditiva e não altera as tabelas antigas.
 
-1. Abra um **novo terminal** na pasta raiz do projeto.
-2. Instale as dependências do frontend:
-   ```bash
-   npm install
-   ```
-3. Configure as variáveis de ambiente:
-   - Copie o arquivo `.env.example` para `.env`:
-     ```bash
-     copy .env.example .env
-     ```
-   - Preencha as variáveis do Supabase e a `VITE_API_BACKEND_URL` (geralmente `http://localhost:5000`).
-4. Inicie o frontend:
-   ```bash
-   npm run dev
-   ```
-   O frontend estará rodando em `http://localhost:3000` (ou a porta indicada no terminal).
+---
 
-## Geração de Documentos
+## 2. BACKEND — criar
 
-Para que a geração de DOCX funcione, você deve colocar o seu arquivo `modelo_frequencia.docx` na pasta `backend/templates/`. O arquivo deve conter os placeholders como `{{NOME}}`, `{{MATRICULA}}`, etc.
+Criar:
+- `backend/src/routes/saeTriagemRoutes.js`
+- `backend/src/services/saeTriagemService.js`
 
-## Deploy em Produção
+Depois siga exatamente:
+- `backend/INTEGRACAO_SERVER.txt`
 
-- **Frontend**: Pode ser hospedado no Vercel, Netlify ou Render (Static Site).
-- **Backend**: Recomendado usar Render.com ou Railway.
-- **CORS**: O backend no Render precisa permitir as seguintes origens no campo `CORS_ORIGINS`:
-  - `https://aistudio.google.com` (para o Preview do AI Studio funcionar)
-  - `https://www.rhciapi.com.br` (seu domínio de produção)
-  - `http://localhost:3000` (desenvolvimento local)
-- Lembre-se de configurar as variáveis de ambiente em produção e apontar o domínio `api.rhciapi.com.br` para o seu backend.
+No Render:
+- Manual Deploy
+- Deploy latest commit
+
+Se você adicionar o health conforme o arquivo de integração, confirme:
+`"saeTriagem": true`
+
+---
+
+## 3. FRONTEND — criar
+
+Criar:
+- `src/sae/types/saeTriagem.ts`
+- `src/sae/services/saeTriagemService.ts`
+- `src/sae/pages/SaeTriagemPage.tsx`
+- `src/sae/components/triagem/NovaTriagemModal.tsx`
+- `src/sae/components/triagem/TriagemDetalheModal.tsx`
+
+Substituir:
+- `src/sae/SaeApp.tsx`
+
+O Sidebar e o Topbar já possuem a aba/título Triagem e não precisam ser alterados.
+
+---
+
+## 4. FUNCIONALIDADES ENTREGUES
+
+### Página Triagem
+- KPIs por etapa;
+- busca;
+- filtro por situação;
+- filtro por etapa atual;
+- lista responsiva;
+- barra de progresso 1 → 2 → 3;
+- modal detalhado.
+
+### Nova Triagem
+- pessoa nova;
+- ou usuário já cadastrado;
+- nome;
+- sexo;
+- nascimento;
+- telefone;
+- observação inicial.
+
+### Fluxo
+1. Serviço Social
+2. Psicologia
+3. Médico
+4. Decisão final
+
+Cada etapa possui:
+- status;
+- parecer;
+- observação;
+- data de conclusão;
+- possibilidade de reabrir em caso de correção.
+
+### Decisão
+Após as três etapas:
+- Apto;
+- Não apto;
+- Desistente.
+
+O sistema não matricula automaticamente.
+
+### Segurança
+- tabelas com RLS ligado e sem policies;
+- acesso operacional pelo backend/service role;
+- usa a mesma permissão `sae_profissionais` que o fluxo atual de agenda, evitando quebrar o sistema de permissões existente.
+
+---
+
+## 5. TESTE RECOMENDADO
+
+1. Criar pessoa em "Nova triagem".
+2. Abrir a triagem.
+3. Concluir Serviço Social.
+4. Concluir Psicologia.
+5. Concluir Médico.
+6. Confirmar que muda para "Aguardando decisão".
+7. Marcar como Apto.
+8. Confirmar histórico e filtros.
+
+---
+
+## Melhorias recomendadas depois desta etapa
+
+1. **Agendamento integrado por etapa**
+   - botão Agendar dentro de Serviço Social/Psicologia/Médico;
+   - reutilizar o calendário inteligente já criado;
+   - vincular `agendamento_id` automaticamente à etapa.
+
+2. **Matrícula após APTO**
+   - botão "Matricular no Centro-Dia";
+   - só aparece para triagem APTO;
+   - cria/vincula prontuário com confirmação administrativa.
+
+3. **Documentos obrigatórios**
+   - checklist de RG, CPF, Cartão SUS, comprovante, contato do responsável.
+
+4. **Parecer estruturado**
+   - formulários específicos por área, em vez de apenas campo de observação.
+
+5. **Pendências**
+   - prazo para resolver documento/exame/avaliação complementar;
+   - alertas na Topbar.
+
+6. **Indicadores**
+   - tempo médio entre entrada e decisão;
+   - taxa de aptos/não aptos/desistentes;
+   - gargalo por etapa;
+   - tempo médio em Serviço Social, Psicologia e Médico.
+
+7. **Importação do legado**
+   - criar rotina separada para transformar os registros históricos `TRIAGEM` da planilha/banco em processos de triagem.
+   - Recomendo fazer isso somente após validar a tela nova, pois o histórico apresenta registros incompletos e ordens diferentes.
