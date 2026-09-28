@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ClipboardList, FilePlus2, Info, Search } from 'lucide-react';
+import { ClipboardList, FilePlus2, Info, Search, Trash2 } from 'lucide-react';
 import { servidoresService } from '../services/servidoresService';
 import { requerimentosService, type Requerimento } from '../services/requerimentosService';
 import type { Servidor } from '../types';
@@ -186,7 +186,7 @@ function dataParaInput(value: string | null | undefined) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
 }
 
-export default function RequerimentosPage({ modoServidor = false }: { modoServidor?: boolean }) {
+export default function RequerimentosPage({ modoServidor = false, podeArquivar = false }: { modoServidor?: boolean; podeArquivar?: boolean }) {
   const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : 'lista');
   const [tipo, setTipo] = useState('');
   const [busca, setBusca] = useState('');
@@ -198,6 +198,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
   const [requerimentos, setRequerimentos] = useState<Requerimento[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [arquivandoId, setArquivandoId] = useState<string | null>(null);
   const [erroEnvio, setErroEnvio] = useState('');
   const [sucesso, setSucesso] = useState('');
   const [carregandoFormulario, setCarregandoFormulario] = useState(false);
@@ -265,12 +266,15 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
 
   const atualizar = (name: string, value: string) => {
     setUltimoSalvo(null);
+    setSucesso('');
     setValores((anterior) => ({ ...anterior, [name]: name.startsWith('data') ? value : value.toLocaleUpperCase('pt-BR') }));
   };
 
   const escolherServidor = async (servidor: Servidor) => {
     const consultaAtual = ++consultaFormulario.current;
     setSelecionado(servidor);
+    setUltimoSalvo(null);
+    setSucesso('');
     setLinkServidor('');
     setBusca(servidor.nomeCompleto || servidor.nome);
     setSugestoes([]);
@@ -327,20 +331,30 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
         ),
       });
       setRequerimentos((anteriores) => [
-  { ...novo, servidor_nome: valores.nome || selecionado.nomeCompleto || selecionado.nome },
-  ...anteriores,
-]);
-      setSucesso(`Requerimento enviado: ${novo.id}`);
+        { ...novo, servidor_nome: valores.nome || selecionado.nomeCompleto || selecionado.nome },
+        ...anteriores,
+      ]);
+      setSucesso('Requerimento salvo. Você já pode baixar o documento.');
       setUltimoSalvo(novo);
-      if (!modoServidor) {
-        setAba('lista');
-        setTipo('');
-        setDetalhes('');
-      }
     } catch (error) {
       setErroEnvio(error instanceof Error ? error.message : 'Falha ao enviar requerimento.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const arquivar = async (item: Requerimento) => {
+    if (!window.confirm(`Remover este requerimento da lista?\n${item.tipo}`)) return;
+    setArquivandoId(item.id);
+    setErroEnvio('');
+    try {
+      await requerimentosService.arquivar(item.id);
+      setRequerimentos((anteriores) => anteriores.filter((requerimento) => requerimento.id !== item.id));
+      setSucesso('Requerimento removido da lista.');
+    } catch (error) {
+      setErroEnvio(error instanceof Error ? error.message : 'Não foi possível remover o requerimento.');
+    } finally {
+      setArquivandoId(null);
     }
   };
 
@@ -375,12 +389,6 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
 
       {sucesso && <p role="status" className="rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-300">{sucesso}</p>}
       {erroEnvio && <p role="alert" className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-300">{erroEnvio}</p>}
-      {modoServidor && ultimoSalvo && (
-        <div className="flex flex-wrap gap-2 rounded-xl border border-blue-500/20 bg-[#172033] p-4">
-          <button type="button" onClick={() => requerimentosService.baixarPdf(ultimoSalvo.id).catch((error) => setErroEnvio(error.message))} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Baixar PDF</button>
-          <button type="button" onClick={() => requerimentosService.baixarDocx(ultimoSalvo.id).catch((error) => setErroEnvio(error.message))} className="rounded-lg border border-[#26344a] px-4 py-2 text-sm text-white">Baixar Word</button>
-        </div>
-      )}
 
       {aba === 'lista' ? (
         <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
@@ -411,6 +419,9 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
                           Baixar {formato === 'pdf' ? 'PDF' : 'Word'}
                         </button>
                       ))}
+                      {podeArquivar && <button type="button" disabled={arquivandoId === item.id} onClick={() => arquivar(item)} className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/10 disabled:opacity-50" title="Remover da lista de solicitações recebidas">
+                        <Trash2 size={14} /> {arquivandoId === item.id ? 'Removendo...' : 'Excluir da lista'}
+                      </button>}
                     </div>
                   </div>
                 ))}
@@ -430,6 +441,8 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
                 onChange={(event) => {
                   setBusca(event.target.value);
                   setSelecionado(null);
+                  setUltimoSalvo(null);
+                  setSucesso('');
                   consultaFormulario.current++;
                   setFormularioPronto(false);
                   setCarregandoFormulario(false);
@@ -490,6 +503,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
               <select value={tipo} onChange={(event) => {
                 const novoTipo = event.target.value;
                 setUltimoSalvo(null);
+                setSucesso('');
                 setTipo(novoTipo);
                 setDetalhes(TEXTOS_BASE[novoTipo] ?? '');
               }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
@@ -498,13 +512,17 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
               </select>
             </label>
             <label className="mt-4 block text-xs font-medium text-slate-300">Texto da solicitação (editável)
-              <textarea rows={7} value={detalhes} onChange={(event) => { setUltimoSalvo(null); setDetalhes(event.target.value); }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
+              <textarea rows={7} value={detalhes} onChange={(event) => { setUltimoSalvo(null); setSucesso(''); setDetalhes(event.target.value); }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
             </label>
           </fieldset>
-          <div className="flex justify-end">
-            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto || (modoServidor && !!ultimoSalvo)} onClick={enviar} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-              {enviando ? 'Salvando...' : modoServidor && ultimoSalvo ? 'Salvo' : modoServidor ? 'Salvar requerimento' : 'Enviar requerimento'}
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto || !!ultimoSalvo} onClick={enviar} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {enviando ? 'Salvando...' : ultimoSalvo ? 'Salvo' : 'Salvar'}
             </button>
+            {ultimoSalvo && <>
+              <button type="button" onClick={() => requerimentosService.baixarDocx(ultimoSalvo.id).catch((error) => setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o Word.'))} className="rounded-xl border border-[#26344a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#26344a]">Baixar Word</button>
+              <button type="button" onClick={() => requerimentosService.baixarPdf(ultimoSalvo.id).catch((error) => setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o PDF.'))} className="rounded-xl border border-[#26344a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#26344a]">Baixar PDF</button>
+            </>}
           </div>
         </div>
       )}
