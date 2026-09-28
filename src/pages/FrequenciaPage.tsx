@@ -153,11 +153,6 @@ function countDiasComOcorrencia(dias: FrequenciaDayItem[]) {
   return dias.filter((day) => day.turno1?.ocorrencia || day.turno2?.ocorrencia).length;
 }
 
-function countTurnosComOcorrencia(dias: FrequenciaDayItem[]) {
-  return dias.reduce((total, day) =>
-    total + Number(Boolean(day.turno1?.ocorrencia)) + Number(Boolean(day.turno2?.ocorrencia)), 0);
-}
-
 function countDiasComRubrica(dias: FrequenciaDayItem[]) {
   return dias.filter((day) => day.turno1?.rubrica || day.turno2?.rubrica).length;
 }
@@ -312,7 +307,6 @@ export default function FrequenciaPage() {
   const [isEventosModalOpen, setIsEventosModalOpen] = useState(false);
   const [isServidoresExpanded, setIsServidoresExpanded] = useState(true);
   const [isCalendarioExpanded, setIsCalendarioExpanded] = useState(true);
-  const [calendarioFiltro, setCalendarioFiltro] = useState<'todos' | 'registro' | 'ocorrencia'>('todos');
   const [eventosCount, setEventosCount] = useState(0);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -459,19 +453,9 @@ export default function FrequenciaPage() {
 
   const selectedServidor = selectedItem?.servidor || null;
   const selectedDias = selectedItem?.dayItems || [];
-  const calendarioDias = calendarioFiltro === 'todos' ? selectedDias : selectedDias.filter((day) =>
-    calendarioFiltro === 'registro'
-      ? Boolean(day.turno1?.rubrica || day.turno2?.rubrica || day.turno1?.ocorrencia || day.turno2?.ocorrencia || day.statusFinal)
-      : Boolean(day.turno1?.ocorrencia || day.turno2?.ocorrencia)
-  );
+  const calendarioDias = selectedDias;
 
-  const mostrarCalendario = (filtro: 'registro' | 'ocorrencia') => {
-    setCalendarioFiltro((atual) => atual === filtro ? 'todos' : filtro);
-    setIsCalendarioExpanded(true);
-    window.requestAnimationFrame(() => document.getElementById('calendario-mensal')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
-
-  const mostrarServidores = (status: 'TODOS' | 'ATIVO') => {
+  const mostrarServidores = (status: 'TODOS' | 'ATIVO' | 'INATIVO') => {
     setFilterStatus(status);
     setIsServidoresExpanded(true);
     window.requestAnimationFrame(() => document.getElementById('lista-servidores-frequencia')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -482,20 +466,14 @@ export default function FrequenciaPage() {
     const ativos = filteredItems.filter((item) =>
       normalizeText(item.servidor?.status || '') === 'ativo'
     ).length;
-    const totalDiasComRegistro = filteredItems.reduce(
-      (sum, item) => sum + countDiasComRegistro(item.dayItems || []),
-      0
-    );
-    const totalOcorrencias = filteredItems.reduce(
-      (sum, item) => sum + countTurnosComOcorrencia(item.dayItems || []),
-      0
-    );
+    const inativos = filteredItems.filter((item) =>
+      normalizeText(item.servidor?.status || '') === 'inativo'
+    ).length;
 
     return {
       totalServidores,
       ativos,
-      totalDiasComRegistro,
-      totalOcorrencias,
+      inativos,
     };
   }, [filteredItems]);
 
@@ -800,9 +778,9 @@ export default function FrequenciaPage() {
               </div>
         </section>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatsCard
-            title="Ativos"
+            title="Servidores ativos"
             value={stats.ativos}
             subtitle="Servidores ativos dentro dos filtros atuais."
             icon={<BadgeCheck className="h-5 w-5" />}
@@ -811,31 +789,22 @@ export default function FrequenciaPage() {
             onClick={() => mostrarServidores('ATIVO')}
           />
           <StatsCard
-            title="Servidores"
+            title="Servidores inativos"
+            value={stats.inativos}
+            subtitle="Servidores inativos dentro dos filtros atuais."
+            icon={<UserRound className="h-5 w-5" />}
+            action="Ver servidores inativos"
+            active={filterStatus === 'INATIVO'}
+            onClick={() => mostrarServidores('INATIVO')}
+          />
+          <StatsCard
+            title="Total"
             value={stats.totalServidores}
-            subtitle="Cadastros encontrados após os filtros aplicados."
+            subtitle="Todos os servidores encontrados após os filtros aplicados."
             icon={<Users className="h-5 w-5" />}
             action="Ver todos os status"
             active={filterStatus === 'TODOS'}
             onClick={() => mostrarServidores('TODOS')}
-          />
-          <StatsCard
-            title="Dias com registro"
-            value={stats.totalDiasComRegistro}
-            subtitle="Soma dos dias com rubrica, ocorrência ou status; inclui os servidores filtrados."
-            icon={<CalendarDays className="h-5 w-5" />}
-            action="Ver dias preenchidos no calendário"
-            active={calendarioFiltro === 'registro'}
-            onClick={() => mostrarCalendario('registro')}
-          />
-          <StatsCard
-            title="Ocorrências de turno"
-            value={stats.totalOcorrencias}
-            subtitle="Total de turnos com ocorrência; um dia pode contar duas vezes."
-            icon={<Hash className="h-5 w-5" />}
-            action="Ver dias com ocorrência"
-            active={calendarioFiltro === 'ocorrencia'}
-            onClick={() => mostrarCalendario('ocorrencia')}
           />
         </div>
         <section id="exportacao-frequencia" aria-label="Exportação da frequência" className="mb-6 rounded-2xl border border-[#26344a] bg-[#172033] p-4 md:p-5">
