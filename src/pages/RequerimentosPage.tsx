@@ -186,7 +186,7 @@ function dataParaInput(value: string | null | undefined) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
 }
 
-export default function RequerimentosPage({ modoServidor = false, podeArquivar = false }: { modoServidor?: boolean; podeArquivar?: boolean }) {
+export default function RequerimentosPage({ modoServidor = false }: { modoServidor?: boolean; podeArquivar?: boolean }) {
   const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : 'lista');
   const [tipo, setTipo] = useState('');
   const [busca, setBusca] = useState('');
@@ -419,9 +419,9 @@ export default function RequerimentosPage({ modoServidor = false, podeArquivar =
                           Baixar {formato === 'pdf' ? 'PDF' : 'Word'}
                         </button>
                       ))}
-                      {podeArquivar && <button type="button" disabled={arquivandoId === item.id} onClick={() => arquivar(item)} className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/10 disabled:opacity-50" title="Remover da lista de solicitações recebidas">
+                      <button type="button" disabled={arquivandoId === item.id} onClick={() => arquivar(item)} className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/10 disabled:opacity-50" title="Remover da lista de solicitações recebidas">
                         <Trash2 size={14} /> {arquivandoId === item.id ? 'Removendo...' : 'Excluir da lista'}
-                      </button>}
+                      </button>
                     </div>
                   </div>
                 ))}
