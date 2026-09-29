@@ -18,6 +18,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
 
     try {
+      setAmbiente(ambienteSelecionado);
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (authError) {
