@@ -1,151 +1,129 @@
-export type AdminProfile =
-  | 'MASTER'
-  | 'ADMINISTRADOR'
-  | 'RH'
-  | 'GESTOR'
-  | 'CONSULTA'
-  | 'SERVIDOR_LIMITADO';
+import { supabase } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../config/api';
+import type {
+  AdminLogsResponse,
+  AdminManagedUser,
+  AdminResetPasswordPayload,
+  AdminUserFilters,
+  AdminUserFormData,
+  AdminUsersListResponse,
+} from '../types/adminAccess';
 
-export type AdminUserStatus = 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
-
-export type PermissionModule =
-  | 'dashboard'
-  | 'servidores'
-  | 'frequencia'
-  | 'ferias'
-  | 'escala'
-  | 'mapas'
-  | 'atestados'
-  | 'eventos'
-  | 'sae_profissionais'
-  | 'administracao'
-  | 'relatorios'
-  | 'exportacoes';
-
-export type PermissionAction =
-  | 'visualizar'
-  | 'criar'
-  | 'editar'
-  | 'excluir'
-  | 'exportar'
-  | 'aprovar'
-  | 'gerenciar_usuarios';
-
-export interface AdminPermission {
-  id?: string;
-  user_id?: string;
-  module: PermissionModule;
-  allowed: boolean;
-  actions: PermissionAction[];
-}
-
-export interface AdminManagedUser {
-  id: string;
-  auth_user_id?: string | null;
-  nome_completo: string;
-  email: string;
-  perfil: AdminProfile;
-  status: AdminUserStatus;
-  setor_nome?: string | null;
-  ultimo_login_em?: string | null;
-  tentativas_login_falhas?: number;
-  bloqueado_ate?: string | null;
+export type AdminCurrentUser = {
+  id: string | null;
+  perfil: string;
+  status: string;
   is_master: boolean;
-  created_at: string;
-  updated_at?: string;
-  permissions: AdminPermission[];
+  ambiente: 'RH' | 'SAE';
+  ambientes_permitidos: ('RH' | 'SAE')[];
+};
+
+function buildUrl(path: string, query?: Record<string, string | number | undefined | null>) {
+  const base = String(API_BASE_URL || '').replace(/\/$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const url = new URL(`${base}${cleanPath}`);
+
+  if (query) {
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    });
+  }
+
+  return url.toString();
 }
 
-export interface AdminUsersStats {
-  totalUsuarios: number;
-  ativos: number;
-  inativos: number;
-  bloqueados: number;
-  masters: number;
-  administradores: number;
-  logsHoje: number;
+async function getAccessToken() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  const token = data.session?.access_token;
+  if (!token) {
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  return token;
 }
 
-export interface AdminUsersListResponse {
-  users: AdminManagedUser[];
-  stats: AdminUsersStats;
+async function request<T>(path: string, options?: RequestInit, query?: Record<string, any>): Promise<T> {
+  const token = await getAccessToken();
+
+  const response = await fetch(buildUrl(path, query), {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-CIAPI-Ambiente': sessionStorage.getItem('ciapi_ambiente') === 'sae' ? 'SAE' : 'RH',
+      ...(options?.headers || {}),
+    },
+  });
+
+  const json = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(json?.error || 'Erro ao processar requisição administrativa.');
+  }
+
+  return json as T;
 }
 
-export interface AdminLogItem {
-  id: string;
-  actor_user_id?: string | null;
-  actor_email?: string | null;
-  action: string;
-  module: string;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  entity_label?: string | null;
-  description: string;
-  metadata?: Record<string, any> | null;
-  ip_address?: string | null;
-  created_at: string;
-}
+export const adminAccessService = {
+  async getMe(): Promise<{ user: AdminCurrentUser }> {
+    return request<{ user: AdminCurrentUser }>('/api/admin/me', { method: 'GET' });
+  },
 
-export interface AdminLogsResponse {
-  logs: AdminLogItem[];
-}
+  async listUsers(filters: AdminUserFilters = {}): Promise<AdminUsersListResponse> {
+    return request<AdminUsersListResponse>('/api/admin/users', { method: 'GET' }, filters);
+  },
 
-export interface AdminUserFormData {
-  nome_completo: string;
-  email: string;
-  perfil: AdminProfile;
-  status: AdminUserStatus;
-  setor_nome?: string | null;
-  permissions: AdminPermission[];
-}
+  async getUser(id: string): Promise<{ user: AdminManagedUser }> {
+    return request<{ user: AdminManagedUser }>(`/api/admin/users/${id}`, { method: 'GET' });
+  },
 
-export interface AdminResetPasswordPayload {
-  newPassword: string;
-}
+  async createUser(payload: AdminUserFormData): Promise<{ ok: true; user: AdminManagedUser }> {
+    return request<{ ok: true; user: AdminManagedUser }>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 
-export interface AdminUserFilters {
-  termo?: string;
-  perfil?: string;
-  status?: string;
-  setorNome?: string;
-}
+  async updateUser(id: string, payload: AdminUserFormData): Promise<{ ok: true; user: AdminManagedUser }> {
+    return request<{ ok: true; user: AdminManagedUser }>(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
 
-export const ADMIN_PROFILE_OPTIONS: AdminProfile[] = [
-  'MASTER',
-  'ADMINISTRADOR',
-  'RH',
-  'GESTOR',
-  'CONSULTA',
-  'SERVIDOR_LIMITADO',
-];
+  async updateUserStatus(
+    id: string,
+    status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO',
+  ): Promise<{ ok: true; user: AdminManagedUser }> {
+    return request<{ ok: true; user: AdminManagedUser }>(`/api/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
 
-export const ADMIN_STATUS_OPTIONS: AdminUserStatus[] = [
-  'ATIVO',
-  'INATIVO',
-  'BLOQUEADO',
-];
+  async deleteUser(id: string): Promise<{ ok: true }> {
+    return request<{ ok: true }>(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
 
-export const ADMIN_PERMISSION_MODULES: PermissionModule[] = [
-  'dashboard',
-  'servidores',
-  'frequencia',
-  'ferias',
-  'escala',
-  'mapas',
-  'atestados',
-  'eventos',
-  'sae_profissionais',
-  'administracao',
-  'relatorios',
-  'exportacoes',
-];
+  async resetPassword(id: string, payload: AdminResetPasswordPayload): Promise<{ ok: true }> {
+    return request<{ ok: true }>(`/api/admin/users/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 
-export const ADMIN_PERMISSION_ACTIONS: PermissionAction[] = [
-  'visualizar',
-  'criar',
-  'editar',
-  'excluir',
-  'exportar',
-  'aprovar',
-  'gerenciar_usuarios',
-];
+  async listLogs(filters?: {
+    search?: string;
+    module?: string;
+    action?: string;
+    limit?: number;
+  }): Promise<AdminLogsResponse> {
+    return request<AdminLogsResponse>('/api/admin/logs', { method: 'GET' }, filters);
+  },
+};
