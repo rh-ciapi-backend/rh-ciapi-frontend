@@ -138,25 +138,6 @@ function getWeekdayLabel(dateIso?: string) {
   return labels[date.getDay()] || 'Dia';
 }
 
-function countDiasComRegistro(dias: FrequenciaDayItem[]) {
-  return dias.filter(
-    (day) =>
-      day.turno1?.rubrica ||
-      day.turno2?.rubrica ||
-      day.turno1?.ocorrencia ||
-      day.turno2?.ocorrencia ||
-      day.statusFinal
-  ).length;
-}
-
-function countDiasComOcorrencia(dias: FrequenciaDayItem[]) {
-  return dias.filter((day) => day.turno1?.ocorrencia || day.turno2?.ocorrencia).length;
-}
-
-function countDiasComRubrica(dias: FrequenciaDayItem[]) {
-  return dias.filter((day) => day.turno1?.rubrica || day.turno2?.rubrica).length;
-}
-
 function statusColor(status: string) {
   const s = normalizeText(status);
   if (s.includes('inativo')) return 'bg-rose-500/15 text-rose-300 border-rose-400/20';
@@ -293,7 +274,7 @@ export default function FrequenciaPage() {
   const [search, setSearch] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('TODAS');
   const [filterSetor, setFilterSetor] = useState('TODOS');
-  const [filterStatus, setFilterStatus] = useState('TODOS');
+  const [filterStatus, setFilterStatus] = useState('ATIVO');
   const [exportMode, setExportMode] = useState<ExportMode>('individual');
   const [exportScope, setExportScope] = useState<ExportScope>('servidor_selecionado');
   const [batchStrategy, setBatchStrategy] =
@@ -932,14 +913,14 @@ export default function FrequenciaPage() {
         <div className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-5 md:p-6">
               {selectedServidor ? (
                 <>
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-blue-300">
+                  <div className="flex flex-col gap-5">
+                    <div className="flex min-w-0 items-start gap-4">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 text-blue-300">
                         <UserRound className="h-8 w-8" />
                       </div>
 
-                      <div>
-                        <h2 className="text-2xl font-semibold text-white">{selectedServidor.nome}</h2>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-xl font-semibold leading-tight text-white sm:text-2xl lg:whitespace-nowrap">{selectedServidor.nome}</h2>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <span
                             className={`rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${statusColor(
@@ -955,7 +936,7 @@ export default function FrequenciaPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
                         <div className="mb-2 flex items-center gap-2 text-slate-400">
                           <Hash className="h-4 w-4" />
@@ -992,28 +973,6 @@ export default function FrequenciaPage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Dias com registro</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {countDiasComRegistro(selectedDias)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Dias com rubrica</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {countDiasComRubrica(selectedDias)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Ocorrências de turno</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {countDiasComOcorrencia(selectedDias)}
-                      </p>
-                    </div>
-                  </div>
                 </>
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
