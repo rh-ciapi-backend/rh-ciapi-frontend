@@ -3,6 +3,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ClipboardCheck,
+  Activity,
   FilterX,
   HeartPulse,
   Loader2,
@@ -29,6 +30,7 @@ interface Props {
 
 const ETAPA_LABEL: Record<string, string> = {
   SERVICO_SOCIAL: 'Serviço Social',
+  ENFERMAGEM: 'Enfermagem',
   PSICOLOGIA: 'Psicologia',
   MEDICO: 'Médico',
   CONCLUIDA: 'Concluída',
@@ -115,6 +117,9 @@ export default function SaeTriagemPage({
       social: emTriagem.filter(
         (item) => item.etapaAtual === 'SERVICO_SOCIAL',
       ).length,
+      enfermagem: emTriagem.filter(
+        (item) => item.etapaAtual === 'ENFERMAGEM',
+      ).length,
       psicologia: emTriagem.filter(
         (item) => item.etapaAtual === 'PSICOLOGIA',
       ).length,
@@ -156,7 +161,7 @@ export default function SaeTriagemPage({
 
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
             Acompanhe o ingresso no SAE pelo fluxo multidisciplinar de
-            Serviço Social, Psicologia e Médico.
+            Serviço Social, Enfermagem, Psicologia e Médico.
           </p>
         </div>
 
@@ -179,20 +184,20 @@ export default function SaeTriagemPage({
 
           <div>
             <p className="text-sm font-bold text-white">
-              Fluxo recomendado pelo histórico
+              Fluxo multidisciplinar configurado
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-400">
-              Serviço Social → Psicologia → Médico. No histórico da
-              planilha, Serviço Social e Psicologia aparecem
-              frequentemente no mesmo dia. A sequência é uma inferência
-              dos registros e pode ser ajustada futuramente se houver
-              protocolo institucional formal.
+              Serviço Social → Enfermagem → Psicologia → Médico.
+              A Enfermagem foi incluída como etapa obrigatória do fluxo,
+              mantendo o Médico como avaliação final. O sistema permite
+              registrar cada conclusão separadamente e preservar o
+              histórico de atendimento.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <Kpi
           label="Triagens"
           value={totais.total}
@@ -205,6 +210,13 @@ export default function SaeTriagemPage({
           value={totais.social}
           helper="Etapa atual"
           icon={ClipboardCheck}
+        />
+
+        <Kpi
+          label="Enfermagem"
+          value={totais.enfermagem}
+          helper="Etapa atual"
+          icon={Activity}
         />
 
         <Kpi
@@ -283,6 +295,7 @@ export default function SaeTriagemPage({
               <option value="SERVICO_SOCIAL">
                 Serviço Social
               </option>
+              <option value="ENFERMAGEM">Enfermagem</option>
               <option value="PSICOLOGIA">Psicologia</option>
               <option value="MEDICO">Médico</option>
               <option value="CONCLUIDA">Concluída</option>
@@ -528,6 +541,7 @@ function Badge({ value }: { value: string }) {
 function Progress({ triagem }: { triagem: SaeTriagem }) {
   const ordem = [
     'SERVICO_SOCIAL',
+    'ENFERMAGEM',
     'PSICOLOGIA',
     'MEDICO',
   ] as const;
