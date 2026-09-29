@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Sidebar } from './components/Sidebar';
@@ -25,7 +25,6 @@ import AtestadosPage from './pages/AtestadosPage';
 import { DiagnosticoPage } from './pages/DiagnosticoPage';
 import RequerimentosPage from './pages/RequerimentosPage';
 import ServidorRequerimentoPortal from './pages/ServidorRequerimentoPortal';
-import { API_BASE_URL } from './config/api';
 import SaeApp from './sae/SaeApp';
 
 type AppTab =
@@ -53,26 +52,9 @@ function isValidTab(tab: string): tab is AppTab {
 }
 
 export default function App() {
-  const { signOut, ambiente, session, isLoading } = useAuth();
-  const [acessoAtual, setAcessoAtual] = useState<{ uid: string; perfil: string; isMaster?: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!session) { setAcessoAtual(null); return; }
-    let ativo = true;
-    setAcessoAtual(null);
-    const base = String(API_BASE_URL || '').replace(/\/$/, '');
-    fetch(`${base}/api/admin/me`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    }).then(async (res) => {
-      if (!res.ok) throw new Error('Não foi possível verificar o acesso.');
-      return res.json();
-    }).then(({ user }) => {
-      if (ativo) setAcessoAtual({ uid: session.user.id, perfil: user.perfil, isMaster: user.isMaster });
-    }).catch(() => {
-      if (ativo) setAcessoAtual({ uid: session.user.id, perfil: 'ERRO' });
-    });
-    return () => { ativo = false; };
-  }, [session?.user.id, session?.access_token]);
+  const { signOut, ambiente, setAmbiente, session, isLoading, acesso, isAccessLoading, accessError } = useAuth();
+  const acessoAtual = acesso && session && acesso.auth_uid === session.user.id ? { uid: acesso.auth_uid, perfil: acesso.perfil,
+    isMaster: acesso.is_master || acesso.perfil === 'MASTER' } : null;
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [initialAction, setInitialAction] = useState<string | null>(null);
 
@@ -124,14 +106,28 @@ export default function App() {
     }
   };
 
-  if (isLoading || (session && acessoAtual?.uid !== session.user.id)) {
+  if (isLoading || (session && (isAccessLoading || (!accessError && acessoAtual?.uid !== session.user.id)))) {
     return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] text-white">Carregando acesso...</div>;
   }
-  if (session && acessoAtual?.perfil === 'ERRO') {
-    return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] p-4 text-white"><div>Acesso indisponível. <button className="text-blue-300" onClick={handleLogout}>Sair</button></div></div>;
+  if (session && accessError) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] p-4 text-white"><div>{accessError} <button className="text-blue-300" onClick={handleLogout}>Sair</button></div></div>;
   }
   if (acessoAtual?.perfil === 'SERVIDOR_LIMITADO' || window.location.hash.startsWith('#/requerimento')) {
     return <ServidorRequerimentoPortal perfil={acessoAtual?.perfil || null} />;
+  }
+
+  if (session && (!acesso || acesso.status !== 'ATIVO' ||
+      !acesso.ambientes_permitidos.includes(ambiente === 'sae' ? 'SAE' : 'RH'))) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] p-4 text-white">
+      <div className="max-w-md rounded-2xl border border-[#26344a] bg-[#172033] p-6 text-center">
+        <h2 className="text-xl font-bold">Ambiente não autorizado</h2>
+        <p className="mt-3 text-sm text-slate-400">Sua conta pode acessar apenas os ambientes liberados pela administração.</p>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          {acesso?.ambientes_permitidos.map((item) => <button key={item} className="rounded-xl bg-blue-600 px-4 py-2" onClick={() => setAmbiente(item === 'SAE' ? 'sae' : 'rh')}>Abrir {item === 'RH' ? 'CIAPI RH' : 'SAE'}</button>)}
+          <button className="rounded-xl border border-[#26344a] px-4 py-2" onClick={handleLogout}>Sair</button>
+        </div>
+      </div>
+    </div>;
   }
 
   return (
@@ -143,6 +139,7 @@ export default function App() {
           <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
+            {acesso?.is_master && <div className="flex justify-end border-b border-[#26344a] px-4 py-2 sm:px-6"><button onClick={() => setAmbiente('sae')} className="rounded-lg border border-[#26344a] bg-[#172033] px-3 py-2 text-xs text-slate-200 hover:border-blue-500">Abrir ambiente SAE</button></div>}
             <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
               <div className="app-page">
                 <AnimatePresence mode="wait">
