@@ -29,6 +29,7 @@ interface Props {
 
 const ETAPA_LABEL = {
   SERVICO_SOCIAL: 'Serviço Social',
+  ENFERMAGEM: 'Enfermagem',
   PSICOLOGIA: 'Psicologia',
   MEDICO: 'Médico',
 } as const;
@@ -81,7 +82,7 @@ export default function TriagemDetalheModal({
   if (!aberto || !triagem) return null;
 
   const todasConcluidas =
-    triagem.etapas.length === 3 &&
+    triagem.etapas.length === 4 &&
     triagem.etapas.every(
       (item) => item.status === 'CONCLUIDO',
     );
@@ -196,7 +197,7 @@ export default function TriagemDetalheModal({
                 {triagem.nome}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Fluxo recomendado: Serviço Social → Psicologia → Médico
+                Fluxo recomendado: Serviço Social → Enfermagem → Psicologia → Médico
               </p>
             </div>
 
@@ -231,7 +232,7 @@ export default function TriagemDetalheModal({
                     Etapas obrigatórias
                   </h3>
                   <p className="mt-1 text-xs text-slate-500">
-                    As três avaliações precisam ser concluídas antes da decisão final.
+                    As quatro avaliações precisam ser concluídas antes da decisão final.
                   </p>
                 </div>
 
@@ -246,7 +247,7 @@ export default function TriagemDetalheModal({
                 )}
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {triagem.etapas.map((etapa) => {
                   const concluida = etapa.status === 'CONCLUIDO';
 
@@ -347,8 +348,8 @@ export default function TriagemDetalheModal({
                   </h3>
                   <p className="mt-1 text-xs text-slate-500">
                     {todasConcluidas
-                      ? 'As três etapas foram concluídas. A triagem pode receber decisão.'
-                      : 'Conclua as três avaliações antes de marcar como apto ou não apto.'}
+                      ? 'As quatro etapas foram concluídas. A triagem pode receber decisão.'
+                      : 'Conclua as quatro avaliações antes de marcar como apto ou não apto.'}
                   </p>
                 </div>
 
