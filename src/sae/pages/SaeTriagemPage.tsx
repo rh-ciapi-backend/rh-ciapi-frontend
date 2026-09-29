@@ -564,6 +564,7 @@ function Progress({ triagem }: { triagem: SaeTriagem }) {
     'ENFERMAGEM',
     'PSICOLOGIA',
     'MEDICO',
+    'TERAPIA_OCUPACIONAL',
   ] as const;
 
   return (
