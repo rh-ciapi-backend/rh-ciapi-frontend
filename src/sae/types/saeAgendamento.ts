@@ -174,3 +174,15 @@ export interface SaeAgendamentoDisponibilidadePeriodoResponse {
   datas: SaeDisponibilidadeDataResumo[];
 }
 
+export interface SaeRemarcarAgendamentoPayload {
+  data: string;
+  tipoAtendimento: SaeTipoAtendimento;
+  observacao?: string | null;
+  servicos: SaeNovoAgendamentoServicoPayload[];
+}
+
+export interface SaeRemarcarAgendamentoResponse {
+  ok: true;
+  agendamento: { id: string; status: string; data: string; servicos: unknown[] };
+}
+
