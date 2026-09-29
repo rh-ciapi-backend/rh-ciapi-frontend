@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Activity,
+  BriefcaseMedical,
   FilterX,
   HeartPulse,
   Loader2,
@@ -23,9 +24,11 @@ import type {
   SaeTriagemEtapaAtual,
   SaeTriagemStatus,
 } from '../types/saeTriagem';
+import type { SaeAgendamentoFoco } from '../types/saeNavegacao';
 
 interface Props {
-  onIrAgendamentos?: () => void;
+  onIrAgendamentos?: (foco?: SaeAgendamentoFoco) => void;
+  onAbrirUsuario?: (usuarioId: string) => void;
 }
 
 const ETAPA_LABEL: Record<string, string> = {
@@ -33,6 +36,7 @@ const ETAPA_LABEL: Record<string, string> = {
   ENFERMAGEM: 'Enfermagem',
   PSICOLOGIA: 'Psicologia',
   MEDICO: 'Médico',
+  TERAPIA_OCUPACIONAL: 'Terapia Ocupacional',
   CONCLUIDA: 'Concluída',
 };
 
@@ -54,6 +58,7 @@ const normalize = (value: unknown) =>
 
 export default function SaeTriagemPage({
   onIrAgendamentos,
+  onAbrirUsuario,
 }: Props) {
   const [triagens, setTriagens] = useState<SaeTriagem[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -126,6 +131,9 @@ export default function SaeTriagemPage({
       medico: emTriagem.filter(
         (item) => item.etapaAtual === 'MEDICO',
       ).length,
+      terapiaOcupacional: emTriagem.filter(
+        (item) => item.etapaAtual === 'TERAPIA_OCUPACIONAL',
+      ).length,
       decisao: triagens.filter(
         (item) => item.status === 'AGUARDANDO_DECISAO',
       ).length,
@@ -161,7 +169,8 @@ export default function SaeTriagemPage({
 
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
             Acompanhe o ingresso no SAE pelo fluxo multidisciplinar de
-            Serviço Social, Enfermagem, Psicologia e Médico.
+            Serviço Social, Enfermagem, Psicologia, Médico e
+            Terapia Ocupacional.
           </p>
         </div>
 
@@ -187,17 +196,16 @@ export default function SaeTriagemPage({
               Fluxo multidisciplinar configurado
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-400">
-              Serviço Social → Enfermagem → Psicologia → Médico.
-              A Enfermagem foi incluída como etapa obrigatória do fluxo,
-              mantendo o Médico como avaliação final. O sistema permite
-              registrar cada conclusão separadamente e preservar o
-              histórico de atendimento.
+              Serviço Social → Enfermagem → Psicologia → Médico →
+              Terapia Ocupacional. Ao concluir as cinco avaliações, o
+              sistema libera a emissão do protocolo e a criação da
+              matrícula definitiva do idoso como usuário do SAE.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
         <Kpi
           label="Triagens"
           value={totais.total}
@@ -231,6 +239,13 @@ export default function SaeTriagemPage({
           value={totais.medico}
           helper="Etapa atual"
           icon={Stethoscope}
+        />
+
+        <Kpi
+          label="Terapia Ocupacional"
+          value={totais.terapiaOcupacional}
+          helper="Etapa atual"
+          icon={BriefcaseMedical}
         />
 
         <Kpi
@@ -280,6 +295,7 @@ export default function SaeTriagemPage({
               <option value="APTO">Apto</option>
               <option value="NAO_APTO">Não apto</option>
               <option value="DESISTENTE">Desistente</option>
+              <option value="MATRICULADO">Matriculado</option>
             </select>
           </Filter>
 
@@ -298,6 +314,9 @@ export default function SaeTriagemPage({
               <option value="ENFERMAGEM">Enfermagem</option>
               <option value="PSICOLOGIA">Psicologia</option>
               <option value="MEDICO">Médico</option>
+              <option value="TERAPIA_OCUPACIONAL">
+                Terapia Ocupacional
+              </option>
               <option value="CONCLUIDA">Concluída</option>
             </select>
           </Filter>
@@ -474,6 +493,7 @@ export default function SaeTriagemPage({
         onClose={() => setSelecionada(null)}
         onAtualizado={atualizarTriagem}
         onIrAgendamentos={onIrAgendamentos}
+        onAbrirUsuario={onAbrirUsuario}
       />
     </motion.section>
   );
