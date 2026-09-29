@@ -14,6 +14,8 @@ export type AdminCurrentUser = {
   perfil: string;
   status: string;
   is_master: boolean;
+  ambiente: 'RH' | 'SAE';
+  ambientes_permitidos: ('RH' | 'SAE')[];
 };
 
 function buildUrl(path: string, query?: Record<string, string | number | undefined | null>) {
@@ -52,6 +54,7 @@ async function request<T>(path: string, options?: RequestInit, query?: Record<st
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      'X-CIAPI-Ambiente': sessionStorage.getItem('ciapi_ambiente') === 'sae' ? 'SAE' : 'RH',
       ...(options?.headers || {}),
     },
   });
