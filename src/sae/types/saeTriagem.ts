@@ -1,5 +1,6 @@
 export type SaeTriagemEtapaNome =
   | 'SERVICO_SOCIAL'
+  | 'ENFERMAGEM'
   | 'PSICOLOGIA'
   | 'MEDICO';
 
