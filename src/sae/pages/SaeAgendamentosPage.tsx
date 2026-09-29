@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
+  CalendarSearch,
   Clock3,
   FilterX,
   Loader2,
   Plus,
+  Pencil,
   XCircle,
   Search,
   Stethoscope,
@@ -18,6 +20,7 @@ import { motion } from 'motion/react';
 import { saeAgendamentosService } from '../services/saeAgendamentosService';
 import GerenciarProfissionaisModal from '../components/agendamentos/GerenciarProfissionaisModal';
 import NovoAgendamentoModal from '../components/agendamentos/NovoAgendamentoModal';
+import RemarcarAgendamentoModal from '../components/agendamentos/RemarcarAgendamentoModal';
 
 import type {
   SaeAgendamentoFiltros,
@@ -25,6 +28,7 @@ import type {
   SaeTipoAtendimento,
   SaeTipoUsuario,
 } from '../types/saeAgendamento';
+import type { SaeAgendamentoFoco } from '../types/saeNavegacao';
 
 const FILTROS_INICIAIS: SaeAgendamentoFiltros = {
   busca: '',
@@ -79,12 +83,34 @@ const formatarHora = (value?: string | null) => {
   return value.slice(0, 5);
 };
 
-export default function SaeAgendamentosPage() {
+interface Props {
+  focoInicial?: SaeAgendamentoFoco | null;
+  onLimparFoco?: () => void;
+}
+
+const SERVICO_POR_ETAPA: Record<string, string[]> = {
+  SERVICO_SOCIAL: ['servico social'],
+  ENFERMAGEM: ['enfermagem'],
+  PSICOLOGIA: ['psicologia'],
+  MEDICO: ['servico medico', 'medico'],
+  TERAPIA_OCUPACIONAL: ['terapia ocupacional', 't. ocupacional'],
+};
+
+const dataSomente = (value?: string | null) => {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+};
+
+export default function SaeAgendamentosPage({
+  focoInicial = null,
+  onLimparFoco,
+}: Props) {
   const [agendamentos, setAgendamentos] = useState<SaeAgendamentoResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [profissionaisAberto, setProfissionaisAberto] = useState(false);
   const [novoAgendamentoAberto, setNovoAgendamentoAberto] = useState(false);
+  const [remarcando, setRemarcando] = useState<SaeAgendamentoResumo | null>(null);
   const [cancelando, setCancelando] = useState<SaeAgendamentoResumo | null>(null);
   const [motivoCancelamento, setMotivoCancelamento] = useState('');
   const [cancelamentoEmAndamento, setCancelamentoEmAndamento] = useState(false);
@@ -148,6 +174,48 @@ export default function SaeAgendamentosPage() {
   }, [agendamentos]);
 
   const agendamentosFiltrados = useMemo(() => {
+    if (focoInicial) {
+      if (focoInicial.agendamentoId) {
+        const porId = agendamentos.filter(
+          (agendamento) =>
+            agendamento.id === focoInicial.agendamentoId,
+        );
+
+        if (porId.length > 0) {
+          return porId;
+        }
+      }
+
+      const nomeFoco = normalize(focoInicial.nomeUsuario);
+      const dataFoco = dataSomente(focoInicial.data);
+      const servicosFoco =
+        focoInicial.etapa
+          ? SERVICO_POR_ETAPA[focoInicial.etapa] || []
+          : [];
+
+      return agendamentos.filter((agendamento) => {
+        const atendeNome =
+          !nomeFoco ||
+          normalize(agendamento.nomeUsuario) === nomeFoco ||
+          normalize(agendamento.nomeUsuario).includes(nomeFoco) ||
+          nomeFoco.includes(normalize(agendamento.nomeUsuario));
+
+        const atendeData =
+          !dataFoco || agendamento.data === dataFoco;
+
+        const atendeServico =
+          servicosFoco.length === 0 ||
+          agendamento.servicos.some((servico) => {
+            const nomeServico = normalize(servico.servicoNome);
+            return servicosFoco.some((termo) =>
+              nomeServico.includes(normalize(termo)),
+            );
+          });
+
+        return atendeNome && atendeData && atendeServico;
+      });
+    }
+
     const busca = normalize(filtros.busca);
 
     return agendamentos.filter((agendamento) => {
@@ -193,7 +261,7 @@ export default function SaeAgendamentosPage() {
         atendeStatus
       );
     });
-  }, [agendamentos, filtros]);
+  }, [agendamentos, filtros, focoInicial]);
 
   const totais = useMemo(() => {
     const contar = (tipo: SaeTipoUsuario) =>
@@ -284,6 +352,53 @@ export default function SaeAgendamentosPage() {
           </button>
         </div>
       </div>
+
+      {focoInicial && (
+        <section className="flex flex-col gap-3 rounded-[18px] border border-primary/25 bg-primary/[0.08] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+              <CalendarSearch size={18} />
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-white">
+                Agendamento aberto pela Triagem
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                {focoInicial.nomeUsuario || 'Usuário'}
+                {focoInicial.etapa
+                  ? ` • ${
+                      {
+                        SERVICO_SOCIAL: 'Serviço Social',
+                        ENFERMAGEM: 'Enfermagem',
+                        PSICOLOGIA: 'Psicologia',
+                        MEDICO: 'Médico',
+                        TERAPIA_OCUPACIONAL: 'Terapia Ocupacional',
+                      }[focoInicial.etapa] || focoInicial.etapa
+                    }`
+                  : ''}
+                {focoInicial.data
+                  ? ` • ${formatarData(dataSomente(focoInicial.data))}`
+                  : ''}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {agendamentosFiltrados.length > 0
+                  ? `${agendamentosFiltrados.length} agendamento(s) correspondente(s).`
+                  : 'Nenhum agendamento correspondente foi localizado.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onLimparFoco?.()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-900/40 px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:border-primary/30 hover:text-white"
+          >
+            <FilterX size={15} />
+            Mostrar todos
+          </button>
+        </section>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
@@ -493,6 +608,7 @@ export default function SaeAgendamentosPage() {
                 <AgendamentoRow
                   key={agendamento.id}
                   agendamento={agendamento}
+                  onRemarcar={setRemarcando}
                   onCancelar={abrirCancelamento}
                 />
               ))}
@@ -503,6 +619,7 @@ export default function SaeAgendamentosPage() {
                 <AgendamentoCard
                   key={agendamento.id}
                   agendamento={agendamento}
+                  onRemarcar={setRemarcando}
                   onCancelar={abrirCancelamento}
                 />
               ))}
@@ -522,6 +639,13 @@ export default function SaeAgendamentosPage() {
         aberto={novoAgendamentoAberto}
         onClose={() => setNovoAgendamentoAberto(false)}
         onCriado={carregarAgendamentos}
+      />
+
+      <RemarcarAgendamentoModal
+        aberto={Boolean(remarcando)}
+        agendamento={remarcando}
+        onClose={() => setRemarcando(null)}
+        onSalvo={carregarAgendamentos}
       />
 
       {cancelando && (
@@ -649,9 +773,11 @@ function KpiCard({
 
 function AgendamentoRow({
   agendamento,
+  onRemarcar,
   onCancelar,
 }: {
   agendamento: SaeAgendamentoResumo;
+  onRemarcar: (agendamento: SaeAgendamentoResumo) => void;
   onCancelar: (agendamento: SaeAgendamentoResumo) => void;
 }) {
   const turnos = Array.from(
@@ -713,19 +839,13 @@ function AgendamentoRow({
 
       <Badge value={agendamento.status || '—'} />
 
-      <div>
+      <div className="flex flex-wrap gap-1.5">
         {String(agendamento.status || '').toUpperCase() === 'AGENDADO' ? (
-          <button
-            type="button"
-            onClick={() => onCancelar(agendamento)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-bold text-rose-300 transition hover:bg-rose-500/15"
-          >
-            <XCircle size={13} />
-            Cancelar
-          </button>
-        ) : (
-          <span className="text-[10px] text-slate-600">—</span>
-        )}
+          <>
+            <button type="button" onClick={() => onRemarcar(agendamento)} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold text-primary"><Pencil size={13}/>Remarcar</button>
+            <button type="button" onClick={() => onCancelar(agendamento)} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-bold text-rose-300"><XCircle size={13}/>Cancelar</button>
+          </>
+        ) : <span className="text-[10px] text-slate-600">—</span>}
       </div>
     </div>
   );
@@ -733,9 +853,11 @@ function AgendamentoRow({
 
 function AgendamentoCard({
   agendamento,
+  onRemarcar,
   onCancelar,
 }: {
   agendamento: SaeAgendamentoResumo;
+  onRemarcar: (agendamento: SaeAgendamentoResumo) => void;
   onCancelar: (agendamento: SaeAgendamentoResumo) => void;
 }) {
   return (
@@ -768,15 +890,9 @@ function AgendamentoCard({
       </div>
 
       {String(agendamento.status || '').toUpperCase() === 'AGENDADO' && (
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => onCancelar(agendamento)}
-            className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:bg-rose-500/15"
-          >
-            <XCircle size={14} />
-            Cancelar agendamento
-          </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => onRemarcar(agendamento)} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary"><Pencil size={14}/>Remarcar</button>
+          <button type="button" onClick={() => onCancelar(agendamento)} className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300"><XCircle size={14}/>Cancelar</button>
         </div>
       )}
 
