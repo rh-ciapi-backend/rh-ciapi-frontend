@@ -33,9 +33,11 @@ import type {
   PermissionModule,
 } from '../types/adminAccess';
 import { adminAccessService } from '../services/adminAccessService';
+import { useAuth } from '../contexts/AuthContext';
 
 const moduleLabels: Record<string, string> = {
   dashboard: 'Dashboard',
+  requerimentos: 'Requerimentos',
   servidores: 'Servidores',
   frequencia: 'Frequência',
   ferias: 'Férias',
@@ -85,6 +87,7 @@ function buildFormFromUser(user?: AdminManagedUser): AdminUserCreateFormData {
     perfil: user?.perfil || 'CONSULTA',
     status: user?.status || 'ATIVO',
     setor_nome: user?.setor_nome || '',
+    ambiente: user?.ambiente || 'RH',
     senha_inicial: '',
     confirmar_senha: '',
     permissions:
@@ -127,6 +130,9 @@ const StatPill = ({
 };
 
 const AdminUsuariosPage = () => {
+  const { acesso, ambiente } = useAuth();
+  const ambienteAtual = ambiente === 'sae' ? 'SAE' : 'RH';
+
   const [users, setUsers] = useState<AdminManagedUser[]>([]);
   const [stats, setStats] = useState({
     totalUsuarios: 0,
@@ -196,7 +202,7 @@ const AdminUsuariosPage = () => {
 
   const openCreateModal = () => {
     setSelectedUser(null);
-    setFormData(buildFormFromUser());
+    setFormData({ ...buildFormFromUser(), ambiente: ambienteAtual });
     setIsUserModalOpen(true);
   };
 
@@ -209,7 +215,7 @@ const AdminUsuariosPage = () => {
   const closeUserModal = () => {
     setIsUserModalOpen(false);
     setSelectedUser(null);
-    setFormData(buildFormFromUser());
+    setFormData({ ...buildFormFromUser(), ambiente: ambienteAtual });
   };
 
   const updatePermissionAllowed = (module: string, allowed: boolean) => {
@@ -274,6 +280,7 @@ const AdminUsuariosPage = () => {
           perfil: formData.perfil,
           status: formData.status,
           setor_nome: formData.setor_nome,
+          ambiente: formData.ambiente,
           permissions: formData.permissions,
         };
 
@@ -286,6 +293,7 @@ const AdminUsuariosPage = () => {
           perfil: formData.perfil,
           status: formData.status,
           setor_nome: formData.setor_nome,
+          ambiente: formData.ambiente,
           permissions: formData.permissions,
           senha_inicial: formData.senha_inicial,
         } as any);
@@ -576,7 +584,7 @@ const AdminUsuariosPage = () => {
 
                     <td className="px-5 py-4">{getProfileBadge(user.perfil, user.is_master)}</td>
 
-                    <td className="px-5 py-4 text-sm text-slate-300">{user.setor_nome || '—'}</td>
+                    <td className="px-5 py-4 text-sm text-slate-300">{user.setor_nome || '—'}<span className="ml-2 rounded-md border border-[#26344a] px-2 py-1 text-[10px]">{user.is_master ? 'GLOBAL' : user.ambiente}</span></td>
 
                     <td className="px-5 py-4">{getStatusBadge(user.status)}</td>
 
@@ -724,6 +732,7 @@ const AdminUsuariosPage = () => {
                       </label>
                       <input
                         type="email"
+                        disabled={isEditing}
                         value={formData.email}
                         onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                         required
@@ -827,9 +836,20 @@ const AdminUsuariosPage = () => {
                       />
                     </div>
 
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-400">Ambiente autorizado</label>
+                      <select value={formData.ambiente || ambienteAtual}
+                        disabled={!acesso?.is_master || !!selectedUser?.is_master}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, ambiente: e.target.value as 'RH' | 'SAE' }))}
+                        className="w-full rounded-xl border border-border-dark bg-slate-900/40 px-3 py-3 text-sm text-white outline-none disabled:opacity-60">
+                        <option value="RH">CIAPI RH</option><option value="SAE">SAE</option>
+                      </select>
+                      <p className="mt-2 text-xs text-slate-400">MASTER tem acesso completo somente ao ambiente autorizado. As duas contas globais acessam RH e SAE.</p>
+                    </div>
+
                     {selectedUser?.is_master && (
                       <div className="rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4 text-sm text-violet-300">
-                        Conta protegida como usuário master.
+                        Conta global protegida, com acesso ao RH e SAE.
                       </div>
                     )}
                   </div>
