@@ -2,7 +2,8 @@ export type SaeTriagemEtapaNome =
   | 'SERVICO_SOCIAL'
   | 'ENFERMAGEM'
   | 'PSICOLOGIA'
-  | 'MEDICO';
+  | 'MEDICO'
+  | 'TERAPIA_OCUPACIONAL';
 
 export type SaeTriagemEtapaAtual =
   | SaeTriagemEtapaNome
@@ -55,6 +56,9 @@ export interface SaeTriagem {
   etapaAtual: SaeTriagemEtapaAtual;
   resultadoObservacao?: string | null;
   concluidoEm?: string | null;
+  protocoloMatricula?: string | null;
+  matriculadoEm?: string | null;
+  matriculadoPor?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   etapas: SaeTriagemEtapa[];
@@ -81,4 +85,16 @@ export interface SaeAtualizarEtapaTriagemPayload {
 export interface SaeDecisaoTriagemPayload {
   decisao: 'APTO' | 'NAO_APTO' | 'DESISTENTE';
   observacao?: string | null;
+}
+
+export interface SaeMatricularTriagemPayload {
+  turno?: 'MANHÃ' | 'TARDE' | null;
+  observacao?: string | null;
+}
+
+export interface SaeTriagemMatricula {
+  usuarioId: string | null;
+  prontuario: string | null;
+  protocolo: string | null;
+  matriculadoEm: string | null;
 }
