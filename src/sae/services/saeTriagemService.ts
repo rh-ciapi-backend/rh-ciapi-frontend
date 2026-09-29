@@ -7,6 +7,8 @@ import type {
   SaeDecisaoTriagemPayload,
   SaeTriagem,
   SaeTriagemEtapaNome,
+  SaeMatricularTriagemPayload,
+  SaeTriagemMatricula,
 } from '../types/saeTriagem';
 
 async function getAccessToken() {
@@ -121,6 +123,27 @@ export const saeTriagemService = {
       `/${triagemId}/decisao`,
       {
         method: 'PATCH',
+        body: JSON.stringify(payload),
+      },
+    );
+  },
+
+  async matricular(
+    triagemId: string,
+    payload: SaeMatricularTriagemPayload,
+  ): Promise<{
+    ok: true;
+    triagem: SaeTriagem;
+    matricula: SaeTriagemMatricula;
+  }> {
+    return request<{
+      ok: true;
+      triagem: SaeTriagem;
+      matricula: SaeTriagemMatricula;
+    }>(
+      `/${triagemId}/matricular`,
+      {
+        method: 'POST',
         body: JSON.stringify(payload),
       },
     );
