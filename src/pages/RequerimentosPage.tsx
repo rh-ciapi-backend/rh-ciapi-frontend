@@ -155,9 +155,9 @@ function GrupoCampos({
     );
   };
   return (
-    <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+    <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
       <legend className="px-2 text-sm font-semibold text-white">{titulo}</legend>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
         {campos.map(({ name, label, type }) => (
           <label key={name} className="block text-xs font-medium text-slate-300">
             {label}
@@ -371,8 +371,8 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
   };
 
   return (
-    <div className="space-y-6 text-slate-200">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="min-w-0 space-y-5 text-slate-200 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Requerimentos</h1>
           <p className="mt-1 text-sm text-slate-400">{modoServidor ? 'Preencha e salve sua solicitação.' : 'Solicitações dos servidores e formulário estadual.'}</p>
@@ -380,7 +380,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
         {!modoServidor && <button
           type="button"
           onClick={() => setAba(aba === 'lista' ? 'novo' : 'lista')}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto"
         >
           <FilePlus2 size={17} />
           {aba === 'lista' ? 'Ver formulário' : 'Voltar à lista'}
@@ -391,15 +391,15 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
       {erroEnvio && <p role="alert" className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-300">{erroEnvio}</p>}
 
       {aba === 'lista' ? (
-        <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+        <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-white"><ClipboardList size={21} /> Solicitações recebidas</h2>
           {carregando ? <p className="mt-4 text-sm text-slate-400">Carregando...</p> :
             requerimentos.length === 0 ? <p className="mt-4 text-sm text-slate-400">Nenhum requerimento recebido.</p> : (
               <div className="mt-4 space-y-2">
                 {requerimentos.map((item) => (
-                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm">
+                  <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-[#26344a] bg-[#0b1220] p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <div><p className="font-medium text-white">{item.tipo}</p><p className="text-xs text-slate-400">Servidor: {item.servidor_nome || item.servidor_id} · {new Date(item.criado_em).toLocaleDateString('pt-BR')}</p></div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                       <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">{item.status.replace('_', ' ')}</span>
                       {(['docx', 'pdf'] as const).map((formato) => (
                         <button
@@ -414,12 +414,12 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
                               setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o requerimento.');
                             }
                           }}
-                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                          className="min-h-10 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 sm:w-auto"
                         >
                           Baixar {formato === 'pdf' ? 'PDF' : 'Word'}
                         </button>
                       ))}
-                      <button type="button" disabled={arquivandoId === item.id} onClick={() => arquivar(item)} className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/10 disabled:opacity-50" title="Remover da lista de solicitações recebidas">
+                      <button type="button" disabled={arquivandoId === item.id} onClick={() => arquivar(item)} className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-lg border border-rose-500/40 px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/10 disabled:opacity-50 sm:w-auto" title="Remover da lista de solicitações recebidas">
                         <Trash2 size={14} /> {arquivandoId === item.id ? 'Removendo...' : 'Excluir da lista'}
                       </button>
                     </div>
@@ -431,9 +431,9 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
       ) : (
         <div className="space-y-5">
           <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100"><Info size={18} className="mt-0.5 shrink-0" /><p>{modoServidor ? 'Confira seus dados e complete os campos que faltam.' : 'Os dados conhecidos são preenchidos ao escolher um servidor. Complete os campos restantes antes de enviar.'}</p></div>
-          {!modoServidor && <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+          {!modoServidor && <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-white">Selecionar servidor</h2>
-            <div className="relative mt-3 max-w-xl">
+            <div className="relative mt-3 w-full max-w-xl">
               <Search size={18} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
               <input
                 type="search"
@@ -472,15 +472,15 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
             {erroBusca && <p className="mt-2 text-xs text-rose-400">{erroBusca}</p>}
             {carregandoFormulario && <p className="mt-2 text-xs text-blue-300">Carregando dados anteriores...</p>}
             {selecionado && formularioPronto && <p className="mt-2 text-xs text-emerald-400">Dados encontrados. Complete os campos que faltam.</p>}
-            {selecionado && formularioPronto && <button type="button" onClick={gerarLink} className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Gerar e copiar link do servidor</button>}
+            {selecionado && formularioPronto && <button type="button" onClick={gerarLink} className="mt-3 min-h-10 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white sm:w-auto">Gerar e copiar link do servidor</button>}
             {linkServidor && <input readOnly value={linkServidor} onFocus={(event) => event.currentTarget.select()} className="mt-2 w-full rounded-lg border border-[#26344a] bg-[#0b1220] p-2 text-xs text-white" aria-label="Link do servidor" />}
           </section>}
           {modoServidor && carregandoFormulario && <p className="text-sm text-blue-300">Carregando seus dados...</p>}
           <GrupoCampos key={`identificacao-${selecionado?.id || ''}`} titulo="Identificação do servidor" campos={identificacao} valores={valores} atualizar={atualizar} />
           <GrupoCampos key={`funcionais-${selecionado?.id || ''}`} titulo="Dados funcionais" campos={funcionais} valores={valores} atualizar={atualizar} />
-          <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+          <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
             <legend className="px-2 text-sm font-semibold text-white">Vínculo</legend>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               <label className="text-xs font-medium text-slate-300">Regime de contrato
                 <select name="regime" value={valores.regime || ''} onChange={(event) => atualizar('regime', event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white">
                   <option value="">Selecione</option><option>Efetivo</option><option>Cargo comissionado</option><option>Temporário</option>
@@ -497,7 +497,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
             </div>
           </fieldset>
           <GrupoCampos titulo="Endereço e contato" campos={contato} valores={valores} atualizar={atualizar} />
-          <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-5">
+          <fieldset className="rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
             <legend className="px-2 text-sm font-semibold text-white">Pedido</legend>
             <label className="block text-xs font-medium text-slate-300">Tipo de requerimento
               <select value={tipo} onChange={(event) => {
@@ -515,13 +515,13 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
               <textarea rows={7} value={detalhes} onChange={(event) => { setUltimoSalvo(null); setSucesso(''); setDetalhes(event.target.value); }} className="mt-1.5 w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
             </label>
           </fieldset>
-          <div className="flex flex-wrap justify-end gap-2">
-            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto || !!ultimoSalvo} onClick={enviar} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <button type="button" disabled={!selecionado || !tipo || enviando || !formularioPronto || !!ultimoSalvo} onClick={enviar} className="min-h-11 w-full rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
               {enviando ? 'Salvando...' : ultimoSalvo ? 'Salvo' : 'Salvar'}
             </button>
             {ultimoSalvo && <>
-              <button type="button" onClick={() => requerimentosService.baixarDocx(ultimoSalvo.id).catch((error) => setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o Word.'))} className="rounded-xl border border-[#26344a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#26344a]">Baixar Word</button>
-              <button type="button" onClick={() => requerimentosService.baixarPdf(ultimoSalvo.id).catch((error) => setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o PDF.'))} className="rounded-xl border border-[#26344a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#26344a]">Baixar PDF</button>
+              <button type="button" onClick={() => requerimentosService.baixarDocx(ultimoSalvo.id).catch((error) => setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o Word.'))} className="min-h-11 w-full rounded-xl border border-[#26344a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#26344a] sm:w-auto">Baixar Word</button>
+              <button type="button" onClick={() => requerimentosService.baixarPdf(ultimoSalvo.id).catch((error) => setErroEnvio(error instanceof Error ? error.message : 'Não foi possível baixar o PDF.'))} className="min-h-11 w-full rounded-xl border border-[#26344a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#26344a] sm:w-auto">Baixar PDF</button>
             </>}
           </div>
         </div>
