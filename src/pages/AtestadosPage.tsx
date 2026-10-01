@@ -339,12 +339,12 @@ const KpiCard: React.FC<{
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.18 }}
-      className="group app-subtle-surface p-4 transition hover:border-primary/20"
+      className="group app-subtle-surface p-3 transition hover:border-primary/20 sm:p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
-          <h3 className="mt-2 text-2xl font-bold leading-none text-white">{value}</h3>
+          <h3 className="mt-2 text-xl font-bold leading-none text-white sm:text-2xl">{value}</h3>
         </div>
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border-dark bg-gradient-to-br ${accent} text-white`}
@@ -369,8 +369,8 @@ const ActionButton: React.FC<{
     onClick={onClick}
     className={
       primary
-        ? 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover'
-        : 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white'
+        ? 'inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto'
+        : 'inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white sm:w-auto'
     }
   >
     {children}
@@ -838,8 +838,8 @@ ${result.warning}`;
   };
 
   return (
-    <div ref={pageTopRef} className="min-h-full space-y-6">
-      <SectionCard className="px-5 py-5 sm:px-6">
+    <div ref={pageTopRef} className="min-h-full space-y-5 sm:space-y-6">
+      <SectionCard className="px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -854,7 +854,7 @@ ${result.warning}`;
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
             <ActionButton primary onClick={openCreateModal}>
               <FilePlus2 size={16} />
               Novo Atestado
@@ -881,7 +881,7 @@ ${result.warning}`;
         />
       )}
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <KpiCard title="Total de Atestados" value={kpis.totalAtestados} icon={<FileText size={19} />} />
         <KpiCard
           title="Servidores Afastados"
@@ -909,7 +909,7 @@ ${result.warning}`;
         />
       </section>
 
-      <SectionCard className="p-5 md:p-6">
+      <SectionCard className="p-4 sm:p-5 md:p-6">
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -923,7 +923,7 @@ ${result.warning}`;
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
             <label className="block 2xl:col-span-1">
               <FieldLabel>Busca</FieldLabel>
               <div className="flex h-12 items-center gap-2 rounded-2xl border border-border-dark bg-slate-900/35 px-4 transition-all duration-200 focus-within:border-primary/40 focus-within:bg-slate-900/55 focus-within:ring-2 focus-within:ring-primary/10">
@@ -1030,7 +1030,7 @@ ${result.warning}`;
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-zinc-200 transition-all hover:bg-white/[0.08]"
+              className="inline-flex h-10 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-zinc-200 transition-all hover:bg-white/[0.08] md:w-auto"
             >
               Limpar filtros
             </button>
@@ -1039,7 +1039,7 @@ ${result.warning}`;
       </SectionCard>
 
       <SectionCard className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:px-5 md:flex-row md:items-center md:justify-between md:px-6">
           <div>
             <h2 className="text-[20px] font-bold text-white">Lista de Atestados</h2>
             <p className="mt-0.5 text-sm text-zinc-400">
@@ -1178,7 +1178,7 @@ ${result.warning}`;
           </table>
         </div>
 
-        <div className="space-y-3 p-4 lg:hidden">
+        <div className="space-y-3 p-3 sm:p-4 lg:hidden">
           {!isLoading && filteredData.length === 0 && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-10 text-center text-sm text-zinc-400">
               Nenhum atestado encontrado com os filtros atuais.
@@ -1186,7 +1186,7 @@ ${result.warning}`;
           )}
 
           {filteredData.map((item) => (
-            <div key={item.id} className="app-subtle-surface p-4">
+            <div key={item.id} className="app-subtle-surface p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</h3>
@@ -1199,7 +1199,7 @@ ${result.warning}`;
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm min-[420px]:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Setor</p>
                   <p className="mt-1 text-zinc-200">{safeText(item.setor) || '-'}</p>
@@ -1256,22 +1256,22 @@ ${result.warning}`;
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm md:items-center md:p-6"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:p-2 md:items-center md:p-6"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0B1220] shadow-[0_30px_90px_rgba(0,0,0,0.45)] md:rounded-3xl"
+              className="flex max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0B1220] shadow-[0_30px_90px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-1rem)] md:max-h-[95vh] md:rounded-3xl"
             >
-              <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 md:px-6">
+              <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5 md:px-6">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-300">
                     <BriefcaseMedical size={13} />
                     {isEditing ? 'Editar Atestado' : 'Novo Atestado'}
                   </div>
-                  <h3 className="mt-3 text-2xl font-black text-white">
+                  <h3 className="mt-3 text-xl font-black text-white sm:text-2xl">
                     {isEditing ? 'Editar registro de atestado' : 'Cadastrar novo atestado'}
                   </h3>
                   <p className="mt-1 text-sm text-zinc-400">
@@ -1289,7 +1289,7 @@ ${result.warning}`;
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 md:px-6">
                 <div className="space-y-6">
                   {formFeedback.type && (
                     <FeedbackBanner
@@ -1298,7 +1298,7 @@ ${result.warning}`;
                       onClose={() => setFormFeedback({ type: null, message: '' })}
                     />
                   )}
-                  <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:rounded-3xl md:p-5">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-200">
                         <Users size={18} />
@@ -1405,7 +1405,7 @@ ${result.warning}`;
                     </div>
                   </section>
 
-                  <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:rounded-3xl md:p-5">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-200">
                         <FileText size={18} />
@@ -1530,7 +1530,7 @@ ${result.warning}`;
                     </div>
                   </section>
 
-                  <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:rounded-3xl md:p-5">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-200">
                         <Paperclip size={18} />
@@ -1593,7 +1593,7 @@ ${result.warning}`;
                     </div>
                   </section>
 
-                  <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:rounded-3xl md:p-5">
                     <div className="mb-4 flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-200">
                         <ShieldCheck size={18} />
@@ -1639,7 +1639,7 @@ ${result.warning}`;
                 </div>
               </div>
 
-              <div className="border-t border-white/10 px-5 py-4 md:px-6">
+              <div className="border-t border-white/10 px-4 py-4 sm:px-5 md:px-6">
                 <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                   <button
                     type="button"
@@ -1674,14 +1674,14 @@ ${result.warning}`;
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm md:items-center md:p-6"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:p-2 md:items-center md:p-6"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className="w-full max-w-3xl overflow-hidden rounded-t-3xl border border-white/10 bg-[#0B1220] shadow-[0_30px_90px_rgba(0,0,0,0.45)] md:rounded-3xl"
+              className="max-h-[100dvh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0B1220] shadow-[0_30px_90px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-1rem)] md:max-h-[90vh] md:rounded-3xl"
             >
               <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 md:px-6">
                 <div>
@@ -1697,7 +1697,7 @@ ${result.warning}`;
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 px-5 py-5 md:grid-cols-2 md:px-6">
+              <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:gap-4 sm:px-5 sm:py-5 md:grid-cols-2 md:px-6">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <FieldLabel>Servidor</FieldLabel>
                   <p className="text-white">{safeText(detailsItem.servidorNome) || '-'}</p>
@@ -1784,13 +1784,13 @@ ${result.warning}`;
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
           >
             <motion.div
               initial={{ opacity: 0, y: 18, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.98 }}
-              className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0B1220] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)]"
+              className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0B1220] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.45)] sm:rounded-3xl sm:p-6"
             >
               <h3 className="text-2xl font-black text-white">Excluir atestado</h3>
               <p className="mt-3 text-sm leading-6 text-zinc-400">
