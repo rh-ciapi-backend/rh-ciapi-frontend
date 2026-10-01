@@ -28,6 +28,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEY = 'ciapi_ambiente';
 
+// O ambiente também fica limitado à janela atual do PWA.
+// Ao fechar completamente o aplicativo, o próximo acesso volta ao padrão RH.
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
