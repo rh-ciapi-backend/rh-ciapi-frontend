@@ -275,7 +275,7 @@ function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.18 }}
-            className={`w-full ${maxWidthClass} max-h-[100dvh] overflow-hidden rounded-t-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[calc(100dvh-1rem)] sm:rounded-2xl md:max-h-[92vh]`}
+            className={`flex w-full ${maxWidthClass} max-h-[100dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[calc(100dvh-1rem)] sm:rounded-2xl md:max-h-[92vh]`}
           >
             {children}
           </motion.div>
@@ -748,7 +748,7 @@ export default function FeriasPage() {
       />
 
       <Modal open={modalOpen}>
-        <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="shrink-0 border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-white">
@@ -766,7 +766,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Servidor</span>
@@ -959,7 +959,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
+        <div className="shrink-0 flex flex-col gap-3 border-t border-white/10 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-slate-400">
             {form.id ? 'Revise as datas e salve as alterações.' : 'A programação deve totalizar exatamente 30 dias.'}
           </div>
