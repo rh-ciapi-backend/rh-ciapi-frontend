@@ -252,14 +252,14 @@ function Modal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 p-0 backdrop-blur-sm sm:p-2 md:items-center md:p-4"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.18 }}
-            className={`w-full ${maxWidthClass} max-h-[92vh] overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl`}
+            className={`w-full ${maxWidthClass} max-h-[100dvh] overflow-hidden rounded-t-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[calc(100dvh-1rem)] sm:rounded-2xl md:max-h-[92vh]`}
           >
             {children}
           </motion.div>
@@ -559,8 +559,8 @@ export default function FeriasPage() {
   }, [clearFeedback, exportFilters, showError, showSuccess]);
 
   return (
-    <div className="space-y-6">
-      <section className="app-surface p-5 sm:p-6">
+    <div className="space-y-5 sm:space-y-6">
+      <section className="app-surface p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Gestão de férias</p>
@@ -570,11 +570,11 @@ export default function FeriasPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
             <button
               type="button"
               onClick={openExportModal}
-              className="inline-flex items-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700/70"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700/70 sm:w-auto"
             >
               <Download className="h-4 w-4" />
               Exportar Férias
@@ -583,7 +583,7 @@ export default function FeriasPage() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover sm:w-auto"
             >
               <Plus className="h-4 w-4" />
               Novo período
@@ -638,7 +638,7 @@ export default function FeriasPage() {
       />
 
       <Modal open={modalOpen}>
-        <div className="border-b border-white/10 px-6 py-5">
+        <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-white">
@@ -656,7 +656,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="space-y-5 overflow-y-auto px-6 py-5">
+        <div className="space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Servidor</span>
@@ -750,16 +750,16 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-5">
+        <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-slate-400">
             {form.id ? 'Revise as datas e salve as alterações.' : 'Selecione um servidor e informe o período para cadastrar.'}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
             <button
               type="button"
               onClick={closeCreateModal}
-              className="rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+              className="min-h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] sm:w-auto"
             >
               Cancelar
             </button>
@@ -767,7 +767,7 @@ export default function FeriasPage() {
               type="button"
               onClick={handleSave}
               disabled={salvando}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {form.id ? 'Salvar alterações' : 'Cadastrar período'}
@@ -790,7 +790,7 @@ export default function FeriasPage() {
       />
 
       <Modal open={!!dayPreview}>
-        <div className="border-b border-white/10 px-6 py-5">
+        <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
@@ -810,7 +810,7 @@ export default function FeriasPage() {
           </div>
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+        <div className="max-h-[70dvh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {!dayPreview?.records.length ? (
             <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/35 px-4 py-10 text-center text-sm text-slate-400">
               Nenhum servidor em férias nesta data.
@@ -819,7 +819,7 @@ export default function FeriasPage() {
             <div className="space-y-3">
               {dayPreview.records.map((item) => (
                 <div key={item.id} className="app-subtle-surface p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 className="font-semibold text-white">{item.servidorNome}</h3>
                       <p className="mt-1 text-sm text-slate-400">{item.setor || 'Setor não informado'}</p>
