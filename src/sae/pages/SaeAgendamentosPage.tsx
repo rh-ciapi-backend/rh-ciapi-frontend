@@ -327,14 +327,14 @@ export default function SaeAgendamentosPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-6"
+      className="space-y-5 sm:space-y-6"
     >
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
             Gestão de Agendamentos
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+          <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
             Agendamentos
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
@@ -343,11 +343,11 @@ export default function SaeAgendamentosPage({
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button type="button" onClick={() => setProfissionaisAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-row">
+          <button type="button" onClick={() => setProfissionaisAberto(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white sm:w-auto">
             <UserCog size={18} className="text-primary" /> Profissionais
           </button>
-          <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover">
+          <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover sm:w-auto">
             <Plus size={18} /> Novo agendamento
           </button>
         </div>
@@ -400,7 +400,7 @@ export default function SaeAgendamentosPage({
         </section>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Total Histórico"
           value={totais.total}
@@ -562,7 +562,7 @@ export default function SaeAgendamentosPage({
             <button
               type="button"
               onClick={() => setFiltros(FILTROS_INICIAIS)}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white md:w-auto"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white xl:w-auto"
             >
               <FilterX size={16} />
               Limpar filtros
@@ -572,7 +572,7 @@ export default function SaeAgendamentosPage({
       </section>
 
       <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
-        <div className="flex flex-col gap-2 border-b border-border-dark px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b border-border-dark px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 className="text-sm font-bold text-white">
               Histórico de agendamentos
@@ -655,7 +655,7 @@ export default function SaeAgendamentosPage({
             onClick={() => !cancelamentoEmAndamento && setCancelando(null)}
           />
 
-          <div className="relative w-full max-w-xl rounded-[22px] border border-border-dark bg-card-dark p-5 shadow-2xl sm:p-6">
+          <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-[22px] border border-border-dark bg-card-dark p-4 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-300">
@@ -754,7 +754,7 @@ function KpiCard({
   icon: React.ElementType;
 }) {
   return (
-    <article className="rounded-[20px] border border-border-dark bg-card-dark p-5">
+    <article className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[20px] sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
@@ -890,9 +890,9 @@ function AgendamentoCard({
       </div>
 
       {String(agendamento.status || '').toUpperCase() === 'AGENDADO' && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => onRemarcar(agendamento)} className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary"><Pencil size={14}/>Remarcar</button>
-          <button type="button" onClick={() => onCancelar(agendamento)} className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300"><XCircle size={14}/>Cancelar</button>
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          <button type="button" onClick={() => onRemarcar(agendamento)} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary sm:w-auto"><Pencil size={14}/>Remarcar</button>
+          <button type="button" onClick={() => onCancelar(agendamento)} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 sm:w-auto"><XCircle size={14}/>Cancelar</button>
         </div>
       )}
 
