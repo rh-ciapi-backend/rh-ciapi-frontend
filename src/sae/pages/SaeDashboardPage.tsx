@@ -77,18 +77,18 @@ export default function SaeDashboardPage() {
     hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-5 sm:space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
             Visão Geral
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+          <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
             {greeting}, {firstName}
           </h1>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-slate-500">
             <CalendarDays size={14} />
             <span className="capitalize">{dataFormatada}</span>
             <span>•</span>
@@ -103,21 +103,21 @@ export default function SaeDashboardPage() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-colors hover:bg-primary-hover"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-colors hover:bg-primary-hover sm:w-auto"
         >
           <CalendarDays size={18} />
           Novo Agendamento
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         {CARDS.map((card) => {
           const Icon = card.icon;
 
           return (
             <article
               key={card.label}
-              className="rounded-3xl border border-border-dark bg-card-dark p-5"
+              className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-3xl sm:p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -125,7 +125,7 @@ export default function SaeDashboardPage() {
                     {card.label}
                   </p>
 
-                  <p className="mt-3 text-3xl font-bold text-white">
+                  <p className="mt-3 text-2xl font-bold text-white sm:text-3xl">
                     {card.value}
                   </p>
 
@@ -143,9 +143,9 @@ export default function SaeDashboardPage() {
         })}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.45fr_0.75fr]">
-        <section className="rounded-3xl border border-border-dark bg-card-dark p-5">
-          <div className="flex items-center justify-between gap-3">
+      <div className="grid gap-4 sm:gap-5 xl:grid-cols-[1.45fr_0.75fr]">
+        <section className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-3xl sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <CalendarDays size={18} className="text-primary" />
@@ -161,22 +161,23 @@ export default function SaeDashboardPage() {
 
             <button
               type="button"
-              className="flex items-center gap-1 text-xs font-bold text-primary"
+              className="flex min-h-9 items-center gap-1 self-start text-xs font-bold text-primary sm:self-auto"
             >
               Ver agenda
               <ArrowRight size={14} />
             </button>
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-2xl border border-border-dark">
-            <div className="grid grid-cols-[90px_1fr_1fr_120px] gap-3 bg-slate-800/60 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+          <div className="responsive-scroll mt-5 overflow-hidden rounded-2xl border border-border-dark">
+            <div className="min-w-[620px]">
+              <div className="grid grid-cols-[90px_1fr_1fr_120px] gap-3 bg-slate-800/60 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
               <span>Horário</span>
               <span>Usuário</span>
               <span>Serviço</span>
               <span>Status</span>
-            </div>
+              </div>
 
-            <div className="flex min-h-[220px] items-center justify-center px-5 py-10 text-center">
+              <div className="flex min-h-[220px] items-center justify-center px-5 py-10 text-center">
               <div>
                 <CalendarDays size={32} className="mx-auto text-slate-700" />
                 <p className="mt-3 text-sm font-semibold text-slate-400">
@@ -186,11 +187,12 @@ export default function SaeDashboardPage() {
                   Os dados aparecerão após a integração do banco SAE.
                 </p>
               </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-border-dark bg-card-dark p-5">
+        <section className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-3xl sm:p-5">
           <div className="flex items-center gap-2">
             <Activity size={18} className="text-primary" />
             <h2 className="text-base font-bold text-white">
@@ -239,7 +241,7 @@ function StatusRow({
         {label}
       </p>
 
-      <p className="mt-1 text-[11px] text-slate-600">
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
         {value}
       </p>
     </div>
