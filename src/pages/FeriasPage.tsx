@@ -15,6 +15,7 @@ import {
 } from '../services/feriasExportService';
 
 type FeriasStatus = 'PROGRAMADAS' | 'EM_ANDAMENTO' | 'FINALIZADAS';
+type FracionamentoFerias = '30' | '15_15' | '10_10_10';
 
 interface ServidorOption {
   id: string;
@@ -45,6 +46,11 @@ interface FeriasRecord {
   ano?: number;
 }
 
+interface FeriasPeriodoForm {
+  inicio: string;
+  fim: string;
+}
+
 interface FormState {
   id?: string;
   servidorId: string;
@@ -55,6 +61,8 @@ interface FormState {
   inicio: string;
   fim: string;
   observacao: string;
+  fracionamento: FracionamentoFerias;
+  periodos: FeriasPeriodoForm[];
 }
 
 const feriasService: any = (feriasServiceModule as any).feriasService ?? feriasServiceModule;
@@ -81,6 +89,14 @@ const emptyForm: FormState = {
   inicio: '',
   fim: '',
   observacao: '',
+  fracionamento: '30',
+  periodos: [{ inicio: '', fim: '' }],
+};
+
+const FRACIONAMENTO_CONFIG: Record<FracionamentoFerias, { label: string; diasPorPeriodo: number; quantidade: number }> = {
+  '30': { label: '30 dias corridos', diasPorPeriodo: 30, quantidade: 1 },
+  '15_15': { label: '15 + 15 dias', diasPorPeriodo: 15, quantidade: 2 },
+  '10_10_10': { label: '10 + 10 + 10 dias', diasPorPeriodo: 10, quantidade: 3 },
 };
 
 function normalizeString(value: unknown) {
@@ -438,6 +454,8 @@ export default function FeriasPage() {
         inicio: registro.inicio,
         fim: registro.fim,
         observacao: registro.observacao || '',
+        fracionamento: '30',
+        periodos: [{ inicio: registro.inicio, fim: registro.fim }],
       });
       setModalOpen(true);
     },
@@ -462,6 +480,36 @@ export default function FeriasPage() {
     [servidores],
   );
 
+  const updateFracionamento = useCallback((value: FracionamentoFerias) => {
+    const config = FRACIONAMENTO_CONFIG[value];
+    setError('');
+    setForm((prev) => ({
+      ...prev,
+      fracionamento: value,
+      inicio: '',
+      fim: '',
+      periodos: Array.from({ length: config.quantidade }, (_, index) => ({
+        inicio: prev.periodos[index]?.inicio || '',
+        fim: prev.periodos[index]?.fim || '',
+      })),
+    }));
+  }, []);
+
+  const updatePeriodo = useCallback((index: number, field: keyof FeriasPeriodoForm, value: string) => {
+    setError('');
+    setForm((prev) => {
+      const periodos = [...prev.periodos];
+      periodos[index] = { ...(periodos[index] || { inicio: '', fim: '' }), [field]: value };
+
+      return {
+        ...prev,
+        periodos,
+        inicio: periodos[0]?.inicio || '',
+        fim: periodos[0]?.fim || '',
+      };
+    });
+  }, []);
+
   const updateExportFilter = useCallback(
     <K extends keyof ExportFeriasFilters>(field: K, value: ExportFeriasFilters[K]) => {
       setError('');
@@ -471,44 +519,106 @@ export default function FeriasPage() {
   );
 
   const handleSave = useCallback(async () => {
-    if (!form.servidorNome || !form.inicio || !form.fim) {
-      showError('Preencha servidor, data inicial e data final antes de salvar.');
+    if (!form.servidorNome) {
+      showError('Selecione o servidor antes de salvar.');
       return;
     }
 
-    if (calculateDays(form.inicio, form.fim) <= 0) {
-      showError('O período informado é inválido. Verifique as datas.');
-      return;
+    if (form.id) {
+      if (!form.inicio || !form.fim) {
+        showError('Preencha a data inicial e final antes de salvar.');
+        return;
+      }
+
+      if (calculateDays(form.inicio, form.fim) <= 0) {
+        showError('O período informado é inválido. Verifique as datas.');
+        return;
+      }
+    } else {
+      const config = FRACIONAMENTO_CONFIG[form.fracionamento];
+
+      if (form.periodos.length !== config.quantidade) {
+        showError('A quantidade de períodos não corresponde ao fracionamento selecionado.');
+        return;
+      }
+
+      const periodosInvalidos = form.periodos.some(
+        (periodo) =>
+          !periodo.inicio ||
+          !periodo.fim ||
+          calculateDays(periodo.inicio, periodo.fim) !== config.diasPorPeriodo,
+      );
+
+      if (periodosInvalidos) {
+        showError(
+          `Cada período deve possuir exatamente ${config.diasPorPeriodo} dia(s) corrido(s).`,
+        );
+        return;
+      }
+
+      const totalDias = form.periodos.reduce(
+        (acc, periodo) => acc + calculateDays(periodo.inicio, periodo.fim),
+        0,
+      );
+
+      if (totalDias !== 30) {
+        showError('A programação anual deve totalizar exatamente 30 dias de férias.');
+        return;
+      }
+
+      const ordenados = [...form.periodos].sort((a, b) => a.inicio.localeCompare(b.inicio));
+      for (let index = 1; index < ordenados.length; index += 1) {
+        const anteriorFim = parseDate(ordenados[index - 1].fim);
+        const atualInicio = parseDate(ordenados[index].inicio);
+        if (anteriorFim && atualInicio && atualInicio <= anteriorFim) {
+          showError('Os períodos de férias não podem se sobrepor.');
+          return;
+        }
+      }
     }
 
     setSalvando(true);
     setError('');
 
-    const payload = {
-      id: form.id,
-      servidorId: form.servidorId || form.cpf,
-      servidorNome: form.servidorNome,
-      matricula: form.matricula,
-      cpf: form.cpf,
-      setor: form.setor,
-      inicio: form.inicio,
-      fim: form.fim,
-      dias: calculateDays(form.inicio, form.fim),
-      observacao: form.observacao,
-      ano: filtros.ano,
-    };
-
     try {
       if (form.id) {
+        const payload = {
+          id: form.id,
+          servidorId: form.servidorId || form.cpf,
+          servidorNome: form.servidorNome,
+          matricula: form.matricula,
+          cpf: form.cpf,
+          setor: form.setor,
+          inicio: form.inicio,
+          fim: form.fim,
+          dias: calculateDays(form.inicio, form.fim),
+          observacao: form.observacao,
+          ano: filtros.ano,
+        };
+
         await (feriasService.editar?.(form.id, payload) ??
           feriasService.atualizar?.(form.id, payload) ??
           feriasService.update?.(form.id, payload));
+
         showSuccess('Período de férias atualizado com sucesso.');
       } else {
-        await (feriasService.criar?.(payload) ??
-          feriasService.adicionar?.(payload) ??
-          feriasService.create?.(payload));
-        showSuccess('Período de férias cadastrado com sucesso.');
+        const programacaoPayload = {
+          servidorId: form.servidorId || form.cpf,
+          servidorNome: form.servidorNome,
+          matricula: form.matricula,
+          cpf: form.cpf,
+          setor: form.setor,
+          observacao: form.observacao,
+          ano: filtros.ano,
+          periodos: form.periodos,
+        };
+
+        if (!feriasService.criarProgramacao) {
+          throw new Error('Atualize o feriasService.ts para habilitar o cadastro fracionado.');
+        }
+
+        await feriasService.criarProgramacao(programacaoPayload);
+        showSuccess('Programação de férias cadastrada com 30 dias distribuídos corretamente.');
       }
 
       setModalOpen(false);
@@ -516,7 +626,7 @@ export default function FeriasPage() {
       await carregarDados();
     } catch (err: any) {
       console.error('Erro ao salvar férias:', err);
-      showError(err?.message || 'Falha ao salvar o período de férias.');
+      showError(err?.message || 'Falha ao salvar a programação de férias.');
     } finally {
       setSalvando(false);
     }
@@ -644,7 +754,7 @@ export default function FeriasPage() {
               <h2 className="text-xl font-semibold text-white">
                 {form.id ? 'Editar período de férias' : 'Novo período de férias'}
               </h2>
-              <p className="mt-1 text-sm text-slate-400">Preencha os dados do servidor e o intervalo do afastamento.</p>
+              <p className="mt-1 text-sm text-slate-400">Selecione o servidor e programe os 30 dias de férias em 1, 2 ou 3 períodos.</p>
             </div>
             <button
               type="button"
@@ -713,29 +823,128 @@ export default function FeriasPage() {
               />
             </label>
 
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data inicial</span>
-              <input
-                type="date"
-                value={form.inicio}
-                onChange={(event) => setForm((prev) => ({ ...prev, inicio: event.target.value }))}
-                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
+            {!form.id ? (
+              <>
+                <label className="space-y-2 md:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Forma de fracionamento
+                  </span>
+                  <select
+                    value={form.fracionamento}
+                    onChange={(event) => updateFracionamento(event.target.value as FracionamentoFerias)}
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="30">30 dias corridos</option>
+                    <option value="15_15">15 + 15 dias</option>
+                    <option value="10_10_10">10 + 10 + 10 dias</option>
+                  </select>
+                </label>
 
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data final</span>
-              <input
-                type="date"
-                value={form.fim}
-                onChange={(event) => setForm((prev) => ({ ...prev, fim: event.target.value }))}
-                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
+                <div className="space-y-3 md:col-span-2">
+                  {form.periodos.map((periodo, index) => {
+                    const diasEsperados = FRACIONAMENTO_CONFIG[form.fracionamento].diasPorPeriodo;
+                    const diasCalculados = calculateDays(periodo.inicio, periodo.fim);
+                    const valido = diasCalculados === diasEsperados;
 
-            <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-blue-100 md:col-span-2">
-              Total previsto: <strong>{calculateDays(form.inicio, form.fim)}</strong> dia(s)
-            </div>
+                    return (
+                      <div
+                        key={`periodo-${index + 1}`}
+                        className="rounded-2xl border border-border-dark bg-slate-900/35 p-4"
+                      >
+                        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{index + 1}º período</p>
+                            <p className="text-xs text-slate-500">
+                              Deve possuir exatamente {diasEsperados} dia(s) corrido(s).
+                            </p>
+                          </div>
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                              periodo.inicio && periodo.fim
+                                ? valido
+                                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                                  : 'border-rose-500/20 bg-rose-500/10 text-rose-300'
+                                : 'border-white/10 bg-white/[0.04] text-slate-400'
+                            }`}
+                          >
+                            {diasCalculados} dia(s)
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <label className="space-y-2">
+                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                              Data inicial
+                            </span>
+                            <input
+                              type="date"
+                              value={periodo.inicio}
+                              onChange={(event) => updatePeriodo(index, 'inicio', event.target.value)}
+                              className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                            />
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                              Data final
+                            </span>
+                            <input
+                              type="date"
+                              value={periodo.fim}
+                              onChange={(event) => updatePeriodo(index, 'fim', event.target.value)}
+                              className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-blue-100 md:col-span-2">
+                  Total programado:{' '}
+                  <strong>
+                    {form.periodos.reduce(
+                      (acc, periodo) => acc + calculateDays(periodo.inicio, periodo.fim),
+                      0,
+                    )} / 30 dias
+                  </strong>
+                  <span className="mt-1 block text-xs text-blue-200/80">
+                    Formatos permitidos: 30 dias, 15 + 15 ou 10 + 10 + 10.
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Data inicial
+                  </span>
+                  <input
+                    type="date"
+                    value={form.inicio}
+                    onChange={(event) => setForm((prev) => ({ ...prev, inicio: event.target.value }))}
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Data final
+                  </span>
+                  <input
+                    type="date"
+                    value={form.fim}
+                    onChange={(event) => setForm((prev) => ({ ...prev, fim: event.target.value }))}
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+
+                <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-blue-100 md:col-span-2">
+                  Total previsto: <strong>{calculateDays(form.inicio, form.fim)}</strong> dia(s)
+                </div>
+              </>
+            )}
 
             <label className="space-y-2 md:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Observação</span>
@@ -752,7 +961,7 @@ export default function FeriasPage() {
 
         <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-slate-400">
-            {form.id ? 'Revise as datas e salve as alterações.' : 'Selecione um servidor e informe o período para cadastrar.'}
+            {form.id ? 'Revise as datas e salve as alterações.' : 'A programação deve totalizar exatamente 30 dias.'}
           </div>
 
           <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
@@ -770,7 +979,7 @@ export default function FeriasPage() {
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {form.id ? 'Salvar alterações' : 'Cadastrar período'}
+              {form.id ? 'Salvar alterações' : 'Cadastrar férias'}
             </button>
           </div>
         </div>
