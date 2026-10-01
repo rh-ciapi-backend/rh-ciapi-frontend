@@ -135,13 +135,23 @@ export default function App() {
       {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
-        <div className="flex min-h-screen bg-bg-dark">
+        <div className="app-shell flex min-h-screen min-w-0 bg-bg-dark">
           <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="app-content-column flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
-            {acesso?.is_master && <div className="flex justify-end border-b border-[#26344a] px-4 py-2 sm:px-6"><button onClick={() => setAmbiente('sae')} className="rounded-lg border border-[#26344a] bg-[#172033] px-3 py-2 text-xs text-slate-200 hover:border-blue-500">Abrir ambiente SAE</button></div>}
-            <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-              <div className="app-page">
+            {acesso?.is_master && (
+              <div className="flex justify-end border-b border-[#26344a] px-3 py-2 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => setAmbiente('sae')}
+                  className="min-h-10 rounded-lg border border-[#26344a] bg-[#172033] px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-blue-500 hover:text-white"
+                >
+                  Abrir ambiente SAE
+                </button>
+              </div>
+            )}
+            <main className="app-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
+              <div className="app-page app-main-inner">
                 <AnimatePresence mode="wait">
                   <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
                     {renderContent()}
