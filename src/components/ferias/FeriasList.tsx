@@ -38,8 +38,8 @@ function formatPeriod(inicio: string, fim: string) {
 
 export function FeriasList({ registros, carregando = false, onVisualizar, onEditar, onExcluir }: FeriasListProps) {
   return (
-    <section className="app-surface p-5">
-      <div className="mb-5 flex items-center justify-between gap-3">
+    <section className="app-surface p-4 sm:p-5">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-primary">
             <CalendarClock className="h-5 w-5" />
@@ -49,7 +49,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
           <p className="mt-1 text-sm text-slate-400">Acompanhe, revise e edite os registros filtrados.</p>
         </div>
 
-        <div className="app-subtle-surface px-4 py-3 text-right">
+        <div className="app-subtle-surface w-full px-4 py-3 text-left sm:w-auto sm:text-right">
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Resultado</p>
           <p className="mt-1 text-2xl font-bold text-white">{carregando ? '...' : registros.length}</p>
         </div>
@@ -65,7 +65,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
         {registros.map((item) => (
           <article
             key={item.id}
-            className="app-subtle-surface p-4 transition hover:border-slate-500/70 hover:bg-slate-800/60"
+            className="app-subtle-surface p-4 transition hover:border-slate-500/70 hover:bg-slate-800/60 sm:p-5"
           >
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
                   </span>
                 </div>
 
-                <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-slate-300 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-slate-300 min-[420px]:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Período</p>
                     <p className="mt-1">{formatPeriod(item.inicio, item.fim)}</p>
@@ -102,11 +102,11 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
                 <button
                   type="button"
                   onClick={() => onVisualizar?.(item)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] xl:w-auto"
                 >
                   <Eye className="h-4 w-4" />
                   Visualizar
@@ -114,7 +114,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
                 <button
                   type="button"
                   onClick={() => onEditar?.(item)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-medium text-blue-200 transition hover:bg-primary/15"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-medium text-blue-200 transition hover:bg-primary/15 xl:w-auto"
                 >
                   <Pencil className="h-4 w-4" />
                   Editar
@@ -122,7 +122,7 @@ export function FeriasList({ registros, carregando = false, onVisualizar, onEdit
                 <button
                   type="button"
                   onClick={() => onExcluir?.(item)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-200 transition hover:bg-rose-500/16"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-200 transition hover:bg-rose-500/16 xl:w-auto"
                 >
                   <Trash2 className="h-4 w-4" />
                   Excluir
