@@ -18,11 +18,20 @@
     min-height: 100%;
     background: var(--color-bg-dark);
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
   }
 
   body {
     @apply bg-bg-dark text-slate-200 font-sans;
     min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
     overflow-x: hidden;
     text-rendering: optimizeLegibility;
@@ -127,8 +136,58 @@
 
 .app-page {
   width: 100%;
+  min-width: 0;
   max-width: 1600px;
   margin: 0 auto;
+}
+
+/* Estrutura responsiva compartilhada entre CIAPI RH e SAE */
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-content-column {
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-main {
+  min-width: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.app-main-inner {
+  width: 100%;
+  min-width: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Safe areas para PWA instalada em celulares/tablets */
+.safe-top {
+  padding-top: max(0px, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+}
+
+.safe-left {
+  padding-left: max(0px, env(safe-area-inset-left));
+}
+
+.safe-right {
+  padding-right: max(0px, env(safe-area-inset-right));
+}
+
+/* Elementos largos continuam utilizáveis sem forçar o app inteiro a rolar */
+.responsive-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Melhor adaptação em telas pequenas */
@@ -144,5 +203,27 @@
 
   .app-subtle-surface {
     border-radius: 14px;
+  }
+
+  .app-page,
+  .app-main-inner {
+    max-width: 100%;
+  }
+
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
+
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
   }
 }
