@@ -39,13 +39,13 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
   const yearOptions = Array.from({ length: 7 }).map((_, index) => baseYear - 2 + index);
 
   return (
-    <section className="app-surface p-5">
+    <section className="app-surface p-4 sm:p-5">
       <div className="mb-4 flex items-center gap-2 text-slate-300">
         <Filter className="h-4 w-4 text-primary" />
         <h2 className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">Filtros da gestão</h2>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
         <label className="space-y-2 xl:col-span-2">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Busca</span>
           <div className="relative">
@@ -107,7 +107,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
       </div>
 
       <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {[
             { value: 'TODOS', label: 'Todos' },
             { value: 'PROGRAMADAS', label: 'Programadas' },
@@ -120,7 +120,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
                 key={option.value}
                 type="button"
                 onClick={() => onChange('status', option.value as FeriasFiltroState['status'])}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                className={`min-h-10 w-full rounded-xl border px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:w-auto sm:rounded-full sm:px-4 ${
                   active
                     ? 'border-primary/40 bg-primary/15 text-blue-200'
                     : 'border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]'
@@ -135,7 +135,7 @@ export function FeriasFilters({ filtros, setores, onChange, onReset }: FeriasFil
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] md:w-auto"
         >
           <RotateCcw className="h-4 w-4" />
           Limpar filtros
