@@ -54,8 +54,8 @@ const AdminSetoresPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="min-w-0 space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-bold text-white">Gestão de Setores</h2>
 
         <button
@@ -64,7 +64,7 @@ const AdminSetoresPage = () => {
             setNome('');
             setIsModalOpen(true);
           }}
-          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover sm:w-auto"
         >
           <Plus size={18} />
           Novo Setor
@@ -78,8 +78,8 @@ const AdminSetoresPage = () => {
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="responsive-scroll">
+          <table className="min-w-[560px] w-full border-collapse text-left sm:min-w-0">
             <thead>
               <tr className="bg-slate-800/50 border-b border-border-dark">
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Nome</th>
@@ -122,14 +122,14 @@ const AdminSetoresPage = () => {
                             setNome(setor.nome);
                             setIsModalOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-primary/10 hover:text-primary"
                         >
                           <Edit2 size={14} />
                         </button>
 
                         <button
                           onClick={() => handleDelete(setor.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-rose-400/10 hover:text-rose-400"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -145,7 +145,7 @@ const AdminSetoresPage = () => {
 
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -158,9 +158,9 @@ const AdminSetoresPage = () => {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-card-dark border border-border-dark rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+              className="relative flex max-h-[100dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl"
             >
-              <div className="p-6 border-b border-border-dark flex justify-between items-center">
+              <div className="flex shrink-0 items-center justify-between border-b border-border-dark p-4 sm:p-6">
                 <h2 className="text-xl font-bold text-white">
                   {editingItem ? 'Editar Setor' : 'Novo Setor'}
                 </h2>
@@ -170,7 +170,7 @@ const AdminSetoresPage = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="p-6 space-y-4">
+              <form onSubmit={handleSave} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Nome do Setor</label>
                   <input
@@ -182,18 +182,18 @@ const AdminSetoresPage = () => {
                   />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4">
+                <div className="grid grid-cols-1 gap-2 pt-4 sm:flex sm:justify-end sm:gap-3">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-sm font-bold text-slate-400 hover:text-white"
+                    className="min-h-11 w-full rounded-xl px-4 py-2 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white sm:w-auto"
                   >
                     Cancelar
                   </button>
 
                   <button
                     type="submit"
-                    className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all"
+                    className="min-h-11 w-full rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover sm:w-auto"
                   >
                     Salvar
                   </button>
