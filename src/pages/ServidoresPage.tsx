@@ -601,8 +601,8 @@ export const ServidoresPage = ({
     : null;
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-5 sm:space-y-6">
+      <section className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Gestão de pessoas
@@ -615,11 +615,11 @@ export const ServidoresPage = ({
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-row">
           <button
             type="button"
             onClick={handleExportCsv}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white sm:w-auto"
             title="Exportar os servidores filtrados para CSV"
           >
             <Download size={18} />
@@ -629,7 +629,7 @@ export const ServidoresPage = ({
           <button
             type="button"
             onClick={handleAddEmployee}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
           >
             <Plus size={18} />
             Novo Servidor
@@ -637,36 +637,36 @@ export const ServidoresPage = ({
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="app-subtle-surface p-4">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="app-subtle-surface p-3 sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Total
           </p>
-          <p className="mt-2 text-2xl font-bold text-white">{summary.total}</p>
+          <p className="mt-2 text-xl font-bold text-white sm:text-2xl">{summary.total}</p>
           <p className="mt-1 text-xs text-slate-600">servidores cadastrados</p>
         </div>
 
-        <div className="app-subtle-surface p-4">
+        <div className="app-subtle-surface p-3 sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Ativos
           </p>
-          <p className="mt-2 text-2xl font-bold text-emerald-400">{summary.ativos}</p>
+          <p className="mt-2 text-xl font-bold text-emerald-400 sm:text-2xl">{summary.ativos}</p>
           <p className="mt-1 text-xs text-slate-600">em situação ativa</p>
         </div>
 
-        <div className="app-subtle-surface p-4">
+        <div className="app-subtle-surface p-3 sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Inativos
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-300">{summary.inativos}</p>
+          <p className="mt-2 text-xl font-bold text-slate-300 sm:text-2xl">{summary.inativos}</p>
           <p className="mt-1 text-xs text-slate-600">em situação inativa</p>
         </div>
 
-        <div className="app-subtle-surface p-4">
+        <div className="app-subtle-surface p-3 sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Exibidos
           </p>
-          <p className="mt-2 text-2xl font-bold text-primary">{summary.filtrados}</p>
+          <p className="mt-2 text-xl font-bold text-primary sm:text-2xl">{summary.filtrados}</p>
           <p className="mt-1 text-xs text-slate-600">após busca e filtros</p>
         </div>
       </section>
@@ -688,7 +688,7 @@ export const ServidoresPage = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:flex xl:items-center">
+            <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-4 xl:flex xl:items-center">
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
@@ -739,7 +739,7 @@ export const ServidoresPage = ({
             <button
               type="button"
               onClick={() => fetchEmployees()}
-              className="flex h-11 items-center justify-center rounded-xl border border-border-dark bg-slate-900/35 px-4 text-sm font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              className="flex h-11 w-full items-center justify-center rounded-xl border border-border-dark bg-slate-900/35 px-4 text-sm font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white xl:w-auto"
               title="Recarregar lista"
             >
               <motion.div
@@ -825,12 +825,12 @@ export const ServidoresPage = ({
                 return (
                   <div
                     key={emp.id}
-                    className="group flex flex-col gap-4 px-4 py-4 transition hover:bg-slate-800/20 sm:px-5 lg:flex-row lg:items-center"
+                    className="group flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-800/20 sm:gap-4 sm:px-5 lg:flex-row lg:items-center"
                   >
                     <button
                       type="button"
                       onClick={() => handleOpenDetails(emp)}
-                      className="flex min-w-0 flex-1 items-center gap-4 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      className="flex min-w-0 flex-1 items-start gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:items-center sm:gap-4"
                       title={`Abrir detalhes de ${safeName}`}
                     >
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-sm font-bold text-primary ring-1 ring-primary/15">
@@ -857,11 +857,11 @@ export const ServidoresPage = ({
                       </div>
                     </button>
 
-                    <div className="flex items-center justify-end gap-1 lg:pl-4">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-1 lg:pl-4">
                       <button
                         type="button"
                         onClick={() => handleEditEmployee(emp)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-primary/10 hover:text-primary"
+                        className="flex min-h-10 w-full items-center justify-center rounded-xl border border-border-dark/60 text-slate-500 transition hover:bg-primary/10 hover:text-primary sm:h-9 sm:w-9 sm:border-0"
                         title="Editar"
                       >
                         <Edit2 size={16} />
@@ -870,7 +870,7 @@ export const ServidoresPage = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteEmployee(emp.id)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-400"
+                        className="flex min-h-10 w-full items-center justify-center rounded-xl border border-border-dark/60 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-400 sm:h-9 sm:w-9 sm:border-0"
                         title="Excluir"
                       >
                         <Trash2 size={16} />
@@ -912,7 +912,7 @@ export const ServidoresPage = ({
 
       <AnimatePresence>
         {isDetailsModalOpen && detailEmployee && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -925,12 +925,12 @@ export const ServidoresPage = ({
               initial={{ scale: 0.96, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 20 }}
-              className="relative z-[61] w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-dark bg-card-dark shadow-2xl"
+              className="relative z-[61] max-h-[calc(100dvh-1rem)] w-full max-w-5xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
             >
-              <div className="border-b border-border-dark bg-slate-900/60 px-6 py-5">
+              <div className="border-b border-border-dark bg-slate-900/60 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-inner shrink-0">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-800 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-inner shrink-0">
                       {getInitials(detailEmployee.nomeCompleto)}
                     </div>
 
@@ -938,7 +938,7 @@ export const ServidoresPage = ({
                       <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">
                         Ficha do Servidor
                       </p>
-                      <h2 className="text-2xl font-bold text-white truncate">
+                      <h2 className="break-words text-xl font-bold text-white sm:text-2xl sm:truncate">
                         {detailEmployee.nomeCompleto}
                       </h2>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -951,7 +951,7 @@ export const ServidoresPage = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-end gap-2 self-end md:self-start">
+                  <div className="grid w-full grid-cols-2 gap-2 self-stretch sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end md:self-start">
                     <button
                       type="button"
                       disabled
@@ -987,7 +987,7 @@ export const ServidoresPage = ({
                 </div>
               </div>
 
-              <div className="max-h-[calc(90vh-110px)] overflow-y-auto px-6 py-6 space-y-8">
+              <div className="max-h-[calc(100dvh-9rem)] space-y-6 overflow-y-auto px-4 py-4 sm:max-h-[calc(90vh-110px)] sm:space-y-8 sm:px-6 sm:py-6">
                 <section className="space-y-4">
                   <div className="border-b border-border-dark pb-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
@@ -1073,7 +1073,7 @@ export const ServidoresPage = ({
 
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1087,9 +1087,9 @@ export const ServidoresPage = ({
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative z-[71] bg-card-dark border border-border-dark rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden"
+              className="relative z-[71] max-h-[calc(100dvh-1rem)] w-full max-w-4xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl"
             >
-              <div className="p-6 border-b border-border-dark flex justify-between items-center">
+              <div className="flex items-center justify-between border-b border-border-dark p-4 sm:p-6">
                 <h2 className="text-xl font-bold text-white">
                   {editingEmployee ? 'Editar Servidor' : 'Novo Servidor'}
                 </h2>
@@ -1101,7 +1101,7 @@ export const ServidoresPage = ({
                 </button>
               </div>
 
-              <div className="p-6 max-h-[75vh] overflow-y-auto scrollbar-hide">
+              <div className="max-h-[calc(100dvh-10rem)] overflow-y-auto p-4 scrollbar-hide sm:max-h-[75vh] sm:p-6">
                 <form id="servidor-form" onSubmit={handleSave} className="space-y-8">
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
@@ -1382,18 +1382,18 @@ export const ServidoresPage = ({
                 </form>
               </div>
 
-              <div className="p-6 border-t border-border-dark flex justify-end gap-3 bg-slate-800/20">
+              <div className="grid grid-cols-1 gap-2 border-t border-border-dark bg-slate-800/20 p-4 sm:flex sm:justify-end sm:gap-3 sm:p-6">
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors"
+                  className="min-h-11 w-full rounded-xl px-6 py-2.5 text-sm font-bold text-slate-400 transition-colors hover:text-white sm:w-auto"
                 >
                   Cancelar
                 </button>
                 <button
                   form="servidor-form"
                   type="submit"
-                  className="bg-primary hover:bg-primary-hover text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all"
+                  className="min-h-11 w-full rounded-xl bg-primary px-8 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover sm:w-auto"
                 >
                   {editingEmployee ? 'Salvar Alterações' : 'Cadastrar Servidor'}
                 </button>
@@ -1419,7 +1419,7 @@ export const ServidoresPage = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative z-[91] w-full max-w-md rounded-3xl border border-border-dark bg-card-dark shadow-2xl overflow-hidden"
+              className="relative z-[91] w-full max-w-md overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl sm:rounded-3xl"
             >
               <div className="p-6 border-b border-border-dark">
                 <div className="flex items-start gap-4">
@@ -1438,12 +1438,12 @@ export const ServidoresPage = ({
                 </div>
               </div>
 
-              <div className="p-6 flex items-center justify-end gap-3 bg-slate-900/20">
+              <div className="grid grid-cols-1 gap-2 bg-slate-900/20 p-4 sm:flex sm:items-center sm:justify-end sm:gap-3 sm:p-6">
                 <button
                   type="button"
                   onClick={closeConfirmSaveModal}
                   disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-50"
+                  className="min-h-11 w-full rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-300 transition-all hover:bg-slate-800 hover:text-white disabled:opacity-50 sm:w-auto"
                 >
                   Não, cancelar
                 </button>
@@ -1451,7 +1451,7 @@ export const ServidoresPage = ({
                   type="button"
                   onClick={confirmSaveEmployee}
                   disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
+                  className="min-h-11 w-full rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover disabled:opacity-50 sm:w-auto"
                 >
                   {isSaving ? 'Salvando...' : 'Sim, salvar'}
                 </button>
