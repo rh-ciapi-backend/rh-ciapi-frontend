@@ -54,6 +54,23 @@ type FeriasSavePayload = Partial<FeriasUiRecord> & {
   ano?: number;
 };
 
+
+type FeriasProgramacaoPeriodo = {
+  inicio: string;
+  fim: string;
+};
+
+type FeriasProgramacaoPayload = {
+  servidorId?: string;
+  servidorNome?: string;
+  matricula?: string;
+  cpf?: string;
+  setor?: string;
+  observacao?: string;
+  ano?: number;
+  periodos: FeriasProgramacaoPeriodo[];
+};
+
 const TABLE_FERIAS = 'ferias';
 const TABLE_SERVIDORES = 'servidores';
 
@@ -275,6 +292,51 @@ const ensureValidPeriodo = (inicio?: NullableString, fim?: NullableString) => {
   if (calculateDays(safeInicio, safeFim) <= 0) {
     throw new Error('O período informado é inválido.');
   }
+};
+
+
+const validateProgramacao30Dias = (periodos: FeriasProgramacaoPeriodo[]) => {
+  const normalized = (Array.isArray(periodos) ? periodos : [])
+    .map((periodo) => ({
+      inicio: safeString(periodo?.inicio),
+      fim: safeString(periodo?.fim),
+    }))
+    .filter((periodo) => periodo.inicio || periodo.fim);
+
+  if (![1, 2, 3].includes(normalized.length)) {
+    throw new Error('A programação de férias deve ter 1, 2 ou 3 períodos.');
+  }
+
+  normalized.forEach((periodo) => ensureValidPeriodo(periodo.inicio, periodo.fim));
+
+  const dias = normalized.map((periodo) => calculateDays(periodo.inicio, periodo.fim));
+  const total = dias.reduce((acc, atual) => acc + atual, 0);
+
+  const formatoValido =
+    (dias.length === 1 && dias[0] === 30) ||
+    (dias.length === 2 && dias.every((dia) => dia === 15)) ||
+    (dias.length === 3 && dias.every((dia) => dia === 10));
+
+  if (!formatoValido || total !== 30) {
+    throw new Error('As férias devem totalizar 30 dias no formato 30, 15 + 15 ou 10 + 10 + 10.');
+  }
+
+  const ordenados = normalized
+    .map((periodo, index) => ({ ...periodo, originalIndex: index }))
+    .sort((a, b) => a.inicio.localeCompare(b.inicio));
+
+  for (let index = 1; index < ordenados.length; index += 1) {
+    if (overlaps(
+      ordenados[index - 1].inicio,
+      ordenados[index - 1].fim,
+      ordenados[index].inicio,
+      ordenados[index].fim,
+    )) {
+      throw new Error('Os períodos de férias não podem se sobrepor.');
+    }
+  }
+
+  return normalized;
 };
 
 const fetchServidoresMap = async () => {
@@ -513,6 +575,154 @@ export const apiFerias = {
     }
 
     return firstPeriod;
+  },
+
+  async criarProgramacao(payload: FeriasProgramacaoPayload): Promise<FeriasUiRecord[]> {
+    const servidorCpf = normalizeCpf(payload.cpf || payload.servidorId);
+    const observacao = safeString(payload.observacao);
+    const periodos = validateProgramacao30Dias(payload.periodos);
+    const ano = Number(payload.ano || toYear(periodos[0]?.inicio));
+
+    if (!servidorCpf) {
+      throw new Error('Servidor não informado para o cadastro de férias.');
+    }
+
+    const anosDosPeriodos = new Set(periodos.map((periodo) => toYear(periodo.inicio)));
+    if (anosDosPeriodos.size !== 1 || !anosDosPeriodos.has(ano)) {
+      throw new Error('Todos os períodos da programação devem pertencer ao mesmo exercício.');
+    }
+
+    if (API_CONFIG.useMock) {
+      const existingIndex = feriasMock.findIndex(
+        (item) => normalizeCpf(item.servidorId) === servidorCpf && Number(item.ano) === ano,
+      );
+
+      if (existingIndex >= 0) {
+        const existente = feriasMock[existingIndex];
+        const hasAny =
+          safeString(existente.periodo1Inicio) ||
+          safeString(existente.periodo1Fim) ||
+          safeString(existente.periodo2Inicio) ||
+          safeString(existente.periodo2Fim) ||
+          safeString(existente.periodo3Inicio) ||
+          safeString(existente.periodo3Fim);
+
+        if (hasAny) {
+          throw new Error('Este servidor já possui programação de férias cadastrada para esse ano.');
+        }
+      }
+
+      const row: Ferias = existingIndex >= 0
+        ? feriasMock[existingIndex]
+        : {
+            id: Math.random().toString(36).slice(2, 10),
+            servidorId: servidorCpf,
+            ano,
+            periodo1Inicio: '',
+            periodo1Fim: '',
+            periodo2Inicio: '',
+            periodo2Fim: '',
+            periodo3Inicio: '',
+            periodo3Fim: '',
+            observacao: '',
+          };
+
+      row.periodo1Inicio = periodos[0]?.inicio || '';
+      row.periodo1Fim = periodos[0]?.fim || '';
+      row.periodo2Inicio = periodos[1]?.inicio || '';
+      row.periodo2Fim = periodos[1]?.fim || '';
+      row.periodo3Inicio = periodos[2]?.inicio || '';
+      row.periodo3Fim = periodos[2]?.fim || '';
+      row.observacao = observacao;
+
+      if (existingIndex < 0) feriasMock.push(row);
+
+      const dbRow: DbFeriasRow = {
+        id: row.id,
+        servidor_cpf: servidorCpf,
+        ano,
+        periodo1_inicio: row.periodo1Inicio,
+        periodo1_fim: row.periodo1Fim,
+        periodo2_inicio: row.periodo2Inicio,
+        periodo2_fim: row.periodo2Fim,
+        periodo3_inicio: row.periodo3Inicio,
+        periodo3_fim: row.periodo3Fim,
+        observacao: row.observacao,
+      };
+
+      return flattenRowToPeriods(dbRow).map((saved) => ({
+        ...saved,
+        servidorNome: safeString(payload.servidorNome),
+        matricula: safeString(payload.matricula),
+        cpf: servidorCpf,
+        setor: safeString(payload.setor),
+      }));
+    }
+
+    const existingRows = await findRowsByServidorAno(servidorCpf, ano);
+    const existingPeriods = existingRows.flatMap((row) => flattenRowToPeriods(row));
+
+    if (existingPeriods.length > 0) {
+      throw new Error('Este servidor já possui programação de férias cadastrada para esse ano.');
+    }
+
+    const insertPayload = {
+      servidor_cpf: servidorCpf,
+      ano,
+      periodo1_inicio: periodos[0]?.inicio || null,
+      periodo1_fim: periodos[0]?.fim || null,
+      periodo2_inicio: periodos[1]?.inicio || null,
+      periodo2_fim: periodos[1]?.fim || null,
+      periodo3_inicio: periodos[2]?.inicio || null,
+      periodo3_fim: periodos[2]?.fim || null,
+      observacao: observacao || null,
+    };
+
+    let savedRow: DbFeriasRow | null = null;
+
+    if (existingRows.length > 0) {
+      const target = existingRows[0];
+      const { data, error } = await supabase
+        .from(TABLE_FERIAS)
+        .update(insertPayload)
+        .eq('id', target.id)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(getErrorMessage(error, 'Falha ao salvar a programação de férias.'));
+      }
+      savedRow = data as DbFeriasRow;
+    } else {
+      const { data, error } = await supabase
+        .from(TABLE_FERIAS)
+        .insert(insertPayload)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(getErrorMessage(error, 'Falha ao criar a programação de férias.'));
+      }
+      savedRow = data as DbFeriasRow;
+    }
+
+    const saved = flattenRowToPeriods(savedRow);
+
+    await registrarLog('CRIAR', safeString(savedRow.id), {
+      servidorCpf,
+      ano,
+      periodos,
+      observacao,
+      totalDias: 30,
+    });
+
+    return saved.map((item) => ({
+      ...item,
+      servidorNome: safeString(payload.servidorNome),
+      matricula: safeString(payload.matricula),
+      cpf: servidorCpf,
+      setor: safeString(payload.setor),
+    }));
   },
 
   async criar(payload: FeriasSavePayload): Promise<FeriasUiRecord> {
