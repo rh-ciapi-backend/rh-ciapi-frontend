@@ -93,32 +93,34 @@ export function FeriasCalendar({ ano, mes, registros, onSelectDate }: FeriasCale
   }, [ano, activeMonth, registros]);
 
   return (
-    <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-      <div className="app-surface p-5">
+    <section className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+      <div className="app-surface min-w-0 p-4 sm:p-5">
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-primary">
               <CalendarDays className="h-5 w-5" />
               <span className="text-xs font-semibold uppercase tracking-[0.22em]">Calendário operacional</span>
             </div>
-            <h2 className="mt-2 text-2xl font-bold capitalize text-white">{monthName(activeMonth)}</h2>
+            <h2 className="mt-2 text-xl font-bold capitalize text-white sm:text-2xl">{monthName(activeMonth)}</h2>
             <p className="mt-1 text-sm text-slate-400">Clique em um dia destacado para ver quem estará em férias.</p>
           </div>
 
-          <div className="app-subtle-surface px-4 py-3 text-right">
+          <div className="app-subtle-surface w-full px-4 py-3 text-left md:w-auto md:text-right">
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Ocorrências no mês</p>
             <p className="mt-1 text-2xl font-bold text-white">{totalEmDestaque}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {WEEK_LABELS.map((label) => (
-            <div key={label} className="pb-2">{label}</div>
-          ))}
-        </div>
+        <div className="responsive-scroll">
+          <div className="min-w-[680px]">
+            <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {WEEK_LABELS.map((label) => (
+                <div key={label} className="pb-2">{label}</div>
+              ))}
+            </div>
 
-        <div className="grid grid-cols-7 gap-2">
-          {days.map((day) => {
+            <div className="grid grid-cols-7 gap-2">
+              {days.map((day) => {
             const iso = formatIso(day);
             const items = recordsByDate.get(iso) || [];
             const inCurrentMonth = day.getMonth() + 1 === activeMonth;
@@ -155,11 +157,13 @@ export function FeriasCalendar({ ano, mes, registros, onSelectDate }: FeriasCale
                 </div>
               </button>
             );
-          })}
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="app-surface p-5">
+      <div className="app-surface min-w-0 p-4 sm:p-5">
         <div className="flex items-center gap-2 text-primary">
           <Sparkles className="h-5 w-5" />
           <span className="text-xs font-semibold uppercase tracking-[0.22em]">Planejamento anual</span>
