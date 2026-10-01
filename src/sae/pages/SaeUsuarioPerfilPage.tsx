@@ -20,6 +20,7 @@ import { motion } from 'motion/react';
 
 import { saeUsuariosService } from '../services/saeUsuariosService';
 import EditarUsuarioModal from '../components/usuarios/EditarUsuarioModal';
+import SaeProntuarioDocumentos from '../components/documentos/SaeProntuarioDocumentos';
 
 import type {
   SaeUsuarioPerfil,
@@ -40,7 +41,8 @@ type AbaPerfil =
   | 'agendamentos'
   | 'atendimentos'
   | 'avaliacoes'
-  | 'sinais-vitais';
+  | 'sinais-vitais'
+  | 'documentos';
 
 const statusUsuarioStyles = {
   ATIVO:
@@ -142,7 +144,7 @@ export default function SaeUsuarioPerfilPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-5 sm:space-y-6"
+      className="space-y-6"
     >
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
@@ -195,14 +197,14 @@ export default function SaeUsuarioPerfilPage({
         <button
           type="button"
           onClick={() => setEditarAberto(true)}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-600 sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-600"
         >
           <Pencil size={17} />
           Editar informações
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Agendamentos"
           value={perfil.agendamentos.length}
@@ -242,8 +244,8 @@ export default function SaeUsuarioPerfilPage({
         />
       </div>
 
-      <div className="responsive-scroll">
-        <div className="inline-flex min-w-max gap-1 rounded-xl border border-border-dark bg-card-dark p-1 sm:min-w-0">
+      <div className="overflow-x-auto">
+        <div className="inline-flex min-w-full gap-1 rounded-xl border border-border-dark bg-card-dark p-1 sm:min-w-0">
           <TabButton
             active={aba === 'resumo'}
             onClick={() => setAba('resumo')}
@@ -278,6 +280,13 @@ export default function SaeUsuarioPerfilPage({
           >
             Sinais vitais
           </TabButton>
+
+          <TabButton
+            active={aba === 'documentos'}
+            onClick={() => setAba('documentos')}
+          >
+            Documentos
+          </TabButton>
         </div>
       </div>
 
@@ -302,6 +311,10 @@ export default function SaeUsuarioPerfilPage({
 
       {aba === 'sinais-vitais' && (
         <SinaisVitaisTab itens={perfil.sinaisVitais} />
+      )}
+
+      {aba === 'documentos' && (
+        <SaeProntuarioDocumentos usuarioId={usuario.id} />
       )}
 
       <EditarUsuarioModal
@@ -508,7 +521,7 @@ function AgendamentosTab({
         return (
           <article
             key={agendamento.id}
-            className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[18px] sm:p-5"
+            className="rounded-[18px] border border-border-dark bg-card-dark p-5"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
@@ -548,7 +561,7 @@ function AgendamentosTab({
             </div>
 
             {agendamento.servicos.length > 0 ? (
-              <div className="mt-4 grid gap-3 sm:mt-5 lg:grid-cols-2">
+              <div className="mt-5 grid gap-3 lg:grid-cols-2">
                 {agendamento.servicos.map(
                   (servico) => (
                     <div
@@ -654,7 +667,7 @@ function AtendimentosTab({
       {itens.map((item) => (
         <article
           key={item.id}
-          className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[18px] sm:p-5"
+          className="rounded-[18px] border border-border-dark bg-card-dark p-5"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -917,7 +930,7 @@ function SinaisVitaisTab({
       {itens.map((item) => (
         <article
           key={item.id}
-          className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[18px] sm:p-5"
+          className="rounded-[18px] border border-border-dark bg-card-dark p-5"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -972,7 +985,7 @@ function KpiCard({
   icon: React.ElementType;
 }) {
   return (
-    <article className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[18px] sm:p-5">
+    <article className="rounded-[18px] border border-border-dark bg-card-dark p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -1006,7 +1019,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[18px] sm:p-5">
+    <section className="rounded-[18px] border border-border-dark bg-card-dark p-5">
       <div className="mb-5 flex items-center gap-2">
         <Icon
           size={17}
@@ -1232,11 +1245,11 @@ function ErrorState({
           {mensagem}
         </p>
 
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-5 flex justify-center gap-3">
           <button
             type="button"
             onClick={onVoltar}
-            className="min-h-11 w-full rounded-xl border border-border-dark bg-slate-800/50 px-4 py-2.5 text-sm font-semibold text-slate-300 sm:w-auto"
+            className="rounded-xl border border-border-dark bg-slate-800/50 px-4 py-2.5 text-sm font-semibold text-slate-300"
           >
             Voltar
           </button>
@@ -1244,7 +1257,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onRetry}
-            className="min-h-11 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white sm:w-auto"
+            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
           >
             Tentar novamente
           </button>
