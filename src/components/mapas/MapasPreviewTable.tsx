@@ -33,18 +33,18 @@ export function MapasPreviewTable({ linhas, layout, onObservationChange }: Props
 
     if (isEditing) {
       return (
-        <div className="min-w-[280px] space-y-2">
+        <div className="min-w-[240px] space-y-2 sm:min-w-[280px]">
           <textarea
             value={draftObservation}
             onChange={(e) => setDraftObservation(e.target.value)}
             rows={3}
             className="w-full rounded-xl border border-cyan-400/20 bg-slate-950 px-3 py-2 text-sm text-white outline-none"
           />
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex">
             <button
               type="button"
               onClick={() => saveEdit(index)}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-3 py-2 text-xs font-bold text-slate-950"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-3 py-2 text-xs font-bold text-slate-950 sm:w-auto"
             >
               <Save size={14} />
               Salvar
@@ -52,7 +52,7 @@ export function MapasPreviewTable({ linhas, layout, onObservationChange }: Props
             <button
               type="button"
               onClick={cancelEdit}
-              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white sm:w-auto"
             >
               <X size={14} />
               Cancelar
@@ -63,7 +63,7 @@ export function MapasPreviewTable({ linhas, layout, onObservationChange }: Props
     }
 
     return (
-      <div className="min-w-[240px] space-y-2">
+      <div className="min-w-[210px] space-y-2 sm:min-w-[240px]">
         <p className="whitespace-pre-wrap break-words text-slate-300">
           {linha.observacao || '—'}
         </p>
@@ -174,16 +174,16 @@ export function MapasPreviewTable({ linhas, layout, onObservationChange }: Props
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
-      <div className="border-b border-white/10 px-5 py-4">
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
+      <div className="border-b border-white/10 px-4 py-4 sm:px-5">
         <h3 className="text-lg font-bold text-white">Pré-visualização do mapa</h3>
         <p className="mt-1 text-sm text-slate-400">
           A tabela se adapta automaticamente ao layout selecionado e permite editar observações antes da exportação.
         </p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm text-slate-300">
+      <div className="responsive-scroll">
+        <table className="min-w-[860px] text-left text-sm text-slate-300 xl:min-w-full">
           <thead className="bg-slate-950/80 text-xs uppercase tracking-wide text-slate-400">
             {renderHead()}
           </thead>
