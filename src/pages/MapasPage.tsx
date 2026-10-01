@@ -156,7 +156,7 @@ export default function MapasPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <MapasHero />
 
       {error && (
@@ -165,8 +165,8 @@ export default function MapasPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-2 shadow-xl">
-        <div className="flex flex-wrap gap-2">
+      <div className="responsive-scroll rounded-2xl border border-white/10 bg-slate-900/70 p-2 shadow-xl">
+        <div className="flex min-w-max gap-2 sm:min-w-0 sm:flex-wrap">
           {tabs.map(({ key, label, icon: Icon }) => {
             const active = activeTab === key;
             return (
@@ -175,7 +175,7 @@ export default function MapasPage() {
                 type="button"
                 onClick={() => setActiveTab(key)}
                 className={[
-                  'inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition',
+                  'inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-semibold transition',
                   active
                     ? 'bg-cyan-500 text-slate-950'
                     : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white',
@@ -204,14 +204,14 @@ export default function MapasPage() {
       )}
 
       {activeTab === 'resumo' && (
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
+        <div className="grid gap-4 sm:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl sm:p-6">
             <h3 className="text-lg font-bold text-white">Painel executivo</h3>
             <p className="mt-1 text-sm text-slate-400">
               Visão geral do mapa mensal com foco em quantidade, pendências e observações.
             </p>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 sm:mt-6">
               <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                 <p className="text-xs uppercase tracking-wide text-slate-400">Layout resolvido</p>
                 <p className="mt-2 text-base font-semibold text-white">{preview.layout}</p>
@@ -231,13 +231,13 @@ export default function MapasPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
+          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl sm:p-6">
             <h3 className="text-lg font-bold text-white">Ações rápidas</h3>
             <p className="mt-1 text-sm text-slate-400">
               Valide os dados e gere o documento oficial do mapa.
             </p>
 
-            <div className="mt-6">
+            <div className="mt-5 sm:mt-6">
               <MapasExportActions
                 isBusy={loading || exporting}
                 onValidate={validateData}
@@ -266,7 +266,7 @@ export default function MapasPage() {
       )}
 
       {activeTab === 'diagnostico' && (
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           <MapasExportActions
             isBusy={loading || exporting}
             onValidate={validateData}
