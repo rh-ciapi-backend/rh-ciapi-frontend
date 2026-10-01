@@ -19,8 +19,8 @@ export function MapasFilters({ filters, categorias, setores, onChange, onRefresh
   const anos = Array.from({ length: 6 }).map((_, idx) => anoAtual - idx);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-xl">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl sm:p-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <label className="space-y-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mês</span>
           <select
@@ -117,10 +117,10 @@ export function MapasFilters({ filters, categorias, setores, onChange, onRefresh
         </label>
       </div>
 
-      <div className="mt-5 flex justify-end">
+      <div className="mt-5 flex justify-stretch sm:justify-end">
         <button
           onClick={onRefresh}
-          className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-400"
+          className="min-h-11 w-full rounded-xl bg-cyan-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 sm:w-auto"
         >
           Atualizar mapa
         </button>
