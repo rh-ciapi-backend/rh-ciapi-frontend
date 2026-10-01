@@ -120,7 +120,7 @@ function StatCard({
       transition={{ duration: 0.18 }}
       onClick={onClick}
       disabled={!onClick}
-      className={`app-surface w-full p-5 text-left transition ${
+      className={`app-surface w-full p-4 text-left transition sm:p-5 ${
         onClick
           ? 'cursor-pointer hover:border-slate-500/70'
           : 'cursor-default'
@@ -132,11 +132,11 @@ function StatCard({
             {title}
           </p>
 
-          <p className="mt-2 text-3xl font-bold tracking-tight text-white">
+          <p className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
             {value}
           </p>
 
-          <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
+          <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">{subtitle}</p>
         </div>
 
         <div
@@ -295,17 +295,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       ) : null}
 
-      <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <section className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Visão geral
           </p>
 
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
             {greeting}, {primeiroNome}
           </h2>
 
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400 sm:text-sm">
             <div className="flex items-center gap-2">
               <CalendarDays size={16} className="text-slate-500" />
               <span>{formattedDate}</span>
@@ -327,14 +327,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('servidores', 'add')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
         >
           <Plus size={18} />
           Novo Servidor
         </button>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <StatCard
           title="Total de servidores"
           value={stats.total}
