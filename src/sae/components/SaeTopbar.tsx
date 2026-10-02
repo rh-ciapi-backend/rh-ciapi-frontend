@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ChevronDown,
   Layers3,
+  KeyRound,
   Search,
 } from 'lucide-react';
 
@@ -16,6 +17,7 @@ import { SaeTab } from './SaeSidebar';
 import MinhaAgendaModal from './agendamentos/MinhaAgendaModal';
 import CentralSolicitacoesModal from './agendamentos/CentralSolicitacoesModal';
 import { saeAgendaService } from '../services/saeAgendaService';
+import SaeAlterarSenhaModal from './SaeAlterarSenhaModal';
 
 interface SaeTopbarProps {
   activeTab: SaeTab;
@@ -69,6 +71,10 @@ export default function SaeTopbar({
   const [
     minhaAgendaAberta,
     setMinhaAgendaAberta,
+  ] = useState(false);
+  const [
+    senhaAberta,
+    setSenhaAberta,
   ] = useState(false);
   const [
     centralAberta,
@@ -254,7 +260,17 @@ export default function SaeTopbar({
           </button>
           )}
 
-          <div className="flex items-center gap-2 rounded-xl border border-border-dark bg-card-dark p-1.5 sm:gap-3 sm:px-3 sm:py-2">
+          <button
+            type="button"
+            onClick={() => restrictedProfessional && setSenhaAberta(true)}
+            className={[
+              'flex items-center gap-2 rounded-xl border border-border-dark bg-card-dark p-1.5 text-left sm:gap-3 sm:px-3 sm:py-2',
+              restrictedProfessional
+                ? 'transition hover:border-primary/30 hover:bg-slate-800/70'
+                : 'cursor-default',
+            ].join(' ')}
+            title={restrictedProfessional ? 'Minha conta / alterar senha' : undefined}
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-bold text-white">
               {firstName
                 .slice(0, 2)
@@ -266,11 +282,18 @@ export default function SaeTopbar({
                 {firstName}
               </p>
 
-              <p className="text-[10px] text-slate-500">
-                Servidor • SAE
+              <p className="flex items-center gap-1 text-[10px] text-slate-500">
+                {restrictedProfessional ? (
+                  <>
+                    <KeyRound size={10} />
+                    Minha conta
+                  </>
+                ) : (
+                  'Servidor • SAE'
+                )}
               </p>
             </div>
-          </div>
+          </button>
         </div>
       </header>
 
@@ -294,6 +317,11 @@ export default function SaeTopbar({
           />
         </>
       )}
+
+      <SaeAlterarSenhaModal
+        aberto={senhaAberta}
+        onClose={() => setSenhaAberta(false)}
+      />
     </>
   );
 }
