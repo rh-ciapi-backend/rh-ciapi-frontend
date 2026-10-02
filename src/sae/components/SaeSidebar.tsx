@@ -14,6 +14,7 @@ import {
   Settings,
   Stethoscope,
   Users,
+  UserCog,
   X,
 } from 'lucide-react';
 
