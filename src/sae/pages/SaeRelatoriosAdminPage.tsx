@@ -16,7 +16,7 @@ import {
   saeAdministrativoService,
   type SaeAdminDocumento,
   type SaeAdminUsuario,
-} from '../services/saeAdministrativoService';
+} from './saeAdministrativoService';
 import { saeDocumentosService } from '../services/saeDocumentosService';
 
 const normalize = (value: unknown) =>
