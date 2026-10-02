@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  FileDown,
   FileText,
   FilterX,
   MapPin,
@@ -461,25 +460,6 @@ export default function SaeRelatoriosAdminPage() {
     );
   };
 
-  const baixarModelo = () => {
-    baixarCsv(
-      'modelo-relatorio-usuarios-sae.csv',
-      [
-        'PRONTUÁRIO',
-        'NOME',
-        'IDADE',
-        'SEXO',
-        'BAIRRO',
-        'TURNO',
-        'SITUAÇÃO',
-        'TELEFONE',
-        'ENDEREÇO',
-        'RELATÓRIOS',
-      ],
-      [],
-    );
-  };
-
   if (carregando) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
@@ -490,7 +470,7 @@ export default function SaeRelatoriosAdminPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="app-surface p-4 sm:p-6">
+      <section className="app-surface overflow-hidden border-primary/10 bg-gradient-to-br from-card-dark via-card-dark to-blue-950/25 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
@@ -504,22 +484,24 @@ export default function SaeRelatoriosAdminPage() {
             <p className="mt-2 text-sm text-slate-400">
               A visão principal considera usuários ativos. Use “Incluir inativos” somente quando precisar pesquisar registros históricos.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+                Ativos por padrão
+              </span>
+              <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300">
+                Filtros dinâmicos
+              </span>
+              <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-300">
+                Exportação CSV
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:flex">
             <button
               type="button"
-              onClick={baixarModelo}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-dark px-4 text-sm font-bold text-slate-300 hover:bg-slate-800"
-            >
-              <FileDown size={17} />
-              Modelo da planilha
-            </button>
-
-            <button
-              type="button"
               onClick={exportar}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white hover:bg-primary-hover"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/15 transition hover:brightness-110"
             >
               <Download size={17} />
               Baixar dados filtrados
@@ -538,7 +520,7 @@ export default function SaeRelatoriosAdminPage() {
         </div>
       )}
 
-      <section className="app-surface overflow-hidden">
+      <section className="app-surface overflow-hidden border-blue-500/10 bg-gradient-to-br from-card-dark to-slate-900/70">
         <div className="border-b border-border-dark p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
             <label className="min-w-0 flex-1 space-y-2">
@@ -598,8 +580,8 @@ export default function SaeRelatoriosAdminPage() {
               className={[
                 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition',
                 filtrosAvancados
-                  ? 'border-primary/40 bg-primary/10 text-blue-200'
-                  : 'border-border-dark text-slate-300 hover:bg-slate-800',
+                  ? 'border-blue-400/40 bg-blue-500/15 text-blue-200 shadow-sm shadow-blue-500/10'
+                  : 'border-border-dark text-slate-300 hover:border-blue-400/20 hover:bg-blue-500/5',
               ].join(' ')}
             >
               <SlidersHorizontal size={16} />
@@ -609,7 +591,7 @@ export default function SaeRelatoriosAdminPage() {
             <button
               type="button"
               onClick={limpar}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-dark px-4 text-sm font-bold text-slate-300 hover:bg-slate-800"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-dark px-4 text-sm font-bold text-slate-300 transition hover:border-rose-400/20 hover:bg-rose-500/5 hover:text-rose-200"
             >
               <FilterX size={16} />
               Limpar
@@ -653,7 +635,7 @@ export default function SaeRelatoriosAdminPage() {
               ]}
             />
 
-            <label className="ml-auto inline-flex min-h-10 cursor-pointer items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 text-xs font-bold text-amber-200">
+            <label className="ml-auto inline-flex min-h-10 cursor-pointer items-center gap-3 rounded-xl border border-amber-400/25 bg-gradient-to-r from-amber-500/10 to-orange-500/10 px-3 text-xs font-bold text-amber-200 transition hover:border-amber-400/40">
               <input
                 type="checkbox"
                 checked={incluirInativos}
@@ -849,7 +831,7 @@ export default function SaeRelatoriosAdminPage() {
           {usuariosPagina.map((u) => (
             <article
               key={u.id}
-              className="rounded-2xl border border-border-dark bg-slate-900/25 p-4 transition hover:border-primary/25 hover:bg-slate-900/40"
+              className="rounded-2xl border border-border-dark bg-gradient-to-br from-slate-900/35 to-blue-950/10 p-4 transition hover:border-blue-400/25 hover:from-slate-900/50 hover:to-blue-950/20"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -862,7 +844,7 @@ export default function SaeRelatoriosAdminPage() {
                   </p>
                 </div>
 
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-blue-200">
+                <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">
                   {u.idade ?? '—'} anos
                 </span>
               </div>
@@ -1100,8 +1082,17 @@ function Kpi({
   icon: React.ElementType;
   suffix?: string;
 }) {
+  const tone =
+    label === 'Usuários'
+      ? 'border-blue-500/20 from-blue-500/10 to-blue-950/10 text-blue-300'
+      : label === 'Idade média'
+        ? 'border-violet-500/20 from-violet-500/10 to-violet-950/10 text-violet-300'
+        : label === 'Relatórios'
+          ? 'border-emerald-500/20 from-emerald-500/10 to-emerald-950/10 text-emerald-300'
+          : 'border-amber-500/20 from-amber-500/10 to-amber-950/10 text-amber-300';
+
   return (
-    <div className="app-surface p-4">
+    <div className={`app-surface border bg-gradient-to-br p-4 ${tone}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -1114,7 +1105,7 @@ function Kpi({
           </p>
         </div>
 
-        <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+        <div className="rounded-xl border border-current/10 bg-white/[0.03] p-2.5">
           <Icon size={19} />
         </div>
       </div>
@@ -1134,8 +1125,15 @@ function Distribution({
   }>;
   total: number;
 }) {
+  const accent =
+    title === 'Faixa etária'
+      ? 'from-violet-500/10 to-transparent border-violet-500/15'
+      : title === 'Principais bairros'
+        ? 'from-cyan-500/10 to-transparent border-cyan-500/15'
+        : 'from-emerald-500/10 to-transparent border-emerald-500/15';
+
   return (
-    <section className="app-surface p-4 sm:p-5">
+    <section className={`app-surface border bg-gradient-to-br p-4 sm:p-5 ${accent}`}>
       <h3 className="font-bold text-white">
         {title}
       </h3>
@@ -1163,7 +1161,7 @@ function Distribution({
 
                 <div className="h-2 overflow-hidden rounded-full bg-slate-800">
                   <div
-                    className="h-full rounded-full bg-primary"
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400"
                     style={{
                       width: `${Math.max(
                         pct,
