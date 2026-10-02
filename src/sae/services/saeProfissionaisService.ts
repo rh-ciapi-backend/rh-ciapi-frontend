@@ -2,9 +2,11 @@ import { supabase } from '../../lib/supabaseClient';
 import { API_BASE_URL } from '../../config/api';
 
 import type {
+  SaeCriarProfissionalResponse,
   SaeProfissional,
   SaeProfissionalForm,
   SaeProfissionaisListResponse,
+  SaeServidorBusca,
 } from '../types/saeProfissional';
 
 const buildUrl = (path = '') => {
@@ -21,9 +23,7 @@ const buildUrl = (path = '') => {
 async function getAccessToken() {
   const { data, error } = await supabase.auth.getSession();
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   const token = data.session?.access_token;
 
@@ -57,23 +57,29 @@ async function request<T>(path = '', options?: RequestInit): Promise<T> {
   return json as T;
 }
 
-const listarCompat = async (): Promise<SaeProfissionaisListResponse> => {
-  return request<SaeProfissionaisListResponse>();
-};
-
 export const saeProfissionaisService = {
   async listar(): Promise<SaeProfissionaisListResponse> {
-    return listarCompat();
+    return request<SaeProfissionaisListResponse>();
   },
 
+  // Compatibilidade com versões anteriores.
   async listarProfissionais(): Promise<SaeProfissionaisListResponse> {
-    return listarCompat();
+    return request<SaeProfissionaisListResponse>();
+  },
+
+  async buscarServidores(
+    busca: string,
+  ): Promise<{ servidores: SaeServidorBusca[] }> {
+    const params = new URLSearchParams({ busca, limit: '20' });
+    return request<{ servidores: SaeServidorBusca[] }>(
+      `/servidores?${params.toString()}`,
+    );
   },
 
   async adicionar(
     form: SaeProfissionalForm,
-  ): Promise<{ ok: true; profissional: SaeProfissional }> {
-    return request<{ ok: true; profissional: SaeProfissional }>('', {
+  ): Promise<SaeCriarProfissionalResponse> {
+    return request<SaeCriarProfissionalResponse>('', {
       method: 'POST',
       body: JSON.stringify(form),
     });
@@ -100,6 +106,24 @@ export const saeProfissionaisService = {
         body: JSON.stringify({ ativo }),
       },
     );
+  },
+
+  async redefinirSenha(
+    id: string,
+  ): Promise<{ ok: true; senhaTemporaria: string; mensagem: string }> {
+    return request<{ ok: true; senhaTemporaria: string; mensagem: string }>(
+      `/${id}/reset-password`,
+      { method: 'POST' },
+    );
+  },
+
+  async alterarMinhaSenha(
+    newPassword: string,
+  ): Promise<{ ok: true }> {
+    return request<{ ok: true }>('/minha-senha', {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
   },
 
   async excluir(id: string): Promise<{ ok: true }> {
