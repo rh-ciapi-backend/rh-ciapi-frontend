@@ -57,17 +57,18 @@ async function request<T>(path = '', options?: RequestInit): Promise<T> {
   return json as T;
 }
 
-async function listarCompat(): Promise<SaeProfissionaisListResponse> {
+const listarProfissionais = async (): Promise<SaeProfissionaisListResponse> => {
   return request<SaeProfissionaisListResponse>();
-}
+};
 
 export const saeProfissionaisService = {
   async listar(): Promise<SaeProfissionaisListResponse> {
-    return listarCompat();
+    return listarProfissionais();
   },
 
+  // Alias mantido para compatibilidade com componentes/cache de versões anteriores.
   async listarProfissionais(): Promise<SaeProfissionaisListResponse> {
-    return listarCompat();
+    return listarProfissionais();
   },
 
   async adicionar(
