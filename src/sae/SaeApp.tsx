@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 import SaeSidebar, { SaeTab } from './components/SaeSidebar';
@@ -10,15 +10,52 @@ import SaeTriagemPage from './pages/SaeTriagemPage';
 import SaeAgendamentosPage from './pages/SaeAgendamentosPage';
 import SaeRelatoriosPage from './pages/SaeRelatoriosPage';
 import type { SaeAgendamentoFoco } from './types/saeNavegacao';
+import { saeDocumentosService } from './services/saeDocumentosService';
+import SaeMapaProfissionalPage from './pages/SaeMapaProfissionalPage';
 
 export default function SaeApp() {
   const { signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState<SaeTab>('dashboard');
+  const [restrictedProfessional, setRestrictedProfessional] = useState(false);
+  const [accessResolved, setAccessResolved] = useState(false);
   const [usuarioSelecionadoId, setUsuarioSelecionadoId] =
     useState<string | null>(null);
   const [agendamentoFoco, setAgendamentoFoco] =
     useState<SaeAgendamentoFoco | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    saeDocumentosService.contexto()
+      .then((contexto) => {
+        if (!mounted) return;
+
+        const restricted = Boolean(
+          contexto.profissional?.ativo &&
+          !contexto.podeAdministrar,
+        );
+
+        setRestrictedProfessional(restricted);
+
+        if (restricted) {
+          setActiveTab('relatorios');
+          setUsuarioSelecionadoId(null);
+          setAgendamentoFoco(null);
+        }
+      })
+      .catch(() => {
+        // Falha no contexto não amplia permissões.
+        if (mounted) setRestrictedProfessional(false);
+      })
+      .finally(() => {
+        if (mounted) setAccessResolved(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -29,6 +66,11 @@ export default function SaeApp() {
   };
 
   const handleChangeTab = (tab: SaeTab) => {
+    if (restrictedProfessional && tab !== 'relatorios' && tab !== 'mapas') {
+      setActiveTab('relatorios');
+      return;
+    }
+
     setActiveTab(tab);
 
     if (tab !== 'usuarios') {
@@ -111,20 +153,23 @@ export default function SaeApp() {
         );
 
       case 'mapas':
-        return (
-          <PlaceholderPage
-            title="Mapas"
-            description="Mapas e relatórios operacionais do SAE."
-          />
-        );
+        return <SaeMapaProfissionalPage />;
 
       case 'relatorios':
         return <SaeRelatoriosPage />;
 
       default:
-        return <SaeDashboardPage />;
+        return restrictedProfessional ? <SaeRelatoriosPage /> : <SaeDashboardPage />;
     }
   };
+
+  if (!accessResolved) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg-dark text-slate-400">
+        Carregando SAE...
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-bg-dark text-white">
@@ -132,10 +177,14 @@ export default function SaeApp() {
         activeTab={activeTab}
         onChange={handleChangeTab}
         onLogout={handleLogout}
+        restrictedProfessional={restrictedProfessional}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <SaeTopbar activeTab={activeTab} />
+        <SaeTopbar
+          activeTab={activeTab}
+          restrictedProfessional={restrictedProfessional}
+        />
 
         <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
           <div className="mx-auto w-full max-w-[1600px]">
