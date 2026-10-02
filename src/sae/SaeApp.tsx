@@ -12,6 +12,10 @@ import SaeRelatoriosPage from './pages/SaeRelatoriosPage';
 import type { SaeAgendamentoFoco } from './types/saeNavegacao';
 import { saeDocumentosService } from './services/saeDocumentosService';
 import SaeMapaProfissionalPage from './pages/SaeMapaProfissionalPage';
+import SaeMapasAdminPage from './pages/SaeMapasAdminPage';
+import SaeAtendimentosPage from './pages/SaeAtendimentosPage';
+import SaeProfissionaisPage from './pages/SaeProfissionaisPage';
+import SaeRelatoriosAdminPage from './pages/SaeRelatoriosAdminPage';
 
 export default function SaeApp() {
   const { signOut } = useAuth();
@@ -42,6 +46,8 @@ export default function SaeApp() {
           setActiveTab('relatorios');
           setUsuarioSelecionadoId(null);
           setAgendamentoFoco(null);
+        } else {
+          setActiveTab('usuarios');
         }
       })
       .catch(() => {
@@ -137,29 +143,28 @@ export default function SaeApp() {
         );
 
       case 'atendimentos':
-        return (
-          <PlaceholderPage
-            title="Atendimentos"
-            description="Registro dos atendimentos realizados pelos profissionais."
-          />
-        );
+        return <SaeAtendimentosPage />;
 
       case 'sinais-vitais':
-        return (
-          <PlaceholderPage
-            title="Sinais Vitais"
-            description="Monitoramento e histórico dos sinais vitais dos usuários."
-          />
-        );
+        return <SaeAtendimentosPage />;
 
       case 'mapas':
-        return <SaeMapaProfissionalPage />;
+        return restrictedProfessional
+          ? <SaeMapaProfissionalPage />
+          : <SaeMapasAdminPage />;
+
+      case 'profissionais':
+        return restrictedProfessional
+          ? <SaeRelatoriosPage />
+          : <SaeProfissionaisPage />;
 
       case 'relatorios':
-        return <SaeRelatoriosPage />;
+        return restrictedProfessional
+          ? <SaeRelatoriosPage />
+          : <SaeRelatoriosAdminPage />;
 
       default:
-        return restrictedProfessional ? <SaeRelatoriosPage /> : <SaeDashboardPage />;
+        return restrictedProfessional ? <SaeRelatoriosPage /> : <SaeUsuariosPage onAbrirUsuario={abrirUsuario} />;
     }
   };
 
