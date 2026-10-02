@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../../config/api';
 export type SaeCampoModeloDocumento = {
   name: string;
   label: string;
-  type: 'text' | 'date' | 'textarea' | 'select' | 'multiselect';
+  type: 'text' | 'date' | 'textarea' | 'select';
   section?: string;
   options?: string[];
   placeholder?: string;
@@ -174,6 +174,13 @@ export const saeDocumentosService = {
         method: 'PUT',
         body: JSON.stringify(payload),
       },
+    );
+  },
+
+  async excluir(documentoId: string): Promise<{ ok: true }> {
+    return request<{ ok: true }>(
+      `/${encodeURIComponent(documentoId)}`,
+      { method: 'DELETE' },
     );
   },
 
