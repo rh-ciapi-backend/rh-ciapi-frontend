@@ -57,18 +57,17 @@ async function request<T>(path = '', options?: RequestInit): Promise<T> {
   return json as T;
 }
 
-async function listarProfissionaisCompat(): Promise<SaeProfissionaisListResponse> {
+async function listarCompat(): Promise<SaeProfissionaisListResponse> {
   return request<SaeProfissionaisListResponse>();
 }
 
 export const saeProfissionaisService = {
   async listar(): Promise<SaeProfissionaisListResponse> {
-    return listarProfissionaisCompat();
+    return listarCompat();
   },
 
-  // Compatibilidade com versões anteriores do modal.
   async listarProfissionais(): Promise<SaeProfissionaisListResponse> {
-    return listarProfissionaisCompat();
+    return listarCompat();
   },
 
   async adicionar(
