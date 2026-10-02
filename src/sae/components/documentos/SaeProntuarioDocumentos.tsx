@@ -117,7 +117,7 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
     setEditor({ documento, modelo });
   };
 
-  const atualizarCampo = (name: string, value: string) => {
+  const atualizarCampo = (name: string, value: any) => {
     setEditor((prev) =>
       prev
         ? {
@@ -426,7 +426,7 @@ function EditorModal({
   editor: NonNullable<EditorState>;
   salvando: boolean;
   onClose: () => void;
-  onCampo: (name: string, value: string) => void;
+  onCampo: (name: string, value: any) => void;
   onSalvar: () => void;
   onFinalizar: () => void;
   onDownload: () => void;
@@ -470,6 +470,57 @@ function EditorModal({
                         onChange={(event) => onCampo(campo.name, event.target.value)}
                         className="w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-primary/40"
                       />
+                    ) : campo.type === 'multiselect' ? (
+                      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 lg:grid-cols-3">
+                        {(campo.options || []).map((option) => {
+                          const selected = Array.isArray(editor.documento.dados?.[campo.name])
+                            ? editor.documento.dados[campo.name].includes(option)
+                            : String(editor.documento.dados?.[campo.name] || '')
+                                .split(',')
+                                .map((item: string) => item.trim())
+                                .filter(Boolean)
+                                .includes(option);
+
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                const atual = Array.isArray(editor.documento.dados?.[campo.name])
+                                  ? [...editor.documento.dados[campo.name]]
+                                  : String(editor.documento.dados?.[campo.name] || '')
+                                      .split(',')
+                                      .map((item: string) => item.trim())
+                                      .filter(Boolean);
+
+                                const proximo = selected
+                                  ? atual.filter((item: string) => item !== option)
+                                  : [...atual, option];
+
+                                onCampo(campo.name, proximo as any);
+                              }}
+                              className={[
+                                'flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition',
+                                selected
+                                  ? 'border-primary/40 bg-primary/15 text-blue-100'
+                                  : 'border-border-dark bg-[#0b1220] text-slate-300 hover:bg-slate-800/70',
+                              ].join(' ')}
+                            >
+                              <span
+                                className={[
+                                  'flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]',
+                                  selected
+                                    ? 'border-primary bg-primary text-white'
+                                    : 'border-slate-600 bg-transparent',
+                                ].join(' ')}
+                              >
+                                {selected ? '✓' : ''}
+                              </span>
+                              <span>{option}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     ) : campo.type === 'select' ? (
                       <select
                         value={value}
