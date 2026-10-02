@@ -25,6 +25,7 @@ export type SaeTab =
   | 'atendimentos'
   | 'sinais-vitais'
   | 'mapas'
+  | 'profissionais'
   | 'relatorios';
 
 interface SaeSidebarProps {
@@ -39,46 +40,13 @@ const MENU: Array<{
   label: string;
   icon: React.ElementType;
 }> = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    id: 'usuarios',
-    label: 'Usuários',
-    icon: Users,
-  },
-  {
-    id: 'triagem',
-    label: 'Triagem',
-    icon: ClipboardList,
-  },
-  {
-    id: 'agendamentos',
-    label: 'Agendamentos',
-    icon: CalendarDays,
-  },
-  {
-    id: 'atendimentos',
-    label: 'Atendimentos',
-    icon: Stethoscope,
-  },
-  {
-    id: 'sinais-vitais',
-    label: 'Sinais Vitais',
-    icon: Activity,
-  },
-  {
-    id: 'mapas',
-    label: 'Mapas',
-    icon: Map,
-  },
-  {
-    id: 'relatorios',
-    label: 'Relatórios',
-    icon: BarChart3,
-  },
+  { id: 'usuarios', label: 'Usuários', icon: Users },
+  { id: 'triagem', label: 'Triagem', icon: ClipboardList },
+  { id: 'agendamentos', label: 'Agendamentos', icon: CalendarDays },
+  { id: 'atendimentos', label: 'Atendimentos', icon: Stethoscope },
+  { id: 'mapas', label: 'Mapas', icon: Map },
+  { id: 'profissionais', label: 'Profissionais', icon: UserCog },
+  { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
 ];
 
 export default function SaeSidebar({
