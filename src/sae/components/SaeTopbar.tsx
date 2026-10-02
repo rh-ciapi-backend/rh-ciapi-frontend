@@ -18,6 +18,7 @@ import MinhaAgendaModal from './agendamentos/MinhaAgendaModal';
 import CentralSolicitacoesModal from './agendamentos/CentralSolicitacoesModal';
 import { saeAgendaService } from '../services/saeAgendaService';
 import SaeAlterarSenhaModal from './SaeAlterarSenhaModal';
+import { saeDocumentosService } from '../services/saeDocumentosService';
 
 interface SaeTopbarProps {
   activeTab: SaeTab;
@@ -65,8 +66,9 @@ export default function SaeTopbar({
   restrictedProfessional = false,
 }: SaeTopbarProps) {
   const { user } = useAuth();
+  const [profissionalNome, setProfissionalNome] = useState('');
   const firstName =
-    getFirstName(user);
+    profissionalNome.trim().split(/\s+/)[0] || getFirstName(user);
 
   const [
     minhaAgendaAberta,
@@ -86,6 +88,30 @@ export default function SaeTopbar({
     podeVerSolicitacoes,
     setPodeVerSolicitacoes,
   ] = useState(false);
+
+  useEffect(() => {
+    if (!restrictedProfessional) {
+      setProfissionalNome('');
+      return;
+    }
+
+    let ativo = true;
+
+    saeDocumentosService
+      .contexto()
+      .then((response) => {
+        if (ativo) {
+          setProfissionalNome(response.profissional?.nome || '');
+        }
+      })
+      .catch(() => {
+        if (ativo) setProfissionalNome('');
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [restrictedProfessional, user?.id]);
 
   const atualizarPendentes =
     useCallback(async () => {
