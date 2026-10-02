@@ -5,7 +5,6 @@ import type {
   SaeProfissional,
   SaeProfissionalForm,
   SaeProfissionaisListResponse,
-  SaeUsuarioSistemaOpcao,
 } from '../types/saeProfissional';
 
 const buildUrl = (path = '') => {
@@ -58,9 +57,18 @@ async function request<T>(path = '', options?: RequestInit): Promise<T> {
   return json as T;
 }
 
+async function listarProfissionaisCompat(): Promise<SaeProfissionaisListResponse> {
+  return request<SaeProfissionaisListResponse>();
+}
+
 export const saeProfissionaisService = {
   async listar(): Promise<SaeProfissionaisListResponse> {
-    return request<SaeProfissionaisListResponse>();
+    return listarProfissionaisCompat();
+  },
+
+  // Compatibilidade com versões anteriores do modal.
+  async listarProfissionais(): Promise<SaeProfissionaisListResponse> {
+    return listarProfissionaisCompat();
   },
 
   async adicionar(
@@ -91,24 +99,6 @@ export const saeProfissionaisService = {
       {
         method: 'PATCH',
         body: JSON.stringify({ ativo }),
-      },
-    );
-  },
-
-
-  async listarUsuariosSistema(): Promise<{ usuarios: SaeUsuarioSistemaOpcao[] }> {
-    return request<{ usuarios: SaeUsuarioSistemaOpcao[] }>('/usuarios-sistema');
-  },
-
-  async vincularUsuario(
-    id: string,
-    authUserId: string | null,
-  ): Promise<{ ok: true; profissional: SaeProfissional }> {
-    return request<{ ok: true; profissional: SaeProfissional }>(
-      `/${id}/usuario-sistema`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ authUserId }),
       },
     );
   },
