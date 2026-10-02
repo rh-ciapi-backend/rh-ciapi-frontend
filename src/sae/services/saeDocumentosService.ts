@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient':
 import { API_BASE_URL } from '../../config/api';
 
 export type SaeCampoModeloDocumento = {
