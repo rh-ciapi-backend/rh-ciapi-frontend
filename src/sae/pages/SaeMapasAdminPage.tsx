@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileSpreadsheet, Loader2, Search } from 'lucide-react';
-import { saeAdministrativoService, type SaeAdminAtendimento } from '../services/saeAdministrativoService';
+import { saeAdministrativoService, type SaeAdminAtendimento } from './saeAdministrativoService';
 
 export default function SaeMapasAdminPage() {
   const now = new Date();
