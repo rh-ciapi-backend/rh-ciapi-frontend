@@ -19,6 +19,7 @@ import { saeAgendaService } from '../services/saeAgendaService';
 
 interface SaeTopbarProps {
   activeTab: SaeTab;
+  restrictedProfessional?: boolean;
 }
 
 const TITLES: Record<SaeTab, string> = {
@@ -58,6 +59,7 @@ function getFirstName(
 
 export default function SaeTopbar({
   activeTab,
+  restrictedProfessional = false,
 }: SaeTopbarProps) {
   const { user } = useAuth();
   const firstName =
@@ -104,6 +106,12 @@ export default function SaeTopbar({
     }, []);
 
   useEffect(() => {
+    if (restrictedProfessional) {
+      setPendentes(0);
+      setPodeVerSolicitacoes(false);
+      return;
+    }
+
     atualizarPendentes();
 
     const timer =
@@ -127,7 +135,7 @@ export default function SaeTopbar({
         onFocus,
       );
     };
-  }, [atualizarPendentes]);
+  }, [atualizarPendentes, restrictedProfessional]);
 
   return (
     <>
@@ -143,6 +151,7 @@ export default function SaeTopbar({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+{!restrictedProfessional && (
           <div className="hidden w-[320px] items-center gap-2 rounded-xl border border-border-dark bg-card-dark px-3 py-2.5 md:flex">
             <Search
               size={17}
@@ -155,7 +164,9 @@ export default function SaeTopbar({
               className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
             />
           </div>
+          )}
 
+{!restrictedProfessional && (
           <button
             type="button"
             onClick={() =>
@@ -172,7 +183,9 @@ export default function SaeTopbar({
             />
             Minha agenda
           </button>
+          )}
 
+{!restrictedProfessional && (
           <div className="hidden items-center gap-2 rounded-xl border border-border-dark bg-card-dark px-3 py-2 text-xs font-bold text-slate-300 lg:flex">
             <Layers3
               size={17}
@@ -184,7 +197,9 @@ export default function SaeTopbar({
               className="text-slate-500"
             />
           </div>
+          )}
 
+{!restrictedProfessional && (
           <button
             type="button"
             onClick={() =>
@@ -200,7 +215,9 @@ export default function SaeTopbar({
               size={18}
             />
           </button>
+          )}
 
+{!restrictedProfessional && (
           <button
             type="button"
             onClick={() =>
@@ -234,6 +251,7 @@ export default function SaeTopbar({
                 </span>
               )}
           </button>
+          )}
 
           <div className="flex items-center gap-2 rounded-xl border border-border-dark bg-card-dark p-1.5 sm:gap-3 sm:px-3 sm:py-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-bold text-white">
@@ -255,22 +273,26 @@ export default function SaeTopbar({
         </div>
       </header>
 
-      <MinhaAgendaModal
-        aberto={minhaAgendaAberta}
-        onClose={() =>
-          setMinhaAgendaAberta(false)
-        }
-      />
+      {!restrictedProfessional && (
+        <>
+          <MinhaAgendaModal
+            aberto={minhaAgendaAberta}
+            onClose={() =>
+              setMinhaAgendaAberta(false)
+            }
+          />
 
-      <CentralSolicitacoesModal
-        aberto={centralAberta}
-        onClose={() =>
-          setCentralAberta(false)
-        }
-        onAtualizarPendentes={
-          atualizarPendentes
-        }
-      />
+          <CentralSolicitacoesModal
+            aberto={centralAberta}
+            onClose={() =>
+              setCentralAberta(false)
+            }
+            onAtualizarPendentes={
+              atualizarPendentes
+            }
+          />
+        </>
+      )}
     </>
   );
 }
