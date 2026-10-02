@@ -30,6 +30,7 @@ const TITLES: Record<SaeTab, string> = {
   atendimentos: 'Atendimentos',
   'sinais-vitais': 'Sinais Vitais',
   mapas: 'Mapas',
+  profissionais: 'Profissionais',
   relatorios: 'Relatórios',
 };
 
