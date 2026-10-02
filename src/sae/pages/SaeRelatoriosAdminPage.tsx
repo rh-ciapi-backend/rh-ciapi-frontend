@@ -520,7 +520,7 @@ export default function SaeRelatoriosAdminPage() {
         </div>
       )}
 
-      <section className="app-surface overflow-hidden border-blue-500/10 bg-gradient-to-br from-card-dark to-slate-900/70">
+      <section className="app-surface overflow-hidden border-blue-500/15 bg-gradient-to-br from-card-dark via-card-dark to-blue-950/15 shadow-lg shadow-blue-950/10">
         <div className="border-b border-border-dark p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
             <label className="min-w-0 flex-1 space-y-2">
@@ -651,106 +651,114 @@ export default function SaeRelatoriosAdminPage() {
           </div>
 
           {filtrosAvancados && (
-            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border-dark bg-slate-900/20 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              <Filter label="Idade mínima">
-                <input
-                  type="number"
-                  min="0"
-                  value={idadeMin}
-                  onChange={(e) =>
-                    setIdadeMin(e.target.value)
-                  }
-                  className="input-admin"
-                />
-              </Filter>
+            <div className="space-y-4 rounded-2xl border border-blue-500/15 bg-gradient-to-br from-slate-900/35 to-blue-950/10 p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                <div className="rounded-2xl border border-border-dark bg-slate-950/25 p-4 lg:col-span-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">
+                    Faixa de idade
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <Filter label="Mínima">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ex.: 60"
+                        value={idadeMin}
+                        onChange={(e) => setIdadeMin(e.target.value)}
+                        className="input-admin"
+                      />
+                    </Filter>
 
-              <Filter label="Idade máxima">
-                <input
-                  type="number"
-                  min="0"
-                  value={idadeMax}
-                  onChange={(e) =>
-                    setIdadeMax(e.target.value)
-                  }
-                  className="input-admin"
-                />
-              </Filter>
+                    <Filter label="Máxima">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ex.: 79"
+                        value={idadeMax}
+                        onChange={(e) => setIdadeMax(e.target.value)}
+                        className="input-admin"
+                      />
+                    </Filter>
+                  </div>
+                </div>
 
-              <Filter label="Profissional / relatório">
-                <select
-                  value={profissionalId}
-                  onChange={(e) =>
-                    setProfissionalId(
-                      e.target.value,
-                    )
-                  }
-                  className="input-admin"
-                >
-                  <option value="TODOS">
-                    Todos
-                  </option>
+                <div className="rounded-2xl border border-border-dark bg-slate-950/25 p-4 lg:col-span-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                    Produção profissional
+                  </p>
 
-                  {profissionais.map((p) => (
-                    <option
-                      key={p.id}
-                      value={p.id}
-                    >
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              </Filter>
+                  <div className="mt-3">
+                    <Filter label="Profissional / relatório">
+                      <select
+                        value={profissionalId}
+                        onChange={(e) => setProfissionalId(e.target.value)}
+                        className="input-admin"
+                      >
+                        <option value="TODOS">Todos os profissionais</option>
 
-              <Filter label="Status do relatório">
-                <Segmented
-                  value={statusDocumento}
-                  onChange={setStatusDocumento}
-                  compact
-                  options={[
-                    {
-                      value: 'TODOS',
-                      label: 'Todos',
-                    },
-                    {
-                      value: 'RASCUNHO',
-                      label: 'Rasc.',
-                    },
-                    {
-                      value: 'FINALIZADO',
-                      label: 'Final.',
-                    },
-                    {
-                      value: 'ASSINADO',
-                      label: 'Assinado',
-                    },
-                  ]}
-                />
-              </Filter>
+                        {profissionais.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </Filter>
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1">
-                <Filter label="Relatório de">
-                  <input
-                    type="date"
-                    value={dataInicio}
-                    onChange={(e) =>
-                      setDataInicio(
-                        e.target.value,
-                      )
-                    }
-                    className="input-admin"
-                  />
-                </Filter>
+                <div className="rounded-2xl border border-border-dark bg-slate-950/25 p-4 lg:col-span-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-300">
+                    Status do relatório
+                  </p>
 
-                <Filter label="Até">
-                  <input
-                    type="date"
-                    value={dataFim}
-                    onChange={(e) =>
-                      setDataFim(e.target.value)
-                    }
-                    className="input-admin"
-                  />
-                </Filter>
+                  <div className="mt-3">
+                    <Segmented
+                      value={statusDocumento}
+                      onChange={setStatusDocumento}
+                      compact
+                      options={[
+                        { value: 'TODOS', label: 'Todos' },
+                        { value: 'RASCUNHO', label: 'Rascunho' },
+                        { value: 'FINALIZADO', label: 'Finalizado' },
+                        { value: 'ASSINADO', label: 'Assinado' },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border-dark bg-slate-950/25 p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">
+                      Período de emissão
+                    </p>
+
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <Filter label="Data inicial">
+                        <input
+                          type="date"
+                          value={dataInicio}
+                          onChange={(e) => setDataInicio(e.target.value)}
+                          className="input-admin"
+                        />
+                      </Filter>
+
+                      <Filter label="Data final">
+                        <input
+                          type="date"
+                          value={dataFim}
+                          onChange={(e) => setDataFim(e.target.value)}
+                          className="input-admin"
+                        />
+                      </Filter>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border-dark bg-slate-900/40 px-4 py-3 text-xs leading-5 text-slate-400 lg:max-w-[260px]">
+                    Use o período somente quando quiser analisar a produção dos relatórios em uma data específica.
+                  </div>
+                </div>
               </div>
             </div>
           )}
