@@ -162,24 +162,6 @@ export default function SaeSidebar({
             );
           })}
         </nav>
-
-        {!restrictedProfessional && (
-          <>
-            <p className="mb-3 mt-7 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">
-              Sistema
-            </p>
-
-            <button
-              type="button"
-              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-slate-400 transition-all hover:bg-slate-800/70 hover:text-white"
-            >
-              <Settings size={19} />
-              <span>
-                Configurações
-              </span>
-            </button>
-          </>
-        )}
       </div>
 
       <div className="border-t border-border-dark p-3">
