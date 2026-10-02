@@ -10,6 +10,9 @@ import {
   Paperclip,
   Save,
   Upload,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -117,7 +120,7 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
     setEditor({ documento, modelo });
   };
 
-  const atualizarCampo = (name: string, value: any) => {
+  const atualizarCampo = (name: string, value: string) => {
     setEditor((prev) =>
       prev
         ? {
@@ -169,6 +172,35 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
       setSalvando(false);
     }
   };
+
+  const excluirDocumento = async (documento: SaeDocumentoProntuario) => {
+    if (documento.status === 'ASSINADO') {
+      setErro('Documento assinado não pode ser excluído do prontuário.');
+      return;
+    }
+
+    const confirmado = window.confirm(
+      `Excluir "${documento.titulo}"? Esta ação não poderá ser desfeita.`,
+    );
+
+    if (!confirmado) return;
+
+    try {
+      setSalvando(true);
+      setErro('');
+      await saeDocumentosService.excluir(documento.id);
+      setSucesso('Relatório excluído.');
+      if (editor?.documento.id === documento.id) {
+        setEditor(null);
+      }
+      await carregar();
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível excluir o relatório.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
 
   return (
     <section className={compact ? 'space-y-4' : 'space-y-5'}>
@@ -290,6 +322,18 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
                     >
                       <Paperclip size={15} />
                       Anexar assinado
+                    </button>
+                  )}
+
+                  {item.status !== 'ASSINADO' && (
+                    <button
+                      type="button"
+                      onClick={() => excluirDocumento(item)}
+                      disabled={salvando}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-200 transition hover:bg-rose-500/15 disabled:opacity-50"
+                    >
+                      <Trash2 size={15} />
+                      Excluir
                     </button>
                   )}
 
@@ -433,120 +477,211 @@ function EditorModal({
 }) {
   const sections = useMemo(() => {
     const map = new Map<string, typeof editor.modelo.campos>();
+
     for (const campo of editor.modelo.campos) {
-      const section = campo.section || 'Dados';
+      const section = campo.section || 'Dados gerais';
       const list = map.get(section) || [];
       list.push(campo);
       map.set(section, list);
     }
+
     return Array.from(map.entries());
   }, [editor.modelo.campos]);
 
+  const [aba, setAba] = useState(0);
+
+  useEffect(() => {
+    setAba(0);
+  }, [editor.documento.id]);
+
+  const totalAbas = Math.max(sections.length, 1);
+  const atual = sections[Math.min(aba, totalAbas - 1)] || ['Dados gerais', []];
+  const [section, fields] = atual;
+
+  const preenchidos = editor.modelo.campos.filter((campo) => {
+    const value = editor.documento.dados?.[campo.name];
+    if (Array.isArray(value)) return value.length > 0;
+    return String(value ?? '').trim().length > 0;
+  }).length;
+
+  const progresso = editor.modelo.campos.length
+    ? Math.round((preenchidos / editor.modelo.campos.length) * 100)
+    : 0;
+
   return (
     <Modal title={editor.documento.titulo} onClose={onClose}>
-      <div className="space-y-6">
-        {sections.map(([section, fields]) => (
-          <fieldset
-            key={section}
-            className="rounded-2xl border border-border-dark bg-slate-900/25 p-4 sm:p-5"
-          >
-            <legend className="px-2 text-sm font-bold text-primary">{section}</legend>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {fields.map((campo) => {
-                const value = String(editor.documento.dados?.[campo.name] ?? '');
-                const full = campo.type === 'textarea';
-
-                return (
-                  <label key={campo.name} className={full ? 'space-y-2 md:col-span-2' : 'space-y-2'}>
-                    <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-                      {campo.label}
-                    </span>
-
-                    {campo.type === 'textarea' ? (
-                      <textarea
-                        rows={4}
-                        value={value}
-                        placeholder={campo.placeholder}
-                        onChange={(event) => onCampo(campo.name, event.target.value)}
-                        className="w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-primary/40"
-                      />
-                    ) : campo.type === 'multiselect' ? (
-                      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 lg:grid-cols-3">
-                        {(campo.options || []).map((option) => {
-                          const selected = Array.isArray(editor.documento.dados?.[campo.name])
-                            ? editor.documento.dados[campo.name].includes(option)
-                            : String(editor.documento.dados?.[campo.name] || '')
-                                .split(',')
-                                .map((item: string) => item.trim())
-                                .filter(Boolean)
-                                .includes(option);
-
-                          return (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => {
-                                const atual = Array.isArray(editor.documento.dados?.[campo.name])
-                                  ? [...editor.documento.dados[campo.name]]
-                                  : String(editor.documento.dados?.[campo.name] || '')
-                                      .split(',')
-                                      .map((item: string) => item.trim())
-                                      .filter(Boolean);
-
-                                const proximo = selected
-                                  ? atual.filter((item: string) => item !== option)
-                                  : [...atual, option];
-
-                                onCampo(campo.name, proximo as any);
-                              }}
-                              className={[
-                                'flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition',
-                                selected
-                                  ? 'border-primary/40 bg-primary/15 text-blue-100'
-                                  : 'border-border-dark bg-[#0b1220] text-slate-300 hover:bg-slate-800/70',
-                              ].join(' ')}
-                            >
-                              <span
-                                className={[
-                                  'flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]',
-                                  selected
-                                    ? 'border-primary bg-primary text-white'
-                                    : 'border-slate-600 bg-transparent',
-                                ].join(' ')}
-                              >
-                                {selected ? '✓' : ''}
-                              </span>
-                              <span>{option}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : campo.type === 'select' ? (
-                      <select
-                        value={value}
-                        onChange={(event) => onCampo(campo.name, event.target.value)}
-                        className="h-11 w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 text-sm text-white outline-none focus:border-primary/40"
-                      >
-                        <option value="">Selecione</option>
-                        {(campo.options || []).map((option) => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={campo.type === 'date' ? 'date' : 'text'}
-                        value={value}
-                        placeholder={campo.placeholder}
-                        onChange={(event) => onCampo(campo.name, event.target.value)}
-                        className="h-11 w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 text-sm text-white outline-none focus:border-primary/40"
-                      />
-                    )}
-                  </label>
-                );
-              })}
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-border-dark bg-slate-900/25 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                Preenchimento da ficha
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                {section}
+              </p>
             </div>
-          </fieldset>
-        ))}
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-primary">
+                {progresso}% preenchido
+              </span>
+              <span className="rounded-full border border-border-dark bg-slate-950/30 px-3 py-1.5 text-[10px] font-bold text-slate-400">
+                {aba + 1} / {totalAbas}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all"
+              style={{ width: `${progresso}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="responsive-scroll -mx-1 px-1">
+          <div className="flex min-w-max gap-2 pb-1">
+            {sections.map(([nome], index) => (
+              <button
+                key={nome}
+                type="button"
+                onClick={() => setAba(index)}
+                className={[
+                  'min-h-10 rounded-xl border px-4 text-xs font-bold transition',
+                  index === aba
+                    ? 'border-primary/40 bg-primary text-white shadow-lg shadow-blue-500/10'
+                    : 'border-border-dark bg-slate-900/30 text-slate-400 hover:border-primary/20 hover:text-white',
+                ].join(' ')}
+              >
+                {index + 1}. {nome}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <fieldset className="rounded-2xl border border-border-dark bg-slate-900/25 p-4 sm:p-5">
+          <legend className="px-2 text-sm font-bold text-primary">
+            {section}
+          </legend>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {fields.map((campo) => {
+              const value = String(editor.documento.dados?.[campo.name] ?? '');
+              const full = campo.type === 'textarea';
+
+              return (
+                <label
+                  key={campo.name}
+                  className={full ? 'space-y-2 md:col-span-2' : 'space-y-2'}
+                >
+                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                    {campo.label}
+                  </span>
+
+                  {campo.type === 'textarea' ? (
+                    <textarea
+                      rows={5}
+                      value={value}
+                      placeholder={campo.placeholder}
+                      onChange={(event) => onCampo(campo.name, event.target.value)}
+                      className="w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-primary/40"
+                    />
+                  ) : campo.type === 'multiselect' ? (
+                    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 lg:grid-cols-3">
+                      {(campo.options || []).map((option) => {
+                        const selected = Array.isArray(editor.documento.dados?.[campo.name])
+                          ? editor.documento.dados[campo.name].includes(option)
+                          : String(editor.documento.dados?.[campo.name] || '')
+                              .split(',')
+                              .map((item: string) => item.trim())
+                              .filter(Boolean)
+                              .includes(option);
+
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => {
+                              const atual = Array.isArray(editor.documento.dados?.[campo.name])
+                                ? [...editor.documento.dados[campo.name]]
+                                : String(editor.documento.dados?.[campo.name] || '')
+                                    .split(',')
+                                    .map((item: string) => item.trim())
+                                    .filter(Boolean);
+
+                              const proximo = selected
+                                ? atual.filter((item: string) => item !== option)
+                                : [...atual, option];
+
+                              onCampo(campo.name, proximo as any);
+                            }}
+                            className={[
+                              'min-h-11 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition',
+                              selected
+                                ? 'border-primary/40 bg-primary/10 text-blue-100'
+                                : 'border-border-dark bg-[#0b1220] text-slate-400 hover:border-primary/20',
+                            ].join(' ')}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : campo.type === 'select' ? (
+                    <select
+                      value={value}
+                      onChange={(event) => onCampo(campo.name, event.target.value)}
+                      className="h-11 w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 text-sm text-white outline-none focus:border-primary/40"
+                    >
+                      <option value="">Selecione</option>
+                      {(campo.options || []).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={campo.type === 'date' ? 'date' : 'text'}
+                      value={value}
+                      placeholder={campo.placeholder}
+                      onChange={(event) => onCampo(campo.name, event.target.value)}
+                      className="h-11 w-full rounded-xl border border-border-dark bg-[#0b1220] px-3 text-sm text-white outline-none focus:border-primary/40"
+                    />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            disabled={aba === 0}
+            onClick={() => setAba((value) => Math.max(0, value - 1))}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-dark px-4 text-sm font-bold text-slate-300 disabled:opacity-30"
+          >
+            <ChevronLeft size={16} />
+            Anterior
+          </button>
+
+          {aba < totalAbas - 1 ? (
+            <button
+              type="button"
+              onClick={() => setAba((value) => Math.min(totalAbas - 1, value + 1))}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white"
+            >
+              Próxima etapa
+              <ChevronRight size={16} />
+            </button>
+          ) : (
+            <div className="text-center text-xs font-semibold text-emerald-300 sm:text-right">
+              Última etapa da ficha
+            </div>
+          )}
+        </div>
 
         <div className="sticky bottom-0 -mx-4 grid grid-cols-1 gap-2 border-t border-border-dark bg-card-dark/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:flex sm:justify-end sm:px-6">
           <button
@@ -557,6 +692,7 @@ function EditorModal({
             <Download size={16} />
             Baixar Word
           </button>
+
           <button
             type="button"
             onClick={onSalvar}
@@ -566,13 +702,18 @@ function EditorModal({
             <Save size={16} />
             Salvar rascunho
           </button>
+
           <button
             type="button"
             onClick={onFinalizar}
             disabled={salvando}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white disabled:opacity-60"
           >
-            {salvando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            {salvando ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <CheckCircle2 size={16} />
+            )}
             Finalizar
           </button>
         </div>
