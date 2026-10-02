@@ -14,7 +14,7 @@ import {
   saeAdministrativoService,
   type SaeAdminAtendimento,
   type SaeAdminSinalVital,
-} from '../services/saeAdministrativoService';
+} from './saeAdministrativoService';
 
 const normalize = (value: unknown) =>
   String(value ?? '')
