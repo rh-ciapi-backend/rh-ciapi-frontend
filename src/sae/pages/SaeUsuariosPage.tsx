@@ -146,30 +146,36 @@ export default function SaeUsuariosPage({
       transition={{ duration: 0.18 }}
       className="space-y-5 sm:space-y-6"
     >
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-            Gestão de Usuários
-          </p>
+      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
+              <Users size={22} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+                SAE Administrativo
+              </p>
+              <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
+                Usuários
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                Consulte, filtre e acompanhe os usuários ativos e históricos do SAE.
+              </p>
+            </div>
+          </div>
 
-          <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
-            Usuários
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Consulte e acompanhe os usuários atendidos pelo CIAPI.
-          </p>
+          <button
+            type="button"
+            onClick={() => setNovoUsuarioAberto(true)}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-blue-600 sm:w-auto"
+          >
+            <UserPlus size={18} />
+            Novo usuário
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setNovoUsuarioAberto(true)}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-blue-600 sm:w-auto"
-        >
-          <UserPlus size={18} />
-          Novo Usuário
-        </button>
-      </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
         <KpiCard
@@ -213,7 +219,7 @@ export default function SaeUsuariosPage({
         />
       </div>
 
-      <section className="rounded-[20px] border border-border-dark bg-card-dark p-4 sm:p-5">
+      <section className="app-surface relative overflow-hidden p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
@@ -310,7 +316,7 @@ export default function SaeUsuariosPage({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
+      <section className="app-surface overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-border-dark px-4 py-4 sm:px-5">
           <div>
             <h2 className="text-sm font-bold text-white">
