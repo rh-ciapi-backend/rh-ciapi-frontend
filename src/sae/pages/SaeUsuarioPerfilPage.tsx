@@ -146,63 +146,60 @@ export default function SaeUsuarioPerfilPage({
       transition={{ duration: 0.18 }}
       className="space-y-6"
     >
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
+      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative">
           <button
             type="button"
             onClick={onVoltar}
-            className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
+            className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
           >
             <ArrowLeft size={17} />
             Voltar para usuários
           </button>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-              <User size={25} />
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  {usuario.nome}
-                </h1>
-
-                <span
-                  className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${
-                    statusUsuarioStyles[usuario.situacao]
-                  }`}
-                >
-                  {usuario.situacao}
-                </span>
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
+                <User size={25} />
               </div>
 
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
-                <span>
-                  Prontuário {usuario.prontuario || '—'}
-                </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Prontuário SAE
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                    {usuario.nome}
+                  </h1>
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                      statusUsuarioStyles[usuario.situacao]
+                    }`}
+                  >
+                    {usuario.situacao}
+                  </span>
+                </div>
 
-                {usuario.idade != null && (
-                  <span>{usuario.idade} anos</span>
-                )}
-
-                {usuario.turno && (
-                  <span>Turno {usuario.turno}</span>
-                )}
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
+                  <span>Prontuário {usuario.prontuario || '—'}</span>
+                  {usuario.idade != null && <span>{usuario.idade} anos</span>}
+                  {usuario.turno && <span>Turno {usuario.turno}</span>}
+                </div>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setEditarAberto(true)}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-600 sm:w-auto"
+            >
+              <Pencil size={17} />
+              Editar informações
+            </button>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setEditarAberto(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-600"
-        >
-          <Pencil size={17} />
-          Editar informações
-        </button>
-      </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
@@ -245,7 +242,7 @@ export default function SaeUsuarioPerfilPage({
       </div>
 
       <div className="overflow-x-auto">
-        <div className="inline-flex min-w-full gap-1 rounded-xl border border-border-dark bg-card-dark p-1 sm:min-w-0">
+        <div className="inline-flex min-w-full gap-1 rounded-2xl border border-border-dark bg-card-dark/90 p-1.5 shadow-sm sm:min-w-0">
           <TabButton
             active={aba === 'resumo'}
             onClick={() => setAba('resumo')}
