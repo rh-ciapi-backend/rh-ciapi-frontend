@@ -36,12 +36,47 @@ export default function SaeMapasAdminPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <section className="app-surface p-4 sm:p-6"><div className="flex items-start gap-3"><div className="rounded-xl bg-primary/10 p-3 text-primary"><FileSpreadsheet size={21}/></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-primary">SAE Administrativo</p><h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Mapas</h1><p className="mt-2 text-sm text-slate-400">Prévia consolidada dos atendimentos registrados por profissional.</p></div></div></section>
-      <section className="app-surface p-4 sm:p-5"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <select value={mes} onChange={(e)=>setMes(Number(e.target.value))} className="h-11 rounded-xl border border-border-dark bg-slate-900/50 px-3 text-white">{Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>{String(i+1).padStart(2,'0')}</option>)}</select>
-        <select value={ano} onChange={(e)=>setAno(Number(e.target.value))} className="h-11 rounded-xl border border-border-dark bg-slate-900/50 px-3 text-white">{Array.from({length:5},(_,i)=>now.getFullYear()-2+i).map(y=><option key={y}>{y}</option>)}</select>
-        <select value={profissional} onChange={(e)=>setProfissional(e.target.value)} className="h-11 rounded-xl border border-border-dark bg-slate-900/50 px-3 text-white"><option value="TODOS">Todos profissionais</option>{profissionais.map(p=><option key={p}>{p}</option>)}</select>
-        <div className="relative"><Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"/><input value={busca} onChange={(e)=>setBusca(e.target.value)} placeholder="Usuário/prontuário" className="h-11 w-full rounded-xl border border-border-dark bg-slate-900/50 pl-10 pr-3 text-white"/></div>
-      </div></section>
+      <section className="app-surface overflow-hidden">
+        <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(260px,1.2fr)_220px_140px_140px]">
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              Busca
+            </label>
+            <div className="relative">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"/>
+              <input value={busca} onChange={(e)=>setBusca(e.target.value)} placeholder="Usuário, prontuário ou profissional" className="h-11 w-full rounded-xl border border-border-dark bg-slate-900/50 pl-10 pr-3 text-white outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"/>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              Profissional
+            </label>
+            <select value={profissional} onChange={(e)=>setProfissional(e.target.value)} className="h-11 w-full rounded-xl border border-border-dark bg-slate-900/50 px-3 text-white outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20">
+              <option value="TODOS">Todos profissionais</option>
+              {profissionais.map(p=><option key={p}>{p}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              Mês
+            </label>
+            <select value={mes} onChange={(e)=>setMes(Number(e.target.value))} className="h-11 w-full rounded-xl border border-border-dark bg-slate-900/50 px-3 text-white outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20">
+              {Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>{String(i+1).padStart(2,'0')}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              Ano
+            </label>
+            <select value={ano} onChange={(e)=>setAno(Number(e.target.value))} className="h-11 w-full rounded-xl border border-border-dark bg-slate-900/50 px-3 text-white outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20">
+              {Array.from({length:5},(_,i)=>now.getFullYear()-2+i).map(y=><option key={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+      </section>
       <section className="app-surface overflow-hidden"><div className="border-b border-border-dark p-4 sm:p-5"><h2 className="font-bold text-white">Atendimentos do mapa</h2><p className="mt-1 text-xs text-slate-500">{filtrados.length} registro(s)</p></div><div className="responsive-scroll"><table className="min-w-[900px] w-full text-left text-sm"><thead className="bg-slate-900/40 text-[11px] uppercase tracking-[.12em] text-slate-500"><tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Pront.</th><th className="px-4 py-3">Usuário</th><th className="px-4 py-3">Profissional</th><th className="px-4 py-3">Serviço</th><th className="px-4 py-3">Observação</th></tr></thead><tbody className="divide-y divide-border-dark">{filtrados.map(i=><tr key={i.id} className="text-slate-300"><td className="px-4 py-3">{i.data}</td><td className="px-4 py-3">{i.prontuario||'—'}</td><td className="px-4 py-3 font-medium text-white">{i.usuarioNome}</td><td className="px-4 py-3">{i.profissionalNome}</td><td className="px-4 py-3">{i.servicoNome}</td><td className="px-4 py-3">{i.observacao||'—'}</td></tr>)}</tbody></table></div></section>
     </div>
   );
