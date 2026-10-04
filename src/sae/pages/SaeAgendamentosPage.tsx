@@ -11,12 +11,14 @@ import {
   XCircle,
   Search,
   Stethoscope,
+  UserCog,
   UserRound,
   Users,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { saeAgendamentosService } from '../services/saeAgendamentosService';
+import GerenciarProfissionaisModal from '../components/agendamentos/GerenciarProfissionaisModal';
 import NovoAgendamentoModal from '../components/agendamentos/NovoAgendamentoModal';
 import RemarcarAgendamentoModal from '../components/agendamentos/RemarcarAgendamentoModal';
 
@@ -106,6 +108,7 @@ export default function SaeAgendamentosPage({
   const [agendamentos, setAgendamentos] = useState<SaeAgendamentoResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [profissionaisAberto, setProfissionaisAberto] = useState(false);
   const [novoAgendamentoAberto, setNovoAgendamentoAberto] = useState(false);
   const [remarcando, setRemarcando] = useState<SaeAgendamentoResumo | null>(null);
   const [cancelando, setCancelando] = useState<SaeAgendamentoResumo | null>(null);
@@ -326,26 +329,36 @@ export default function SaeAgendamentosPage({
       transition={{ duration: 0.18 }}
       className="space-y-6"
     >
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-            Gestão de Agendamentos
-          </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
-            Agendamentos
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Consulte o histórico de marcações do SAE, incluindo usuários,
-            serviços, turnos, profissionais e horários disponíveis na fonte.
-          </p>
-        </div>
+      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-violet-300">
+              <CalendarDays size={22} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+                SAE Administrativo
+              </p>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+                Agendamentos
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm text-slate-400">
+                Consulte marcações, serviços, turnos, profissionais e horários do SAE.
+              </p>
+            </div>
+          </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover">
-            <Plus size={18} /> Novo agendamento
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" onClick={() => setProfissionaisAberto(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-900/30 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white">
+              <UserCog size={18} className="text-primary" /> Profissionais
+            </button>
+            <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-primary-hover">
+              <Plus size={18} /> Novo agendamento
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
       {focoInicial && (
         <section className="flex flex-col gap-3 rounded-[18px] border border-primary/25 bg-primary/[0.08] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -427,7 +440,7 @@ export default function SaeAgendamentosPage({
         />
       </div>
 
-      <section className="rounded-[20px] border border-border-dark bg-card-dark p-4 sm:p-5">
+      <section className="app-surface p-4 sm:p-5">
         <div className="grid gap-4 xl:grid-cols-[minmax(260px,1.5fr)_180px_190px_190px]">
           <FilterField label="Buscar">
             <div className="relative">
@@ -565,7 +578,7 @@ export default function SaeAgendamentosPage({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
+      <section className="app-surface overflow-hidden">
         <div className="flex flex-col gap-2 border-b border-border-dark px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-bold text-white">
@@ -623,6 +636,11 @@ export default function SaeAgendamentosPage({
           <EmptyState />
         )}
       </section>
+
+      <GerenciarProfissionaisModal
+        aberto={profissionaisAberto}
+        onClose={() => setProfissionaisAberto(false)}
+      />
 
       <NovoAgendamentoModal
         aberto={novoAgendamentoAberto}
