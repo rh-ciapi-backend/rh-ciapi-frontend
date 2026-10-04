@@ -144,40 +144,34 @@ export default function SaeUsuariosPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-5 sm:space-y-6"
+      className="space-y-6"
     >
-      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
-              <Users size={22} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-                SAE Administrativo
-              </p>
-              <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
-                Usuários
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Consulte, filtre e acompanhe os usuários ativos e históricos do SAE.
-              </p>
-            </div>
-          </div>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            Gestão de Usuários
+          </p>
 
-          <button
-            type="button"
-            onClick={() => setNovoUsuarioAberto(true)}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-blue-600 sm:w-auto"
-          >
-            <UserPlus size={18} />
-            Novo usuário
-          </button>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+            Usuários
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm text-slate-400">
+            Consulte e acompanhe os usuários atendidos pelo CIAPI.
+          </p>
         </div>
-      </section>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
+        <button
+          type="button"
+          onClick={() => setNovoUsuarioAberto(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-blue-600"
+        >
+          <UserPlus size={18} />
+          Novo Usuário
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           label="Total de Usuários"
           value={usuarios.length}
@@ -219,11 +213,11 @@ export default function SaeUsuariosPage({
         />
       </div>
 
-      <section className="app-surface relative overflow-hidden p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
+      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
+        <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              Buscar
+              Busca
             </label>
 
             <div className="relative">
@@ -236,88 +230,101 @@ export default function SaeUsuariosPage({
                 type="text"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome ou número do prontuário..."
+                placeholder="Nome, prontuário ou contato..."
                 className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              Situação
-            </label>
-
-            <select
-              value={situacao}
-              onChange={(e) =>
-                setSituacao(
-                  e.target.value as
-                    | 'TODOS'
-                    | SituacaoUsuario,
-                )
-              }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setBusca('');
+                setSituacao('TODOS');
+                setTurno('TODOS');
+              }}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white sm:w-auto"
             >
-              <option value="TODOS">Todos</option>
-              <option value="ATIVO">Ativos</option>
-              <option value="INATIVO">Inativos</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              Turno
-            </label>
-
-            <select
-              value={turno}
-              onChange={(e) =>
-                setTurno(
-                  e.target.value as
-                    | 'TODOS'
-                    | 'MANHÃ'
-                    | 'TARDE',
-                )
-              }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="TODOS">Todos</option>
-              <option value="MANHÃ">Manhã</option>
-              <option value="TARDE">Tarde</option>
-            </select>
+              Limpar
+            </button>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col items-stretch gap-2 border-t border-border-dark pt-4 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex items-center gap-2 text-xs text-slate-500 sm:mr-1">
-            <SlidersHorizontal size={14} />
-            Filtros rápidos
+        <div className="border-t border-border-dark px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                  Situação
+                </span>
+
+                <div className="inline-flex rounded-2xl border border-border-dark bg-slate-900/40 p-1">
+                  {[
+                    { value: 'TODOS', label: 'Todos' },
+                    { value: 'ATIVO', label: 'Ativos' },
+                    { value: 'INATIVO', label: 'Inativos' },
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() =>
+                        setSituacao(item.value as 'TODOS' | SituacaoUsuario)
+                      }
+                      className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
+                        situacao === item.value
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden h-8 w-px bg-border-dark xl:block" />
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                  Turno
+                </span>
+
+                <div className="inline-flex rounded-2xl border border-border-dark bg-slate-900/40 p-1">
+                  {[
+                    { value: 'TODOS', label: 'Todos' },
+                    { value: 'MANHÃ', label: 'Manhã' },
+                    { value: 'TARDE', label: 'Tarde' },
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() =>
+                        setTurno(item.value as 'TODOS' | 'MANHÃ' | 'TARDE')
+                      }
+                      className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
+                        turno === item.value
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <SlidersHorizontal size={14} />
+              filtros rápidos no estilo relatório
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setSituacao('ATIVO')}
-            className="min-h-10 w-full rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-primary/30 hover:text-white sm:min-h-0 sm:w-auto sm:rounded-full sm:py-1.5"
-          >
-            Somente ativos
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setBusca('');
-              setSituacao('TODOS');
-              setTurno('TODOS');
-            }}
-            className="min-h-10 w-full rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2 text-xs font-medium text-slate-400 transition hover:text-white sm:min-h-0 sm:w-auto sm:rounded-full sm:py-1.5"
-          >
-            Limpar filtros
-          </button>
         </div>
       </section>
 
-      <section className="app-surface overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-border-dark px-4 py-4 sm:px-5">
+      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
+        <div className="flex items-center justify-between gap-3 border-b border-border-dark px-5 py-4">
           <div>
             <h2 className="text-sm font-bold text-white">
               Lista de usuários
@@ -404,14 +411,14 @@ function KpiCard({
   iconClass: string;
 }) {
   return (
-    <article className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[20px] sm:p-5">
+    <article className="rounded-[20px] border border-border-dark bg-card-dark p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
             {label}
           </p>
 
-          <p className="mt-3 text-2xl font-bold text-white sm:text-3xl">
+          <p className="mt-3 text-3xl font-bold text-white">
             {value}
           </p>
 
@@ -513,7 +520,7 @@ function UsuarioCard({
   onAbrir: (usuarioId: string) => void;
 }) {
   return (
-    <article className="p-4 sm:p-5">
+    <article className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <button
@@ -540,8 +547,8 @@ function UsuarioCard({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 text-xs text-slate-400 min-[420px]:grid-cols-2">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-400">
+        <div className="flex items-center gap-2">
           <IdCard
             size={14}
             className="text-slate-600"
@@ -549,7 +556,7 @@ function UsuarioCard({
           {usuario.turno || 'Turno não informado'}
         </div>
 
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex items-center gap-2">
           <Phone
             size={14}
             className="text-slate-600"
@@ -557,7 +564,7 @@ function UsuarioCard({
           {usuario.telefonePrincipal || 'Sem telefone'}
         </div>
 
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex items-center gap-2">
           <MapPin
             size={14}
             className="text-slate-600"
@@ -566,11 +573,11 @@ function UsuarioCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+      <div className="mt-4 flex gap-2">
         <button
           type="button"
           onClick={() => onAbrir(usuario.id)}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
         >
           <Eye size={15} />
           Abrir
@@ -579,7 +586,7 @@ function UsuarioCard({
         <button
           type="button"
           onClick={() => onAbrir(usuario.id)}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
         >
           <Pencil size={15} />
           Perfil
@@ -632,7 +639,7 @@ function ErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-5 min-h-11 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white sm:w-auto"
+          className="mt-5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
         >
           Tentar novamente
         </button>
