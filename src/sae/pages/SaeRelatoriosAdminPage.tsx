@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   BarChart3,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -19,6 +20,8 @@ import {
   type SaeAdminUsuario,
 } from '../services/saeAdministrativoService';
 import { saeDocumentosService } from '../services/saeDocumentosService';
+import { saeAgendamentosService } from '../services/saeAgendamentosService';
+import type { SaeAgendamentoResumo } from '../types/saeAgendamento';
 
 const normalize = (value: unknown) =>
   String(value ?? '')
@@ -77,6 +80,7 @@ const PAGE_SIZE = 12;
 export default function SaeRelatoriosAdminPage() {
   const [usuarios, setUsuarios] = useState<SaeAdminUsuario[]>([]);
   const [documentos, setDocumentos] = useState<SaeAdminDocumento[]>([]);
+  const [agendamentos, setAgendamentos] = useState<SaeAgendamentoResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
 
@@ -104,10 +108,12 @@ export default function SaeRelatoriosAdminPage() {
     Promise.all([
       saeAdministrativoService.listarUsuarios(),
       saeAdministrativoService.listarDocumentos(),
+      saeAgendamentosService.listar(),
     ])
-      .then(([users, docs]) => {
+      .then(([users, docs, appointments]) => {
         setUsuarios(users);
         setDocumentos(docs);
+        setAgendamentos(appointments);
       })
       .catch((error) =>
         setErro(
@@ -349,6 +355,72 @@ export default function SaeRelatoriosAdminPage() {
       )
       .slice(0, 12);
   }, [filtrados]);
+
+  const historicoAgendamentos = useMemo(() => {
+    const mapa = new Map<string, number>();
+
+    agendamentos.forEach((agendamento) => {
+      // Quando o agendamento pertence a um usuário cadastrado,
+      // respeita os mesmos filtros da página de relatórios.
+      if (
+        agendamento.usuarioId &&
+        !idsFiltrados.has(agendamento.usuarioId)
+      ) {
+        return;
+      }
+
+      const data = String(agendamento.data || '').slice(0, 10);
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+        return;
+      }
+
+      const [ano, mes] = data.split('-');
+      const chave = `${ano}-${mes}`;
+
+      mapa.set(
+        chave,
+        (mapa.get(chave) || 0) + 1,
+      );
+    });
+
+    const nomesMeses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+
+    return Array.from(mapa.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 12)
+      .map(([chave, total]) => {
+        const [ano, mes] = chave.split('-');
+        const indiceMes = Number(mes) - 1;
+
+        return {
+          label: `${nomesMeses[indiceMes] || mes}/${ano}`,
+          total,
+        };
+      });
+  }, [agendamentos, idsFiltrados]);
+
+  const totalAgendamentosFiltrados = useMemo(
+    () =>
+      historicoAgendamentos.reduce(
+        (total, item) => total + item.total,
+        0,
+      ),
+    [historicoAgendamentos],
+  );
 
   const relatoriosPorProfissional = useMemo(() => {
     const map = new Map<string, number>();
@@ -765,7 +837,7 @@ export default function SaeRelatoriosAdminPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi
           label="Usuários"
           value={filtrados.length}
@@ -786,6 +858,12 @@ export default function SaeRelatoriosAdminPage() {
         />
 
         <Kpi
+          label="Agendamentos"
+          value={totalAgendamentosFiltrados}
+          icon={CalendarDays}
+        />
+
+        <Kpi
           label="Bairros"
           value={
             new Set(
@@ -798,7 +876,7 @@ export default function SaeRelatoriosAdminPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Distribution
           title="Faixa etária"
           items={faixas}
@@ -809,6 +887,12 @@ export default function SaeRelatoriosAdminPage() {
           title="Principais bairros"
           items={porBairro}
           total={filtrados.length}
+        />
+
+        <Distribution
+          title="Histórico de agendamentos"
+          items={historicoAgendamentos}
+          total={Math.max(totalAgendamentosFiltrados, 1)}
         />
 
         <Distribution
