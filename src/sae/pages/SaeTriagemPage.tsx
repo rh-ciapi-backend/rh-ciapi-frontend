@@ -157,38 +157,34 @@ export default function SaeTriagemPage({
       transition={{ duration: 0.18 }}
       className="space-y-6"
     >
-      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300">
-              <ClipboardCheck size={22} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-                SAE Administrativo
-              </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
-                Triagem
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm text-slate-400">
-                Acompanhe o fluxo multidisciplinar até a conclusão da triagem e matrícula.
-              </p>
-            </div>
-          </div>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            Gestão de Triagem
+          </p>
 
-          <button
-            type="button"
-            onClick={() => setNovaAberta(true)}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-primary-hover sm:w-auto"
-          >
-            <Plus size={18} />
-            Nova triagem
-          </button>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+            Triagem
+          </h1>
+
+          <p className="mt-2 max-w-3xl text-sm text-slate-400">
+            Acompanhe o ingresso no SAE pelo fluxo multidisciplinar de
+            Serviço Social, Enfermagem, Psicologia, Médico e
+            Terapia Ocupacional.
+          </p>
         </div>
-      </section>
 
-      <div className="app-surface border-primary/15 bg-gradient-to-r from-primary/[0.08] to-cyan-500/[0.04] p-4 sm:p-5">
+        <button
+          type="button"
+          onClick={() => setNovaAberta(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover"
+        >
+          <Plus size={18} />
+          Nova triagem
+        </button>
+      </div>
+
+      <div className="rounded-[18px] border border-primary/15 bg-primary/[0.05] p-4">
         <div className="flex items-start gap-3">
           <HeartPulse
             size={18}
@@ -260,11 +256,11 @@ export default function SaeTriagemPage({
         />
       </div>
 
-      <section className="rounded-[20px] border border-border-dark bg-card-dark p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(260px,1fr)_220px_220px_auto]">
+      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
+        <div className="grid gap-4 px-4 py-4 sm:px-5 xl:grid-cols-[minmax(260px,1.3fr)_220px_220px_auto]">
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              Buscar
+              Busca
             </label>
 
             <div className="relative">
@@ -278,7 +274,7 @@ export default function SaeTriagemPage({
                   setBusca(event.target.value)
                 }
                 placeholder="Nome ou telefone..."
-                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-primary/50"
+                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -289,7 +285,7 @@ export default function SaeTriagemPage({
               onChange={(event) =>
                 setStatus(event.target.value)
               }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none"
+              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             >
               <option value="TODOS">Todas</option>
               <option value="EM_TRIAGEM">Em triagem</option>
@@ -309,7 +305,7 @@ export default function SaeTriagemPage({
               onChange={(event) =>
                 setEtapa(event.target.value)
               }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none"
+              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             >
               <option value="TODAS">Todas</option>
               <option value="SERVICO_SOCIAL">
@@ -333,16 +329,45 @@ export default function SaeTriagemPage({
                 setStatus('TODOS');
                 setEtapa('TODAS');
               }}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 hover:text-white"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white xl:w-auto"
             >
               <FilterX size={16} />
               Limpar
             </button>
           </div>
         </div>
+
+        <div className="border-t border-border-dark px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              Filtros rápidos
+            </span>
+
+            <div className="inline-flex flex-wrap rounded-2xl border border-border-dark bg-slate-900/40 p-1">
+              {[
+                { value: 'TODOS', label: 'Todas' },
+                { value: 'EM_TRIAGEM', label: 'Em triagem' },
+                { value: 'MATRICULADO', label: 'Matriculado' },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setStatus(item.value)}
+                  className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
+                    status === item.value
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="app-surface overflow-hidden">
+      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
         <div className="flex items-center justify-between border-b border-border-dark px-5 py-4">
           <div>
             <h2 className="text-sm font-bold text-white">
@@ -515,7 +540,7 @@ function Kpi({
   icon: React.ElementType;
 }) {
   return (
-    <article className="app-surface p-5">
+    <article className="rounded-[20px] border border-border-dark bg-card-dark p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
