@@ -329,36 +329,29 @@ export default function SaeAgendamentosPage({
       transition={{ duration: 0.18 }}
       className="space-y-6"
     >
-      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-violet-300">
-              <CalendarDays size={22} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-                SAE Administrativo
-              </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
-                Agendamentos
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm text-slate-400">
-                Consulte marcações, serviços, turnos, profissionais e horários do SAE.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={() => setProfissionaisAberto(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-900/30 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white">
-              <UserCog size={18} className="text-primary" /> Profissionais
-            </button>
-            <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-primary-hover">
-              <Plus size={18} /> Novo agendamento
-            </button>
-          </div>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            Gestão de Agendamentos
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+            Agendamentos
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-400">
+            Consulte o histórico de marcações do SAE, incluindo usuários,
+            serviços, turnos, profissionais e horários disponíveis na fonte.
+          </p>
         </div>
-      </section>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="button" onClick={() => setProfissionaisAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-dark bg-card-dark px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-primary/30 hover:bg-slate-800/60 hover:text-white">
+            <UserCog size={18} className="text-primary" /> Profissionais
+          </button>
+          <button type="button" onClick={() => setNovoAgendamentoAberto(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover">
+            <Plus size={18} /> Novo agendamento
+          </button>
+        </div>
+      </div>
 
       {focoInicial && (
         <section className="flex flex-col gap-3 rounded-[18px] border border-primary/25 bg-primary/[0.08] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -440,8 +433,8 @@ export default function SaeAgendamentosPage({
         />
       </div>
 
-      <section className="app-surface p-4 sm:p-5">
-        <div className="grid gap-4 xl:grid-cols-[minmax(260px,1.5fr)_180px_190px_190px]">
+      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
+        <div className="grid gap-4 px-4 py-4 sm:px-5 xl:grid-cols-[minmax(260px,1.5fr)_180px_190px_190px_auto]">
           <FilterField label="Buscar">
             <div className="relative">
               <Search
@@ -511,74 +504,91 @@ export default function SaeAgendamentosPage({
               ))}
             </select>
           </FilterField>
-        </div>
-
-        <div className="mt-4 grid gap-4 border-t border-border-dark pt-4 md:grid-cols-3 xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]">
-          <FilterField label="Serviço">
-            <select
-              value={filtros.servicoId}
-              onChange={(event) =>
-                atualizarFiltro('servicoId', event.target.value)
-              }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="TODOS">Todos os serviços</option>
-              {servicosDisponiveis.map((servico) => (
-                <option key={servico.id} value={servico.id}>
-                  {servico.nome}
-                </option>
-              ))}
-            </select>
-          </FilterField>
-
-          <FilterField label="Turno">
-            <select
-              value={filtros.turno}
-              onChange={(event) =>
-                atualizarFiltro(
-                  'turno',
-                  event.target.value as SaeAgendamentoFiltros['turno'],
-                )
-              }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="TODOS">Todos</option>
-              <option value="MANHÃ">Manhã</option>
-              <option value="TARDE">Tarde</option>
-            </select>
-          </FilterField>
-
-          <FilterField label="Status">
-            <select
-              value={filtros.status}
-              onChange={(event) =>
-                atualizarFiltro('status', event.target.value)
-              }
-              className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="TODOS">Todos</option>
-              {statusDisponiveis.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </FilterField>
 
           <div className="flex items-end">
             <button
               type="button"
               onClick={() => setFiltros(FILTROS_INICIAIS)}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white md:w-auto"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white xl:w-auto"
             >
               <FilterX size={16} />
-              Limpar filtros
+              Limpar
             </button>
+          </div>
+        </div>
+
+        <div className="border-t border-border-dark px-4 py-4 sm:px-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_minmax(220px,1fr)_auto] xl:items-end">
+            <FilterField label="Serviço">
+              <select
+                value={filtros.servicoId}
+                onChange={(event) =>
+                  atualizarFiltro('servicoId', event.target.value)
+                }
+                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="TODOS">Todos os serviços</option>
+                {servicosDisponiveis.map((servico) => (
+                  <option key={servico.id} value={servico.id}>
+                    {servico.nome}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+
+            <FilterField label="Status">
+              <select
+                value={filtros.status}
+                onChange={(event) =>
+                  atualizarFiltro('status', event.target.value)
+                }
+                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-3 text-sm text-slate-200 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="TODOS">Todos</option>
+                {statusDisponiveis.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:justify-end">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                Turno
+              </span>
+
+              <div className="inline-flex rounded-2xl border border-border-dark bg-slate-900/40 p-1">
+                {[
+                  { value: 'TODOS', label: 'Todos' },
+                  { value: 'MANHÃ', label: 'Manhã' },
+                  { value: 'TARDE', label: 'Tarde' },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() =>
+                      atualizarFiltro(
+                        'turno',
+                        item.value as SaeAgendamentoFiltros['turno'],
+                      )
+                    }
+                    className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
+                      filtros.turno === item.value
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="app-surface overflow-hidden">
+      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
         <div className="flex flex-col gap-2 border-b border-border-dark px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-bold text-white">
