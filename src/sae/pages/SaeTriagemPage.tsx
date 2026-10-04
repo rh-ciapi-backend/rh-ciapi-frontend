@@ -155,36 +155,40 @@ export default function SaeTriagemPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-5 sm:space-y-6"
+      className="space-y-6"
     >
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-            Gestão de Triagem
-          </p>
+      <section className="app-surface relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300">
+              <ClipboardCheck size={22} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+                SAE Administrativo
+              </p>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+                Triagem
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm text-slate-400">
+                Acompanhe o fluxo multidisciplinar até a conclusão da triagem e matrícula.
+              </p>
+            </div>
+          </div>
 
-          <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
-            Triagem
-          </h1>
-
-          <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Acompanhe o ingresso no SAE pelo fluxo multidisciplinar de
-            Serviço Social, Enfermagem, Psicologia, Médico e
-            Terapia Ocupacional.
-          </p>
+          <button
+            type="button"
+            onClick={() => setNovaAberta(true)}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-primary-hover sm:w-auto"
+          >
+            <Plus size={18} />
+            Nova triagem
+          </button>
         </div>
+      </section>
 
-        <button
-          type="button"
-          onClick={() => setNovaAberta(true)}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-hover sm:w-auto"
-        >
-          <Plus size={18} />
-          Nova triagem
-        </button>
-      </div>
-
-      <div className="rounded-[18px] border border-primary/15 bg-primary/[0.05] p-4">
+      <div className="app-surface border-primary/15 bg-gradient-to-r from-primary/[0.08] to-cyan-500/[0.04] p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <HeartPulse
             size={18}
@@ -205,7 +209,7 @@ export default function SaeTriagemPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-7">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
         <Kpi
           label="Triagens"
           value={totais.total}
@@ -329,7 +333,7 @@ export default function SaeTriagemPage({
                 setStatus('TODOS');
                 setEtapa('TODAS');
               }}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 hover:text-white lg:w-auto"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 hover:text-white"
             >
               <FilterX size={16} />
               Limpar
@@ -338,8 +342,8 @@ export default function SaeTriagemPage({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
-        <div className="flex items-center justify-between border-b border-border-dark px-4 py-4 sm:px-5">
+      <section className="app-surface overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border-dark px-5 py-4">
           <div>
             <h2 className="text-sm font-bold text-white">
               Pessoas em acompanhamento
@@ -440,7 +444,7 @@ export default function SaeTriagemPage({
               {filtradas.map((triagem) => (
                 <article
                   key={triagem.id}
-                  className="p-4 sm:p-5"
+                  className="p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -467,7 +471,7 @@ export default function SaeTriagemPage({
                   <button
                     type="button"
                     onClick={() => setSelecionada(triagem)}
-                    className="mt-4 min-h-11 w-full rounded-xl border border-border-dark px-3 py-2.5 text-sm font-bold text-slate-300 transition hover:border-primary/30 hover:text-white"
+                    className="mt-4 w-full rounded-xl border border-border-dark px-3 py-2.5 text-sm font-bold text-slate-300"
                   >
                     Abrir triagem
                   </button>
@@ -511,7 +515,7 @@ function Kpi({
   icon: React.ElementType;
 }) {
   return (
-    <article className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-[20px] sm:p-5">
+    <article className="app-surface p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
@@ -568,7 +572,7 @@ function Progress({ triagem }: { triagem: SaeTriagem }) {
   ] as const;
 
   return (
-    <div className="responsive-scroll flex min-w-0 items-center gap-2">
+    <div className="flex items-center gap-2">
       {ordem.map((nome, index) => {
         const etapa = triagem.etapas.find(
           (item) => item.etapa === nome,
