@@ -209,43 +209,73 @@ export default function SaeTriagemPage({
         <Kpi
           label="Triagens"
           value={totais.total}
-          helper="Processos cadastrados"
+          helper="Mostrar todos"
           icon={Users}
+          active={status === 'TODOS' && etapa === 'TODAS'}
+          onClick={() => {
+            setStatus('TODOS');
+            setEtapa('TODAS');
+          }}
         />
 
         <Kpi
           label="Serviço Social"
           value={totais.social}
-          helper="Etapa atual"
+          helper="Filtrar etapa"
           icon={ClipboardCheck}
+          active={status === 'EM_TRIAGEM' && etapa === 'SERVICO_SOCIAL'}
+          onClick={() => {
+            setStatus('EM_TRIAGEM');
+            setEtapa('SERVICO_SOCIAL');
+          }}
         />
 
         <Kpi
           label="Enfermagem"
           value={totais.enfermagem}
-          helper="Etapa atual"
+          helper="Filtrar etapa"
           icon={Activity}
+          active={status === 'EM_TRIAGEM' && etapa === 'ENFERMAGEM'}
+          onClick={() => {
+            setStatus('EM_TRIAGEM');
+            setEtapa('ENFERMAGEM');
+          }}
         />
 
         <Kpi
           label="Psicologia"
           value={totais.psicologia}
-          helper="Etapa atual"
+          helper="Filtrar etapa"
           icon={HeartPulse}
+          active={status === 'EM_TRIAGEM' && etapa === 'PSICOLOGIA'}
+          onClick={() => {
+            setStatus('EM_TRIAGEM');
+            setEtapa('PSICOLOGIA');
+          }}
         />
 
         <Kpi
           label="Médico"
           value={totais.medico}
-          helper="Etapa atual"
+          helper="Filtrar etapa"
           icon={Stethoscope}
+          active={status === 'EM_TRIAGEM' && etapa === 'MEDICO'}
+          onClick={() => {
+            setStatus('EM_TRIAGEM');
+            setEtapa('MEDICO');
+          }}
         />
 
         <Kpi
           label="Terapia Ocupacional"
           value={totais.terapiaOcupacional}
-          helper="Etapa atual"
+          helper="Filtrar etapa"
           icon={BriefcaseMedical}
+          active={status === 'EM_TRIAGEM' && etapa === 'TERAPIA_OCUPACIONAL'}
+          onClick={() => {
+            setStatus('EM_TRIAGEM');
+            setEtapa('TERAPIA_OCUPACIONAL');
+          }}
         />
 
         <Kpi
@@ -253,6 +283,11 @@ export default function SaeTriagemPage({
           value={totais.decisao}
           helper="Aguardando resultado"
           icon={CheckCircle2}
+          active={status === 'AGUARDANDO_DECISAO' && etapa === 'TODAS'}
+          onClick={() => {
+            setStatus('AGUARDANDO_DECISAO');
+            setEtapa('TODAS');
+          }}
         />
       </div>
 
@@ -533,32 +568,66 @@ function Kpi({
   value,
   helper,
   icon: Icon,
+  active,
+  onClick,
 }: {
   label: string;
   value: number;
   helper: string;
   icon: React.ElementType;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <article className="rounded-[20px] border border-border-dark bg-card-dark p-5">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={[
+        'group w-full rounded-[20px] border p-5 text-left transition-all duration-200',
+        'focus:outline-none focus:ring-2 focus:ring-primary/30',
+        active
+          ? 'border-primary/50 bg-primary/[0.12] shadow-lg shadow-primary/10'
+          : 'border-border-dark bg-card-dark hover:-translate-y-0.5 hover:border-primary/35 hover:bg-slate-800/60',
+      ].join(' ')}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+          <p
+            className={[
+              'text-[10px] font-bold uppercase tracking-[0.16em] transition',
+              active ? 'text-primary' : 'text-slate-500 group-hover:text-slate-400',
+            ].join(' ')}
+          >
             {label}
           </p>
+
           <p className="mt-3 text-3xl font-bold text-white">
             {value}
           </p>
-          <p className="mt-2 text-xs text-slate-500">
-            {helper}
+
+          <p
+            className={[
+              'mt-2 text-xs transition',
+              active ? 'text-blue-300' : 'text-slate-500 group-hover:text-slate-400',
+            ].join(' ')}
+          >
+            {active ? 'Filtro ativo' : helper}
           </p>
         </div>
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+        <div
+          className={[
+            'flex h-10 w-10 items-center justify-center rounded-xl border transition',
+            active
+              ? 'border-primary/40 bg-primary text-white shadow-md shadow-primary/20'
+              : 'border-primary/20 bg-primary/10 text-primary group-hover:border-primary/40 group-hover:bg-primary/15',
+          ].join(' ')}
+        >
           <Icon size={18} />
         </div>
       </div>
-    </article>
+    </button>
   );
 }
 
