@@ -6,16 +6,30 @@ on:
     - cron: '0 */12 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   ping:
+    name: Ping Supabase
     runs-on: ubuntu-latest
+
     steps:
-      - name: Ping Supabase
+      - name: Consultar banco Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          set -e
+
+          echo "Iniciando ping do Supabase..."
+
           curl --fail-with-body --silent --show-error \
+            --retry 3 \
             --max-time 30 \
-            "${SUPABASE_URL}/rest/v1/servidores?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_KEY}"
+            "${SUPABASE_URL}/rest/v1/servidores?select=*&limit=1" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Accept: application/json" \
+            -o /dev/null
+
+          echo "Ping realizado com sucesso!"
