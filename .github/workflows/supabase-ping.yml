@@ -1,3 +1,4 @@
+
 name: Supabase Keep Alive
 
 on:
@@ -10,9 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail-with-body --silent --show-error \
             --max-time 30 \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/servidores?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+            "${SUPABASE_URL}/rest/v1/servidores?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_KEY}"
