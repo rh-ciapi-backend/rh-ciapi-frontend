@@ -27,9 +27,9 @@ jobs:
           curl --fail-with-body --silent --show-error \
             --retry 3 \
             --max-time 30 \
-            "${SUPABASE_URL}/rest/v1/servidores?select=*&limit=1" \
+            "${SUPABASE_URL}/rest/v1/sistema_ping?select=id&limit=1" \
             -H "apikey: ${SUPABASE_KEY}" \
-            -H "Accept: application/json" 
-            
+            -H "Accept: application/json" \
+            -o /dev/null
 
           echo "Ping realizado com sucesso!"
