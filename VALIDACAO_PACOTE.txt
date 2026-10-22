@@ -1,0 +1,2 @@
+Conferidos os caminhos dos imports relativos. Corrigido src/utils/atestados.ts para importar os tipos de src/types.ts.
+O build NÃO foi executado: o npm ci offline falhou porque as dependências não estavam disponíveis no cache deste ambiente. Execute npm ci && npm run build na branch de homologação.
