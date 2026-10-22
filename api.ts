@@ -3,10 +3,13 @@
  */
 
 const API_PRODUCAO = 'https://api.rhciapi.com.br';
-// Permite configurar a API de homologação/produção sem alterar o código-fonte.
-// A URL padrão continua a mesma, preservando a instalação existente.
-const API_CONFIGURADA = String(import.meta.env.VITE_API_BACKEND_URL || '').trim();
-export const API_BASE_URL = (API_CONFIGURADA || API_PRODUCAO).replace(/\/+$/, '');
+const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+const dominioProducao =
+  hostname === 'rhciapi.com.br' || hostname === 'www.rhciapi.com.br';
+
+export const API_BASE_URL = dominioProducao
+  ? API_PRODUCAO
+  : (import.meta as any).env?.VITE_API_BACKEND_URL || API_PRODUCAO;
 
 let healthCheckDone = false;
 
