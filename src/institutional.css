@@ -147,3 +147,25 @@
   filter: none !important;
   opacity: 1;
 }
+
+
+/* =====================================================================
+   CIAPI — proteção de cores das marcas (22/10/2026)
+   Não altera a aparência dos cartões RH/SAE e do formulário de login.
+   ===================================================================== */
+.institutional-header .institutional-brand__logos,
+.institutional-header .institutional-brand__divider,
+.institutional-header .institutional-brand__ciapi,
+.institutional-header .institutional-brand__gov {
+  filter: none !important;
+  -webkit-filter: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+}
+.institutional-header img.institutional-brand__ciapi,
+.institutional-header img.institutional-brand__gov {
+  display: block;
+  object-fit: contain;
+  background: transparent;
+  image-rendering: auto;
+}
