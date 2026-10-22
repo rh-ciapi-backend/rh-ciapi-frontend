@@ -6,23 +6,19 @@ type InstitutionalHeaderProps = {
   compact?: boolean;
 };
 
-/** Cabeçalho institucional compartilhado entre o portal CIAPI RH e SAE. */
+/** Cabeçalho institucional — apenas apresentação; nenhuma mudança em autenticação. */
 export function InstitutionalHeader({
   subtitle = 'Centro Integrado de Atenção à Pessoa Idosa',
   compact = false,
 }: InstitutionalHeaderProps) {
   return (
-    <header className={`institutional-header${compact ? ' institutional-header--compact' : ''}`}>
+    <header className={`institutional-header ${compact ? 'institutional-header--compact' : ''}`}>
       <div className="institutional-header__inner">
-        <div className="institutional-brand">
-          <img
-            src="/images/governo-roraima-identidade.jpg"
-            alt="Identidade visual do Governo de Roraima"
-            className="institutional-brand__img"
-          />
-          <div className="institutional-brand__text">
-            <strong>GOVERNO DE RORAIMA</strong>
-            <span>SETRABES · CIAPI</span>
+        <div className="institutional-brand institutional-brand--dual">
+          <div className="institutional-brand__logos">
+            <img className="institutional-brand__ciapi" src="/images/ciapi-simbolo-colorido.png" alt="Símbolo do CIAPI" />
+            <span className="institutional-brand__divider" aria-hidden="true" />
+            <img className="institutional-brand__gov" src="/images/governo-roraima-branco.png" alt="Governo de Roraima" />
           </div>
         </div>
         <div className="institutional-heading">
