@@ -15,27 +15,29 @@
 /* Proteção contra dimensão excessiva do logotipo. */
 .institutional-header .institutional-brand img { width: 68px; height: 68px; object-fit: contain; flex-shrink: 0; }
 
-/* Versão 2 — página inicial separada da autenticação, inspirada no portal PMRR */
-.institutional-header{background:linear-gradient(115deg,#073b6b 0%,#052e55 64%,#042544 100%)}
-.institutional-header__inner{position:relative;max-width:1380px;min-height:136px;padding:18px 30px;display:grid;grid-template-columns:310px 1fr 220px;gap:25px}
-.institutional-brand{gap:8px;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
-.institutional-header .institutional-brand img{width:220px;height:91px;max-width:100%;object-fit:contain;object-position:left center;flex-shrink:1}
-.institutional-brand__unit{font-size:11px;letter-spacing:.09em;color:#d5e5f5;margin-top:-10px;padding-left:3px}
-.institutional-heading strong{font-size:31px;letter-spacing:-.03em}
-.institutional-heading span{font-size:14px}
-.institutional-login{background:linear-gradient(145deg,#f5f7fa,#edf1f6 70%,#e9eff6)}
-.institutional-login__content{width:min(1170px,calc(100% - 36px));padding:52px 0 70px}
-.institutional-login__intro{margin-bottom:40px}
-.institutional-login__intro h1{font-size:30px;color:#073259}
-.institutional-login__systems--home{grid-template-columns:repeat(2,minmax(0,280px));max-width:600px;margin:0 auto;justify-content:center;gap:24px}
-.institutional-login__systems--home .institutional-system-card{min-height:245px;border:1px solid #dbe5ef;border-radius:12px;padding:28px 18px;gap:15px;box-shadow:0 7px 20px #13385912}
-.institutional-login__systems--home .institutional-system-card:hover{transform:translateY(-3px);border-color:#2275b6;box-shadow:0 14px 27px #13385920}
-.institutional-system-card__access{margin-top:auto;display:flex;align-items:center;gap:5px;font-weight:700;color:#075c9c;font-size:12px}
-.institutional-login__selected{max-width:460px;margin:0 auto}
-.institutional-login__back{display:inline-flex;align-items:center;gap:8px;color:#075c9c;font-size:13px;font-weight:700;padding:8px 0;margin-bottom:13px}
+/* Portal de escolha dos sistemas — inspirado na organização do portal PMRR */
+.institutional-login__content--portal{width:min(1050px,calc(100% - 32px));padding:50px 0 80px}
+.institutional-login__systems--portal{grid-template-columns:repeat(2,minmax(0,1fr));max-width:625px;gap:24px;margin:0 auto}
+.institutional-login__systems--portal .institutional-system-card{min-height:255px}
+.institutional-system-card__action{margin-top:auto;font-size:12px;color:#0d65a8;font-weight:700}
+.institutional-login__standalone{flex:1;min-height:calc(100dvh - 55px);display:flex;justify-content:center;align-items:center;padding:38px 16px;background:#e9e9e9}
+.institutional-login__standalone-panel{width:min(100%,475px);border:1px solid #d9dfe5;border-radius:18px;background:#fff;padding:17px;box-shadow:0 7px 22px #172b3d15;overflow:hidden}
+.institutional-login__banner{display:flex;gap:15px;align-items:center;background:linear-gradient(105deg,#052a4c,#0e5793);padding:13px;border-radius:7px;color:#fff}
+.institutional-login__banner img{height:68px;width:98px;object-fit:contain;flex-shrink:0}
+.institutional-login__banner div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.institutional-login__banner small{font-size:10px;color:#e1eaf6}
+.institutional-login__banner strong{font-size:23px;font-weight:800}
+.institutional-login__banner span{font-size:11px;line-height:1.4;color:#e8f0f8}
+.institutional-login__standalone-panel .institutional-login__panelhead{margin-top:10px;border:1px solid #e6edf5;border-radius:7px}
+.institutional-login__standalone-panel .institutional-login__form{padding:20px 6px 8px}
+.institutional-login__back{display:block;margin:5px auto 2px;color:#0b5791;font-size:13px;padding:10px;font-weight:700}
 .institutional-login__back:hover{text-decoration:underline}
-.institutional-login__intro--selected{margin-bottom:22px}
-.institutional-login__intro--selected h1{font-size:26px}
-.institutional-login__panel{width:100%}
-@media(max-width:900px){.institutional-header__inner{grid-template-columns:225px 1fr;min-height:106px}.institutional-seal{display:none}.institutional-header .institutional-brand img{width:180px;height:76px}.institutional-heading strong{font-size:24px}}
-@media(max-width:600px){.institutional-header__inner{grid-template-columns:1fr;gap:8px;justify-items:center;padding:12px 15px 20px}.institutional-brand{align-items:center}.institutional-brand__unit{margin-top:-8px}.institutional-header .institutional-brand img{width:165px;height:66px;object-position:center}.institutional-heading strong{font-size:22px}.institutional-heading span{font-size:12px}.institutional-login__content{padding:32px 0 44px}.institutional-login__intro h1{font-size:25px}.institutional-login__systems--home{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.institutional-login__systems--home .institutional-system-card{padding:20px 9px;min-height:213px}}
+.institutional-brand img{width:160px!important;height:65px!important;object-fit:contain;background:transparent}
+.institutional-brand{min-width:280px}
+.institutional-brand__caption{display:none}
+.institutional-header{background:#062d54}
+.institutional-app{display:flex!important;flex-direction:column!important}
+.institutional-app>.app-content-column{flex:1;min-width:0}
+.institutional-app .institutional-header__inner{max-width:none}
+.institutional-nav__links{width:100%}
+@media(max-width:640px){.institutional-login__systems--portal{grid-template-columns:1fr;max-width:350px}.institutional-login__content--portal{padding:30px 0 45px}.institutional-brand{min-width:0}.institutional-brand img{height:46px!important;width:125px!important}.institutional-login__banner img{width:76px}}

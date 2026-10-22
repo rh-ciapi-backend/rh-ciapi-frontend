@@ -1,4 +1,3 @@
-import { InstitutionalHeader } from '../components/InstitutionalHeader';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -178,9 +177,7 @@ export default function SaeApp() {
   }
 
   return (
-    <div className="institutional-sae bg-bg-dark text-white">
-      <InstitutionalHeader compact subtitle="Serviço de Atenção Especializada (SAE)" />
-      <div className="institutional-sae__body flex min-h-screen">
+    <div className="flex min-h-screen bg-bg-dark text-white">
       <SaeSidebar
         activeTab={activeTab}
         onChange={handleChangeTab}
@@ -199,7 +196,6 @@ export default function SaeApp() {
             {renderContent()}
           </div>
         </main>
-      </div>
       </div>
     </div>
   );

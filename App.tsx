@@ -6,8 +6,8 @@
 import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { InstitutionalNav } from './components/InstitutionalNav';
 import { InstitutionalHeader } from './components/InstitutionalHeader';
+import { InstitutionalNav } from './components/InstitutionalNav';
 import { Topbar } from './components/Topbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';

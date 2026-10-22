@@ -328,8 +328,7 @@ const filename = resolveFilename(
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  // Adiar a revogação permite ao navegador iniciar o download do blob.
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  URL.revokeObjectURL(url);
 
   return { filename };
 }
