@@ -1,0 +1,29 @@
+/* Navegação horizontal tradicional CIAPI RH. Arquivo isolado: não altera institutional.css */
+.ciapi-hnav{position:relative;z-index:80;background:linear-gradient(180deg,#203c56,#172a42);border-top:1px solid #405974;box-shadow:0 3px 12px #00162a2e}
+.ciapi-hnav__inner{width:100%;margin:0 auto;padding:0 14px;max-width:1920px}
+.ciapi-hnav__items{display:flex;align-items:stretch;min-height:47px;gap:2px;flex-wrap:wrap}
+.ciapi-hnav__group{position:relative;display:flex}
+.ciapi-hnav__trigger{border:0;background:transparent;cursor:pointer;color:#e8f3ff;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;font-size:12px;font-weight:650;line-height:1.2;padding:13px 12px;min-height:46px;transition:background .14s ease}
+.ciapi-hnav__trigger:hover,.ciapi-hnav__trigger:focus-visible,.ciapi-hnav__trigger--active{background:#1364ab;color:#fff}
+.ciapi-hnav__trigger:focus-visible,.ciapi-hnav__dropdown button:focus-visible,.ciapi-hnav__mobile-toggle:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
+.ciapi-hnav__trigger>svg:last-child:not(:first-child){opacity:.75}
+.ciapi-hnav__dropdown{position:absolute;top:100%;left:0;z-index:90;min-width:238px;padding:7px;background:white;border:1px solid #d8e2ed;border-radius:0 0 10px 10px;box-shadow:0 15px 40px #05162a30;display:flex;flex-direction:column;gap:2px}
+.ciapi-hnav__dropdown button{display:flex;align-items:center;text-align:left;gap:10px;width:100%;border:0;background:white;color:#233e5c;padding:11px 12px;border-radius:7px;cursor:pointer;font:600 12px/1.35 inherit;white-space:nowrap}
+.ciapi-hnav__dropdown button:hover,.ciapi-hnav__dropdown button:focus-visible{background:#e9f3ff;color:#075e9e}
+.ciapi-hnav__dropdown button svg{flex-shrink:0;color:#2872af}
+.ciapi-hnav__sae{margin-left:auto;background:#224a72}
+.ciapi-hnav__logout{color:#ffdbdd}
+.ciapi-hnav__mobile-toggle{display:none}
+@media(max-width:1100px){.ciapi-hnav__inner{padding:0 10px}.ciapi-hnav__trigger{font-size:11px;padding:12px 8px}}
+@media(max-width:800px){
+ .ciapi-hnav__mobile-toggle{display:flex;gap:8px;align-items:center;background:transparent;border:0;padding:13px 10px;color:#fff;cursor:pointer;font:700 13px/1.4 inherit;min-height:47px}
+ .ciapi-hnav__items{display:none;flex-direction:column;align-items:stretch;gap:0;padding:0 0 8px;max-height:calc(100dvh - 160px);overflow:auto}
+ .ciapi-hnav__items--open{display:flex}
+ .ciapi-hnav__group{display:block}
+ .ciapi-hnav__trigger{justify-content:flex-start;width:100%;padding:13px 12px}
+ .ciapi-hnav__sae{margin-left:0}
+ .ciapi-hnav__dropdown{position:static;min-width:0;width:100%;border-radius:0;box-shadow:none;padding:4px 5px 7px 18px;background:#18334f;border:0}
+ .ciapi-hnav__dropdown button{background:transparent;color:#ebf4ff;white-space:normal}
+ .ciapi-hnav__dropdown button svg{color:#94c7fd}
+ .ciapi-hnav__dropdown button:hover{background:#27567d;color:#fff}
+}
