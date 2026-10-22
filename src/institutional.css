@@ -70,9 +70,8 @@
   object-fit: contain;
   background: transparent;
   border-radius: 8px;
-  /* Leve coloração azul-dourada para ícone monocromático.
-     Para cor fiel ao desenho, prefira substituir o PNG por arte colorida. */
-  filter: sepia(0.65) saturate(2.3) hue-rotate(172deg) contrast(1.08);
+  /* Mantém as cores naturais do PNG colorido, sem tonalização. */
+  filter: none;
 }
 .institutional-brand .institutional-brand__gov {
   width: 190px !important;
@@ -113,4 +112,38 @@
   .institutional-brand__logos { gap: 6px; }
   .institutional-brand .institutional-brand__ciapi { width: 49px !important; height: 49px !important; }
   .institutional-brand .institutional-brand__gov { width: 132px !important; height: 49px !important; }
+}
+
+
+/* CIAPI — ajuste visual do cabeçalho dual. Mantém todas as regras do portal e login. */
+.institutional-header__inner { max-width: 1700px; display: grid; grid-template-columns: minmax(330px,1fr) auto minmax(200px,1fr); gap: 28px; align-items: center; }
+.institutional-brand--dual { min-width: 0; gap: 0; }
+.institutional-brand__logos { display: flex; align-items: center; gap: 14px; width: max-content; max-width: 100%; }
+.institutional-brand__divider { display: block; width: 1px; height: 59px; background: rgba(255,255,255,.70); flex-shrink: 0; }
+.institutional-brand--dual .institutional-brand__ciapi { width: 70px; height: 70px; object-fit: contain; flex-shrink: 0; }
+.institutional-brand--dual .institutional-brand__gov { width: 250px; max-width: min(250px,40vw); height: 70px; object-fit: contain; object-position: left center; }
+.institutional-heading { justify-self: center; }
+.institutional-seal { justify-self: end; }
+.institutional-header--compact .institutional-brand__ciapi { width: 52px; height: 52px; }
+.institutional-header--compact .institutional-brand__gov { width: 210px; height: 54px; }
+.institutional-header--compact .institutional-brand__divider { height: 46px; }
+@media (max-width: 1050px) {
+  .institutional-header__inner { display: flex; flex-wrap: wrap; justify-content: center; text-align: center; gap: 14px 28px; }
+  .institutional-brand--dual { justify-content: center; width: 100%; }
+  .institutional-heading { order: 2; width: 100%; }
+  .institutional-seal { order: 3; justify-content: center; width: 100%; }
+}
+@media (max-width: 600px) {
+  .institutional-brand__logos { gap: 9px; }
+  .institutional-brand--dual .institutional-brand__ciapi { width: 48px; height: 48px; }
+  .institutional-brand--dual .institutional-brand__gov { width: 177px; height: 51px; max-width: 58vw; }
+  .institutional-brand__divider { height: 43px; }
+  .institutional-header__inner { gap: 9px; padding: 14px 12px; }
+}
+
+/* Preservar a coloração original das duas identidades visuais. */
+.institutional-header .institutional-brand__ciapi,
+.institutional-header .institutional-brand__gov {
+  filter: none !important;
+  opacity: 1;
 }
