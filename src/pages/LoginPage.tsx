@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Info, AlertCircle, Layers3, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
+import { InstitutionalHeader } from '../components/InstitutionalHeader';
+import { HeartPulse, UsersRound, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth, AmbienteSistema } from '../contexts/AuthContext';
 
@@ -34,72 +36,28 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-dark flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full"></div>
-      </div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md relative z-10">
-        <div className="bg-card-dark border border-border-dark rounded-3xl shadow-2xl overflow-hidden">
-          <div className="p-8 pb-0 flex flex-col items-center">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center font-bold text-white text-3xl shadow-xl shadow-primary/20 mb-6">C</div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">CIAPI</h1>
-            <p className="text-slate-500 text-sm mt-2">Sistema Integrado de Gestão</p>
+    <div className="institutional-login min-h-screen">
+      <InstitutionalHeader subtitle="Acesso aos sistemas internos" />
+      <div className="institutional-login__content">
+        <div className="institutional-login__intro"><h1>Sistemas Internos</h1><p>Selecione o ambiente e entre com sua conta institucional.</p></div>
+        <div className="institutional-login__grid">
+          <div className="institutional-login__systems" aria-label="Sistemas disponíveis">
+            <button className={`institutional-system-card ${ambienteSelecionado === 'rh' ? 'is-selected' : ''}`} type="button" onClick={() => setAmbienteSelecionado('rh')} aria-pressed={ambienteSelecionado === 'rh'}><span className="institutional-system-card__icon"><UsersRound size={30}/></span><strong>CIAPI RH</strong><small>Sistema Integrado de Gestão de Recursos Humanos</small></button>
+            <button className={`institutional-system-card ${ambienteSelecionado === 'sae' ? 'is-selected' : ''}`} type="button" onClick={() => setAmbienteSelecionado('sae')} aria-pressed={ambienteSelecionado === 'sae'}><span className="institutional-system-card__icon"><HeartPulse size={30}/></span><strong>SAE</strong><small>Serviço de Atenção Especializada</small></button>
           </div>
-
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            {error && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-400 text-xs">
-                <AlertCircle size={18} className="shrink-0" />{error}
-              </motion.div>
-            )}
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">E-mail</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full bg-slate-800 border border-border-dark rounded-2xl py-3.5 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-primary transition-all" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center ml-1">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Senha</label>
-                  <button type="button" className="text-[10px] font-bold text-primary hover:underline">Esqueceu a senha?</button>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                  <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-slate-800 border border-border-dark rounded-2xl py-3.5 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-primary transition-all" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Ambiente</label>
-                <div className="relative">
-                  <Layers3 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
-                  <select value={ambienteSelecionado} onChange={(e) => setAmbienteSelecionado(e.target.value as AmbienteSistema)} className="w-full appearance-none bg-slate-800 border border-border-dark rounded-2xl py-3.5 pl-12 pr-12 text-white outline-none focus:ring-2 focus:ring-primary transition-all cursor-pointer">
-                    <option value="rh">CIAPI RH</option>
-                    <option value="sae">SAE</option>
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                </div>
-              </div>
-            </div>
-
-            <button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary-hover text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-3 group disabled:opacity-70">
-              {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><span>Entrar no Sistema</span><ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" /></>}
-            </button>
-          </form>
-
-          <div className="p-6 bg-slate-800/50 border-t border-border-dark flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Info size={16} /></div>
-            <p className="text-[10px] text-slate-500 leading-tight">Acesso restrito a servidores autorizados. Todas as ações são monitoradas e registradas em log.</p>
-          </div>
+          <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="institutional-login__panel">
+            <div className="institutional-login__panelhead"><ShieldCheck size={23}/><div><strong>Identificação do usuário</strong><span>{ambienteSelecionado === 'rh' ? 'Acessar CIAPI RH' : 'Acessar SAE'}</span></div></div>
+            <form onSubmit={handleSubmit} className="institutional-login__form">
+              {error && <div role="alert" className="institutional-login__error"><AlertCircle size={17}/>{error}</div>}
+              <label htmlFor="ciapi-email">E-mail institucional</label><div className="institutional-login__field"><User size={18}/><input id="ciapi-email" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" /></div>
+              <label htmlFor="ciapi-password">Senha</label><div className="institutional-login__field"><Lock size={18}/><input id="ciapi-password" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Digite sua senha" /></div>
+              <button className="institutional-login__submit" type="submit" disabled={isLoading}>{isLoading?'Autenticando...':<>Entrar no sistema <ArrowRight size={18}/></>}</button>
+              <p className="institutional-login__notice">Acesso exclusivo a usuários autorizados. As permissões são verificadas após a autenticação.</p>
+            </form>
+          </motion.div>
         </div>
-        <p className="text-center mt-8 text-slate-600 text-xs font-medium">&copy; 2024 CIAPI - Todos os direitos reservados</p>
-      </motion.div>
+      </div>
+      <footer className="institutional-login__footer">Governo do Estado de Roraima · SETRABES · CIAPI</footer>
     </div>
   );
 };
