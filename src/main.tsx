@@ -9,6 +9,7 @@ import { registerSW } from "virtual:pwa-register";
 
 import App from "./App";
 import "./index.css";
+import "./institutional.css";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
