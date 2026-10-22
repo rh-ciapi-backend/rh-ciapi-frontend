@@ -1,0 +1,1048 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Plus, CalendarRange, Loader2, X, Save, Download } from 'lucide-react';
+import { FeriasStatsCards } from '../components/ferias/FeriasStatsCards';
+import { FeriasFilters, FeriasFiltroState } from '../components/ferias/FeriasFilters';
+import { FeriasCalendar, FeriasCalendarItem } from '../components/ferias/FeriasCalendar';
+import { FeriasList, FeriasListItem } from '../components/ferias/FeriasList';
+import ExportarFeriasModal from '../components/ferias/ExportarFeriasModal';
+import * as feriasServiceModule from '../services/feriasService';
+import * as servidoresServiceModule from '../services/servidoresService';
+import {
+  exportFeriasFile,
+  getDefaultFeriasExportFilters,
+  ExportFeriasFilters,
+} from '../services/feriasExportService';
+
+type FeriasStatus = 'PROGRAMADAS' | 'EM_ANDAMENTO' | 'FINALIZADAS';
+type FracionamentoFerias = '30' | '15_15' | '10_10_10';
+
+interface ServidorOption {
+  id: string;
+  nome: string;
+  matricula?: string;
+  cpf?: string;
+  setor?: string;
+  categoria?: string;
+  status?: string;
+}
+
+interface FeriasRecord {
+  id: string;
+  rowId?: string;
+  slot?: number;
+  servidorId?: string;
+  servidorNome: string;
+  matricula?: string;
+  cpf?: string;
+  setor?: string;
+  categoria?: string;
+  statusServidor?: string;
+  inicio: string;
+  fim: string;
+  dias: number;
+  status: FeriasStatus;
+  observacao?: string;
+  ano?: number;
+}
+
+interface FeriasPeriodoForm {
+  inicio: string;
+  fim: string;
+}
+
+interface FormState {
+  id?: string;
+  servidorId: string;
+  servidorNome: string;
+  matricula: string;
+  cpf: string;
+  setor: string;
+  inicio: string;
+  fim: string;
+  observacao: string;
+  fracionamento: FracionamentoFerias;
+  periodos: FeriasPeriodoForm[];
+}
+
+const feriasService: any = (feriasServiceModule as any).feriasService ?? feriasServiceModule;
+const servidoresService: any = (servidoresServiceModule as any).servidoresService ?? servidoresServiceModule;
+
+const today = new Date();
+const defaultYear = today.getFullYear();
+const defaultMonth = today.getMonth() + 1;
+
+const initialFilters: FeriasFiltroState = {
+  busca: '',
+  ano: defaultYear,
+  mes: defaultMonth,
+  setor: '',
+  status: 'TODOS',
+};
+
+const emptyForm: FormState = {
+  servidorId: '',
+  servidorNome: '',
+  matricula: '',
+  cpf: '',
+  setor: '',
+  inicio: '',
+  fim: '',
+  observacao: '',
+  fracionamento: '30',
+  periodos: [{ inicio: '', fim: '' }],
+};
+
+const FRACIONAMENTO_CONFIG: Record<FracionamentoFerias, { label: string; diasPorPeriodo: number; quantidade: number }> = {
+  '30': { label: '30 dias corridos', diasPorPeriodo: 30, quantidade: 1 },
+  '15_15': { label: '15 + 15 dias', diasPorPeriodo: 15, quantidade: 2 },
+  '10_10_10': { label: '10 + 10 + 10 dias', diasPorPeriodo: 10, quantidade: 3 },
+};
+
+function normalizeString(value: unknown) {
+  return String(value ?? '').trim();
+}
+
+function parseDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatISODate(date: Date) {
+  return date.toLocaleDateString('en-CA');
+}
+
+function calculateDays(start?: string, end?: string) {
+  const s = parseDate(start);
+  const e = parseDate(end);
+  if (!s || !e) return 0;
+  const diff = Math.round((e.getTime() - s.getTime()) / 86400000);
+  return diff >= 0 ? diff + 1 : 0;
+}
+
+function computeStatus(inicio?: string, fim?: string): FeriasStatus {
+  const now = parseDate(formatISODate(new Date()))!;
+  const start = parseDate(inicio);
+  const end = parseDate(fim);
+  if (!start || !end) return 'PROGRAMADAS';
+  if (now >= start && now <= end) return 'EM_ANDAMENTO';
+  if (now > end) return 'FINALIZADAS';
+  return 'PROGRAMADAS';
+}
+
+function safeArray<T = any>(value: any): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.registros)) return value.registros;
+  if (Array.isArray(value?.ferias)) return value.ferias;
+  return [];
+}
+
+function normalizeServidor(item: any): ServidorOption {
+  return {
+    id: normalizeString(item?.id || item?.servidor || item?.uuid || item?.cpf),
+    nome: normalizeString(item?.nomeCompleto || item?.nome || item?.nome_completo || item?.servidor_nome),
+    matricula: normalizeString(item?.matricula),
+    cpf: normalizeString(item?.cpf),
+    setor: normalizeString(item?.setor || item?.lotacao || item?.lotacao_interna),
+    categoria: normalizeString(item?.categoria || item?.categoria_canonica).toUpperCase(),
+    status: normalizeString(item?.status).toUpperCase() || 'ATIVO',
+  };
+}
+
+function normalizeFerias(item: any): FeriasRecord {
+  const inicio = normalizeString(item?.inicio || item?.dataInicio || item?.data_inicio || item?.inicio_periodo);
+  const fim = normalizeString(item?.fim || item?.dataFim || item?.data_fim || item?.fim_periodo);
+  const dias = Number(item?.dias || item?.quantidadeDias || item?.dias_corridos || calculateDays(inicio, fim));
+
+  return {
+    id: normalizeString(item?.id || item?.uuid || `${item?.cpf || item?.servidor_id || 'ferias'}-${inicio}-${fim}`),
+    rowId: normalizeString(item?.rowId || item?.row_id || item?.ferias_id),
+    slot: Number(item?.slot || item?.periodo || 0),
+    servidorId: normalizeString(item?.servidorId || item?.servidor_id || item?.servidor || item?.cpf),
+    servidorNome: normalizeString(
+      item?.servidorNome || item?.nomeServidor || item?.servidor_nome || item?.nome || item?.nome_completo,
+    ),
+    matricula: normalizeString(item?.matricula),
+    cpf: normalizeString(item?.cpf),
+    setor: normalizeString(item?.setor || item?.lotacao || item?.lotacao_interna),
+    categoria: normalizeString(item?.categoria || item?.categoria_canonica).toUpperCase(),
+    statusServidor: normalizeString(item?.statusServidor || item?.status || item?.status_servidor).toUpperCase() || 'ATIVO',
+    inicio,
+    fim,
+    dias: Number.isFinite(dias) ? dias : 0,
+    status: computeStatus(inicio, fim),
+    observacao: normalizeString(item?.observacao || item?.obs || item?.descricao),
+    ano: Number(item?.ano || parseDate(inicio)?.getFullYear() || defaultYear),
+  };
+}
+
+function applyFilters(registros: FeriasRecord[], filtros: FeriasFiltroState) {
+  const term = filtros.busca.trim().toLowerCase();
+
+  return registros.filter((item) => {
+    const inicio = parseDate(item.inicio);
+    const matchesTerm =
+      !term ||
+      [item.servidorNome, item.matricula, item.cpf, item.observacao, item.setor]
+        .join(' ')
+        .toLowerCase()
+        .includes(term);
+
+    const matchesYear = !inicio || inicio.getFullYear() === filtros.ano;
+    const matchesMonth = filtros.mes === 0 || (!inicio ? false : inicio.getMonth() + 1 === filtros.mes);
+    const matchesSetor = !filtros.setor || item.setor === filtros.setor;
+    const matchesStatus = filtros.status === 'TODOS' || item.status === filtros.status;
+
+    return matchesTerm && matchesYear && matchesMonth && matchesSetor && matchesStatus;
+  });
+}
+
+function buildStats(registros: FeriasRecord[], filtros: FeriasFiltroState) {
+  const now = parseDate(formatISODate(new Date()))!;
+  const emFeriasAgora = registros.filter((item) => {
+    const inicio = parseDate(item.inicio);
+    const fim = parseDate(item.fim);
+    return !!inicio && !!fim && now >= inicio && now <= fim;
+  }).length;
+
+  const previstasMes = registros.filter((item) => {
+    const inicio = parseDate(item.inicio);
+    return !!inicio && inicio.getFullYear() === filtros.ano && (filtros.mes === 0 || inicio.getMonth() + 1 === filtros.mes);
+  }).length;
+
+  const saldoProgramadoAno = registros.filter((item) => parseDate(item.inicio)?.getFullYear() === filtros.ano).length;
+  const coberturaPlanejada =
+    saldoProgramadoAno === 0 ? 0 : Math.min(100, (saldoProgramadoAno / Math.max(1, registros.length)) * 100);
+
+  return {
+    totalRegistros: registros.length,
+    emFeriasAgora,
+    previstasMes,
+    saldoProgramadoAno,
+    coberturaPlanejada,
+  };
+}
+
+function buildCalendarItems(registros: FeriasRecord[]): FeriasCalendarItem[] {
+  return registros.map((item) => ({
+    id: item.id,
+    servidorNome: item.servidorNome,
+    setor: item.setor,
+    inicio: item.inicio,
+    fim: item.fim,
+    status: item.status,
+  }));
+}
+
+function toListItems(registros: FeriasRecord[]): FeriasListItem[] {
+  return registros.map((item) => ({
+    id: item.id,
+    servidorNome: item.servidorNome,
+    matricula: item.matricula,
+    cpf: item.cpf,
+    setor: item.setor,
+    inicio: item.inicio,
+    fim: item.fim,
+    dias: item.dias,
+    status: item.status,
+    observacao: item.observacao,
+  }));
+}
+
+function Modal({
+  open,
+  children,
+  maxWidthClass = 'max-w-3xl',
+}: {
+  open: boolean;
+  children: React.ReactNode;
+  maxWidthClass?: string;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 p-0 backdrop-blur-sm sm:p-2 md:items-center md:p-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+            transition={{ duration: 0.18 }}
+            className={`flex w-full ${maxWidthClass} max-h-[100dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[calc(100dvh-1rem)] sm:rounded-2xl md:max-h-[92vh]`}
+          >
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+export default function FeriasPage() {
+  const [filtros, setFiltros] = useState<FeriasFiltroState>(initialFilters);
+  const [registros, setRegistros] = useState<FeriasRecord[]>([]);
+  const [servidores, setServidores] = useState<ServidorOption[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [exportando, setExportando] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [exportFilters, setExportFilters] = useState<ExportFeriasFilters>(
+    getDefaultFeriasExportFilters(initialFilters.ano),
+  );
+  const [dayPreview, setDayPreview] = useState<{ date: string; records: FeriasCalendarItem[] } | null>(null);
+
+  const clearFeedback = useCallback(() => {
+    setError('');
+    setSuccess('');
+  }, []);
+
+  const showError = useCallback((message: string) => {
+    setSuccess('');
+    setError(message);
+  }, []);
+
+  const showSuccess = useCallback((message: string) => {
+    setError('');
+    setSuccess(message);
+  }, []);
+
+  const carregarDados = useCallback(async () => {
+    setCarregando(true);
+    setError('');
+
+    try {
+      const [feriasResponse, servidoresResponse] = await Promise.all([
+        feriasService.listar?.({ ano: filtros.ano }) ??
+          feriasService.list?.({ ano: filtros.ano }) ??
+          feriasService.getAll?.({ ano: filtros.ano }) ??
+          Promise.resolve([]),
+        servidoresService.listar?.({ limite: 1000, limit: 1000 }) ??
+          servidoresService.list?.({ limite: 1000, limit: 1000 }) ??
+          Promise.resolve([]),
+      ]);
+
+      const servidoresNormalizados = safeArray(servidoresResponse)
+        .map(normalizeServidor)
+        .filter((item) => item.nome);
+
+      const servidorMap = new Map<string, ServidorOption>();
+      for (const servidor of servidoresNormalizados) {
+        if (servidor.id) servidorMap.set(servidor.id, servidor);
+        if (servidor.cpf) servidorMap.set(servidor.cpf, servidor);
+      }
+
+      const feriasNormalizadas = safeArray(feriasResponse)
+        .map(normalizeFerias)
+        .map((item) => {
+          const match = servidorMap.get(item.servidorId || '') || servidorMap.get(item.cpf || '');
+          return {
+            ...item,
+            setor: item.setor || match?.setor || '',
+            categoria: item.categoria || match?.categoria || '',
+            statusServidor: item.statusServidor || match?.status || 'ATIVO',
+            matricula: item.matricula || match?.matricula || '',
+            cpf: item.cpf || match?.cpf || '',
+          };
+        })
+        .filter((item) => item.servidorNome);
+
+      setRegistros(feriasNormalizadas);
+      setServidores(servidoresNormalizados);
+    } catch (err: any) {
+      console.error('Erro ao carregar férias:', err);
+      showError(err?.message || 'Não foi possível carregar os dados da aba Férias.');
+    } finally {
+      setCarregando(false);
+    }
+  }, [filtros.ano, showError]);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(''), 8000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(''), 3500);
+    return () => window.clearTimeout(timer);
+  }, [success]);
+
+  const setores = useMemo(() => {
+    return Array.from(new Set(registros.map((item) => item.setor).filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [registros]);
+
+  const setoresExportacao = useMemo(() => {
+    return Array.from(new Set(servidores.map((item) => item.setor).filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    );
+  }, [servidores]);
+
+  const registrosFiltrados = useMemo(() => applyFilters(registros, filtros), [registros, filtros]);
+  const stats = useMemo(() => buildStats(registros, filtros), [registros, filtros]);
+  const calendarItems = useMemo(() => buildCalendarItems(registrosFiltrados), [registrosFiltrados]);
+  const listItems = useMemo(() => toListItems(registrosFiltrados), [registrosFiltrados]);
+
+  const handleFilterChange = useCallback(<K extends keyof FeriasFiltroState>(field: K, value: FeriasFiltroState[K]) => {
+    setError('');
+    setFiltros((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    clearFeedback();
+    setFiltros(initialFilters);
+  }, [clearFeedback]);
+
+  const closeCreateModal = useCallback(() => {
+    setModalOpen(false);
+    setForm(emptyForm);
+    clearFeedback();
+  }, [clearFeedback]);
+
+  const closeExportModal = useCallback(() => {
+    setExportModalOpen(false);
+    clearFeedback();
+  }, [clearFeedback]);
+
+  const openCreateModal = useCallback(() => {
+    clearFeedback();
+    setForm(emptyForm);
+    setModalOpen(true);
+  }, [clearFeedback]);
+
+  const openExportModal = useCallback(() => {
+    clearFeedback();
+    setExportFilters({
+      ...getDefaultFeriasExportFilters(filtros.ano),
+      ano: filtros.ano || new Date().getFullYear(),
+      mes: filtros.mes || 'TODOS',
+      setor: filtros.setor || 'TODOS',
+    });
+    setExportModalOpen(true);
+  }, [clearFeedback, filtros.ano, filtros.mes, filtros.setor]);
+
+  const openEditModal = useCallback(
+    (item: FeriasListItem) => {
+      const registro = registros.find((entry) => entry.id === item.id);
+      if (!registro) return;
+
+      clearFeedback();
+      setForm({
+        id: registro.id,
+        servidorId: registro.servidorId || '',
+        servidorNome: registro.servidorNome,
+        matricula: registro.matricula || '',
+        cpf: registro.cpf || '',
+        setor: registro.setor || '',
+        inicio: registro.inicio,
+        fim: registro.fim,
+        observacao: registro.observacao || '',
+        fracionamento: '30',
+        periodos: [{ inicio: registro.inicio, fim: registro.fim }],
+      });
+      setModalOpen(true);
+    },
+    [clearFeedback, registros],
+  );
+
+  const selectServidor = useCallback(
+    (servidorId: string) => {
+      const servidor = servidores.find((item) => item.id === servidorId || item.cpf === servidorId);
+      if (!servidor) return;
+
+      setError('');
+      setForm((prev) => ({
+        ...prev,
+        servidorId: servidor.id,
+        servidorNome: servidor.nome,
+        matricula: servidor.matricula || '',
+        cpf: servidor.cpf || '',
+        setor: servidor.setor || '',
+      }));
+    },
+    [servidores],
+  );
+
+  const updateFracionamento = useCallback((value: FracionamentoFerias) => {
+    const config = FRACIONAMENTO_CONFIG[value];
+    setError('');
+    setForm((prev) => ({
+      ...prev,
+      fracionamento: value,
+      inicio: '',
+      fim: '',
+      periodos: Array.from({ length: config.quantidade }, (_, index) => ({
+        inicio: prev.periodos[index]?.inicio || '',
+        fim: prev.periodos[index]?.fim || '',
+      })),
+    }));
+  }, []);
+
+  const updatePeriodo = useCallback((index: number, field: keyof FeriasPeriodoForm, value: string) => {
+    setError('');
+    setForm((prev) => {
+      const periodos = [...prev.periodos];
+      periodos[index] = { ...(periodos[index] || { inicio: '', fim: '' }), [field]: value };
+
+      return {
+        ...prev,
+        periodos,
+        inicio: periodos[0]?.inicio || '',
+        fim: periodos[0]?.fim || '',
+      };
+    });
+  }, []);
+
+  const updateExportFilter = useCallback(
+    <K extends keyof ExportFeriasFilters>(field: K, value: ExportFeriasFilters[K]) => {
+      setError('');
+      setExportFilters((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
+
+  const handleSave = useCallback(async () => {
+    if (!form.servidorNome) {
+      showError('Selecione o servidor antes de salvar.');
+      return;
+    }
+
+    if (form.id) {
+      if (!form.inicio || !form.fim) {
+        showError('Preencha a data inicial e final antes de salvar.');
+        return;
+      }
+
+      if (calculateDays(form.inicio, form.fim) <= 0) {
+        showError('O período informado é inválido. Verifique as datas.');
+        return;
+      }
+    } else {
+      const config = FRACIONAMENTO_CONFIG[form.fracionamento];
+
+      if (form.periodos.length !== config.quantidade) {
+        showError('A quantidade de períodos não corresponde ao fracionamento selecionado.');
+        return;
+      }
+
+      const periodosInvalidos = form.periodos.some(
+        (periodo) =>
+          !periodo.inicio ||
+          !periodo.fim ||
+          calculateDays(periodo.inicio, periodo.fim) !== config.diasPorPeriodo,
+      );
+
+      if (periodosInvalidos) {
+        showError(
+          `Cada período deve possuir exatamente ${config.diasPorPeriodo} dia(s) corrido(s).`,
+        );
+        return;
+      }
+
+      const totalDias = form.periodos.reduce(
+        (acc, periodo) => acc + calculateDays(periodo.inicio, periodo.fim),
+        0,
+      );
+
+      if (totalDias !== 30) {
+        showError('A programação anual deve totalizar exatamente 30 dias de férias.');
+        return;
+      }
+
+      const ordenados = [...form.periodos].sort((a, b) => a.inicio.localeCompare(b.inicio));
+      for (let index = 1; index < ordenados.length; index += 1) {
+        const anteriorFim = parseDate(ordenados[index - 1].fim);
+        const atualInicio = parseDate(ordenados[index].inicio);
+        if (anteriorFim && atualInicio && atualInicio <= anteriorFim) {
+          showError('Os períodos de férias não podem se sobrepor.');
+          return;
+        }
+      }
+    }
+
+    setSalvando(true);
+    setError('');
+
+    try {
+      if (form.id) {
+        const payload = {
+          id: form.id,
+          servidorId: form.servidorId || form.cpf,
+          servidorNome: form.servidorNome,
+          matricula: form.matricula,
+          cpf: form.cpf,
+          setor: form.setor,
+          inicio: form.inicio,
+          fim: form.fim,
+          dias: calculateDays(form.inicio, form.fim),
+          observacao: form.observacao,
+          ano: filtros.ano,
+        };
+
+        await (feriasService.editar?.(form.id, payload) ??
+          feriasService.atualizar?.(form.id, payload) ??
+          feriasService.update?.(form.id, payload));
+
+        showSuccess('Período de férias atualizado com sucesso.');
+      } else {
+        const programacaoPayload = {
+          servidorId: form.servidorId || form.cpf,
+          servidorNome: form.servidorNome,
+          matricula: form.matricula,
+          cpf: form.cpf,
+          setor: form.setor,
+          observacao: form.observacao,
+          ano: filtros.ano,
+          periodos: form.periodos,
+        };
+
+        if (!feriasService.criarProgramacao) {
+          throw new Error('Atualize o feriasService.ts para habilitar o cadastro fracionado.');
+        }
+
+        await feriasService.criarProgramacao(programacaoPayload);
+        showSuccess('Programação de férias cadastrada com 30 dias distribuídos corretamente.');
+      }
+
+      setModalOpen(false);
+      setForm(emptyForm);
+      await carregarDados();
+    } catch (err: any) {
+      console.error('Erro ao salvar férias:', err);
+      showError(err?.message || 'Falha ao salvar a programação de férias.');
+    } finally {
+      setSalvando(false);
+    }
+  }, [carregarDados, filtros.ano, form, showError, showSuccess]);
+
+  const handleDelete = useCallback(
+    async (item: FeriasListItem) => {
+      const confirmado = window.confirm(`Excluir o período de férias de ${item.servidorNome}?`);
+      if (!confirmado) return;
+
+      setError('');
+      try {
+        await (feriasService.excluir?.(item.id) ??
+          feriasService.remover?.(item.id) ??
+          feriasService.delete?.(item.id));
+        showSuccess('Período de férias excluído com sucesso.');
+        await carregarDados();
+      } catch (err: any) {
+        console.error('Erro ao excluir férias:', err);
+        showError(err?.message || 'Não foi possível excluir o período selecionado.');
+      }
+    },
+    [carregarDados, showError, showSuccess],
+  );
+
+  const handleExport = useCallback(async () => {
+    clearFeedback();
+    setExportando(true);
+
+    try {
+      const result = await exportFeriasFile(exportFilters);
+      showSuccess(`Exportação concluída com sucesso. Arquivo gerado: ${result.filename}`);
+      setExportModalOpen(false);
+    } catch (err: any) {
+      console.error('Erro ao exportar férias:', err);
+      showError(err?.message || 'Não foi possível exportar o documento de férias.');
+    } finally {
+      setExportando(false);
+    }
+  }, [clearFeedback, exportFilters, showError, showSuccess]);
+
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <section className="app-surface p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Gestão de férias</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Férias</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Planejamento anual, períodos cadastrados e exportação da Programação Anual de Férias do CIAPI.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+            <button
+              type="button"
+              onClick={openExportModal}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700/70 sm:w-auto"
+            >
+              <Download className="h-4 w-4" />
+              Exportar Férias
+            </button>
+
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Novo período
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {error ? (
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <div className="leading-relaxed">{error}</div>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            className="shrink-0 rounded-xl border border-rose-400/20 px-3 py-1 text-xs font-medium text-rose-100 transition hover:bg-rose-400/10"
+          >
+            Fechar
+          </button>
+        </div>
+      ) : null}
+
+      {success ? (
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="leading-relaxed">{success}</div>
+          <button
+            type="button"
+            onClick={() => setSuccess('')}
+            className="shrink-0 rounded-xl border border-emerald-400/20 px-3 py-1 text-xs font-medium text-emerald-100 transition hover:bg-emerald-400/10"
+          >
+            Fechar
+          </button>
+        </div>
+      ) : null}
+
+      <FeriasStatsCards stats={stats} carregando={carregando} />
+
+      <FeriasFilters filtros={filtros} setores={setores} onChange={handleFilterChange} onReset={handleResetFilters} />
+
+      <FeriasCalendar
+        ano={filtros.ano}
+        mes={filtros.mes || defaultMonth}
+        registros={calendarItems}
+        onSelectDate={(date, records) => setDayPreview({ date, records })}
+      />
+
+      <FeriasList
+        registros={listItems}
+        carregando={carregando}
+        onVisualizar={(item) => openEditModal(item)}
+        onEditar={(item) => openEditModal(item)}
+        onExcluir={handleDelete}
+      />
+
+      <Modal open={modalOpen}>
+        <div className="shrink-0 border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-white">
+                {form.id ? 'Editar período de férias' : 'Novo período de férias'}
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">Selecione o servidor e programe os 30 dias de férias em 1, 2 ou 3 períodos.</p>
+            </div>
+            <button
+              type="button"
+              onClick={closeCreateModal}
+              className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-300 transition hover:bg-white/[0.08]"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Servidor</span>
+              <select
+                value={form.servidorId || form.cpf}
+                onChange={(event) => selectServidor(event.target.value)}
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Selecione um servidor</option>
+                {servidores
+                  .slice()
+                  .sort((a, b) => a.nome.localeCompare(b.nome))
+                  .map((servidor) => (
+                    <option key={servidor.id || servidor.cpf} value={servidor.id || servidor.cpf}>
+                      {servidor.nome} {servidor.setor ? `• ${servidor.setor}` : ''}
+                    </option>
+                  ))}
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome do servidor</span>
+              <input
+                value={form.servidorNome}
+                onChange={(event) => setForm((prev) => ({ ...prev, servidorNome: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</span>
+              <input
+                value={form.setor}
+                onChange={(event) => setForm((prev) => ({ ...prev, setor: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Matrícula</span>
+              <input
+                value={form.matricula}
+                onChange={(event) => setForm((prev) => ({ ...prev, matricula: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">CPF</span>
+              <input
+                value={form.cpf}
+                onChange={(event) => setForm((prev) => ({ ...prev, cpf: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+
+            {!form.id ? (
+              <>
+                <label className="space-y-2 md:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Forma de fracionamento
+                  </span>
+                  <select
+                    value={form.fracionamento}
+                    onChange={(event) => updateFracionamento(event.target.value as FracionamentoFerias)}
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="30">30 dias corridos</option>
+                    <option value="15_15">15 + 15 dias</option>
+                    <option value="10_10_10">10 + 10 + 10 dias</option>
+                  </select>
+                </label>
+
+                <div className="space-y-3 md:col-span-2">
+                  {form.periodos.map((periodo, index) => {
+                    const diasEsperados = FRACIONAMENTO_CONFIG[form.fracionamento].diasPorPeriodo;
+                    const diasCalculados = calculateDays(periodo.inicio, periodo.fim);
+                    const valido = diasCalculados === diasEsperados;
+
+                    return (
+                      <div
+                        key={`periodo-${index + 1}`}
+                        className="rounded-2xl border border-border-dark bg-slate-900/35 p-4"
+                      >
+                        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{index + 1}º período</p>
+                            <p className="text-xs text-slate-500">
+                              Deve possuir exatamente {diasEsperados} dia(s) corrido(s).
+                            </p>
+                          </div>
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                              periodo.inicio && periodo.fim
+                                ? valido
+                                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                                  : 'border-rose-500/20 bg-rose-500/10 text-rose-300'
+                                : 'border-white/10 bg-white/[0.04] text-slate-400'
+                            }`}
+                          >
+                            {diasCalculados} dia(s)
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <label className="space-y-2">
+                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                              Data inicial
+                            </span>
+                            <input
+                              type="date"
+                              value={periodo.inicio}
+                              onChange={(event) => updatePeriodo(index, 'inicio', event.target.value)}
+                              className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                            />
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                              Data final
+                            </span>
+                            <input
+                              type="date"
+                              value={periodo.fim}
+                              onChange={(event) => updatePeriodo(index, 'fim', event.target.value)}
+                              className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-blue-100 md:col-span-2">
+                  Total programado:{' '}
+                  <strong>
+                    {form.periodos.reduce(
+                      (acc, periodo) => acc + calculateDays(periodo.inicio, periodo.fim),
+                      0,
+                    )} / 30 dias
+                  </strong>
+                  <span className="mt-1 block text-xs text-blue-200/80">
+                    Formatos permitidos: 30 dias, 15 + 15 ou 10 + 10 + 10.
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Data inicial
+                  </span>
+                  <input
+                    type="date"
+                    value={form.inicio}
+                    onChange={(event) => setForm((prev) => ({ ...prev, inicio: event.target.value }))}
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Data final
+                  </span>
+                  <input
+                    type="date"
+                    value={form.fim}
+                    onChange={(event) => setForm((prev) => ({ ...prev, fim: event.target.value }))}
+                    className="h-11 w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+
+                <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-blue-100 md:col-span-2">
+                  Total previsto: <strong>{calculateDays(form.inicio, form.fim)}</strong> dia(s)
+                </div>
+              </>
+            )}
+
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Observação</span>
+              <textarea
+                value={form.observacao}
+                onChange={(event) => setForm((prev) => ({ ...prev, observacao: event.target.value }))}
+                rows={4}
+                className="w-full rounded-xl border border-border-dark bg-bg-dark/70 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                placeholder="Portaria, observações internas, remanejamentos ou detalhes do período"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="shrink-0 flex flex-col gap-3 border-t border-white/10 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
+          <div className="text-sm text-slate-400">
+            {form.id ? 'Revise as datas e salve as alterações.' : 'A programação deve totalizar exatamente 30 dias.'}
+          </div>
+
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
+            <button
+              type="button"
+              onClick={closeCreateModal}
+              className="min-h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] sm:w-auto"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={salvando}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            >
+              {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {form.id ? 'Salvar alterações' : 'Cadastrar férias'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <ExportarFeriasModal
+        open={exportModalOpen}
+        loading={exportando}
+        filters={exportFilters}
+        registros={registros}
+        servidores={servidores}
+        setores={setoresExportacao}
+        error={error}
+        onClose={closeExportModal}
+        onChange={updateExportFilter}
+        onSubmit={handleExport}
+      />
+
+      <Modal open={!!dayPreview}>
+        <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
+                <CalendarRange className="h-5 w-5 text-primary" />
+                Detalhes do dia{' '}
+                {dayPreview?.date ? new Date(`${dayPreview.date}T00:00:00`).toLocaleDateString('pt-BR') : ''}
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">Servidores em férias na data selecionada.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDayPreview(null)}
+              className="rounded-xl border border-border-dark bg-slate-800/60 p-2 text-slate-300 transition hover:bg-white/[0.08]"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="max-h-[70dvh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+          {!dayPreview?.records.length ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/35 px-4 py-10 text-center text-sm text-slate-400">
+              Nenhum servidor em férias nesta data.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {dayPreview.records.map((item) => (
+                <div key={item.id} className="app-subtle-surface p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-semibold text-white">{item.servidorNome}</h3>
+                      <p className="mt-1 text-sm text-slate-400">{item.setor || 'Setor não informado'}</p>
+                    </div>
+                    <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      {item.inicio} até {item.fim}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+    </div>
+  );
+}
