@@ -1,13 +1,20 @@
 import React from 'react';
-import { Building2, ShieldCheck } from 'lucide-react';
-import ciapiLogo from './layout/ciapi_logo.png';
+import { ShieldCheck } from 'lucide-react';
 
 export function InstitutionalHeader({ subtitle = 'Centro Integrado de Atenção à Pessoa Idosa', compact = false }: { subtitle?: string; compact?: boolean }) {
-  return <div className={`institutional-header ${compact ? 'institutional-header--compact' : ''}`}>
-    <div className="institutional-header__inner">
-      <div className="institutional-brand"><img src={ciapiLogo} alt="Identidade visual do CIAPI" /><div><strong>GOVERNO DE RORAIMA</strong><span>SETRABES · CIAPI</span></div></div>
-      <div className="institutional-heading"><strong>Portal Intranet CIAPI</strong><span>{subtitle}</span></div>
-      <div className="institutional-seal" aria-label="Ambiente institucional"><ShieldCheck size={22} /><span>Acesso institucional</span></div>
-    </div>
-  </div>;
+  return (
+    <header className={`institutional-header ${compact ? 'institutional-header--compact' : ''}`}>
+      <div className="institutional-header__inner">
+        <div className="institutional-brand">
+          <img src="/images/governo-roraima-logo.png" alt="Logomarca do Governo de Roraima" />
+          <span className="institutional-brand__unit">SETRABES · CIAPI</span>
+        </div>
+        <div className="institutional-heading">
+          <strong>Portal Intranet CIAPI</strong>
+          <span>{subtitle}</span>
+        </div>
+        <div className="institutional-seal"><ShieldCheck size={19} /><span>Acesso institucional</span></div>
+      </div>
+    </header>
+  );
 }
