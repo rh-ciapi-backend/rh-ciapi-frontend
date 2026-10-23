@@ -6,7 +6,8 @@
 import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { Sidebar } from './components/Sidebar';
+import { InstitutionalHeader } from './components/InstitutionalHeader';
+import { InstitutionalNav } from './components/InstitutionalNav';
 import { Topbar } from './components/Topbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -135,8 +136,9 @@ export default function App() {
       {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
-        <div className="app-shell flex min-h-screen min-w-0 bg-bg-dark">
-          <Sidebar activeTab={activeTab} setActiveTab={(tab: string) => navigateWithAction(tab)} onLogout={handleLogout} />
+        <div className="ciapi-horizontal-layout app-shell institutional-app min-h-screen min-w-0 bg-bg-dark">
+          <InstitutionalHeader compact subtitle="Sistema Integrado de Gestão de Recursos Humanos" />
+          <InstitutionalNav activeTab={activeTab} onNavigate={navigateWithAction} onLogout={handleLogout} />
           <div className="app-content-column flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
             {acesso?.is_master && (
