@@ -3,7 +3,7 @@ import {
   Activity, CalendarDays, ChevronDown, ClipboardList, Clock3, FileText,
   HeartPulse, Home, LogOut, Map, Menu, Settings, Stethoscope, Users, X,
   UserPlus, ListFilter, UserRound, Layers3, Building2, ScrollText,
-  BarChart3
+  BarChart3, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './institutional-horizontal-nav.css';
@@ -53,8 +53,10 @@ const groups: NavGroup[] = [
 ];
 
 const adminTabs = new Set(['admin', 'admin-usuarios', 'admin-categorias', 'admin-setores', 'admin-logs']);
-export function InstitutionalNav({ activeTab, onNavigate, onLogout }: {
+export function InstitutionalNav({ activeTab, selectedModule, onOpenModule, onNavigate, onLogout }: {
   activeTab: string;
+  selectedModule: string;
+  onOpenModule: (module: string, tab: string) => void;
   onNavigate: (tab: string, action?: string) => void;
   onLogout: () => void;
 }) {
@@ -82,7 +84,7 @@ export function InstitutionalNav({ activeTab, onNavigate, onLogout }: {
     setExpanded(null);
     setMobileOpen(false);
   };
-  const groupActive = (g: NavGroup) => g.id === activeTab ||
+  const groupActive = (g: NavGroup) => g.id === selectedModule || g.id === activeTab ||
     (g.id === 'admin' && adminTabs.has(activeTab)) ||
     (g.id !== 'relatorios' && Boolean(g.children?.some(i => i.tab === activeTab)));
 
@@ -101,17 +103,9 @@ export function InstitutionalNav({ activeTab, onNavigate, onLogout }: {
               <button className={`ciapi-hnav__trigger${groupActive(g) ? ' ciapi-hnav__trigger--active' : ''}`}
                 type="button" aria-expanded={g.children ? visible : undefined}
                 aria-haspopup={g.children ? 'menu' : undefined}
-                onClick={() => g.children ? setExpanded(visible ? null : g.id) : g.target && select(g.target)}>
+                onClick={() => { if (g.id === 'dashboard') { onOpenModule('dashboard','dashboard'); } else { onOpenModule(g.id, g.children?.[0]?.tab || g.target?.tab || 'dashboard'); } setMobileOpen(false); setExpanded(null); }}>
                 <Icon size={16} aria-hidden="true"/><span>{g.label}</span>{g.children && <ChevronDown size={13} aria-hidden="true"/>}
               </button>
-              {g.children && visible && <div className="ciapi-hnav__dropdown" role="menu" aria-label={g.label}>
-                {g.children.filter(item => isAdmin || !adminTabs.has(item.tab)).map((item, index) => {
-                  const ItemIcon = item.icon;
-                  return <button key={`${item.tab}-${index}`} role="menuitem" type="button" onClick={() => select(item)}>
-                    <ItemIcon size={15} aria-hidden="true"/><span>{item.label}</span>
-                  </button>;
-                })}
-              </div>}
             </div>;
           })}
           {allowedSAE && <button type="button" className="ciapi-hnav__trigger ciapi-hnav__sae"

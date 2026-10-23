@@ -1,0 +1,27 @@
+/* Layout contextual do CIAPI RH; não se aplica ao SAE. */
+.ciapi-contextual-app{background:#f3f6fb!important;color:#112d4b}
+.ciapi-contextual-app .ciapi-hnav{z-index:80;position:relative}
+.ciapi-contextual-app>.app-content-column{background:#f3f6fb!important}
+.ciapi-contextual-app .ciapi-contextual-workspace{display:flex;align-items:stretch;min-height:calc(100vh - 240px);width:100%;min-width:0;background:#f3f6fb}
+.ciapi-contextual-app .ciapi-contextual-main{min-width:0;width:100%;background:#f3f6fb!important;color:#143858}
+.ciapi-contextual-app .app-main-inner{width:100%}
+.ciapi-side{flex:0 0 258px;width:258px;min-width:0;background:#fff;border-right:1px solid #dbe6f2;padding:18px 13px;box-shadow:2px 0 10px #142a4010}
+.ciapi-side--collapsed{flex-basis:68px;width:68px;padding:14px 8px}
+.ciapi-side__heading{display:flex;align-items:center;gap:9px;color:#0b3761;padding:8px 8px 17px;border-bottom:1px solid #e2eaf4}
+.ciapi-side__heading strong{flex:1;font-size:15px}
+.ciapi-side__heading button{margin-left:auto;border:0;background:#edf4fc;border-radius:8px;padding:6px;color:#1a527e;cursor:pointer}
+.ciapi-side__items{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+.ciapi-side__item{display:flex;justify-content:space-between;align-items:center;text-align:left;width:100%;background:transparent;border:0;border-radius:9px;padding:13px 12px;color:#315273;font:600 13px/1.35 inherit;cursor:pointer}
+.ciapi-side__item:hover,.ciapi-side__item:focus-visible{background:#e9f3fe;color:#095db1}
+.ciapi-side__item--active{background:#e9f3fe;color:#095db1;border-left:3px solid #1a74d2}
+.ciapi-entry{max-width:900px;margin:30px auto;background:#fff;border:1px solid #dbe5ef;box-shadow:0 8px 32px #12304e0c;border-radius:16px;padding:clamp(22px,4vw,48px);text-align:center;color:#12385e}
+.ciapi-entry__icon{display:flex;align-items:center;justify-content:center;background:#e7f2ff;color:#166bc4;border-radius:15px;font-size:32px;width:70px;height:70px;margin:0 auto 18px}
+.ciapi-entry__eyebrow{text-transform:uppercase;letter-spacing:.14em;color:#6584a7;font-size:11px;font-weight:700}
+.ciapi-entry h2{font-size:clamp(22px,3vw,30px);color:#10345a;margin:15px 0}
+.ciapi-entry p:not(.ciapi-entry__eyebrow){color:#59728b;line-height:1.6;max-width:530px;margin:0 auto 26px}
+.ciapi-entry button{background:#116cc3;color:white;border:0;padding:13px 23px;border-radius:9px;cursor:pointer;font-weight:700}
+.ciapi-entry button:hover{background:#07559e}
+/* As páginas antigas são preservadas em superfície própria até sua conversão visual. */
+.ciapi-existing-module{background:#0b1220;color:#e5edfa;border-radius:14px;padding:15px;min-width:0}
+.ciapi-contextual-app .ciapi-hnav__dropdown{display:none!important}
+@media(max-width:800px){.ciapi-contextual-app .ciapi-contextual-workspace{flex-direction:column}.ciapi-side,.ciapi-side--collapsed{flex:none;width:100%;padding:9px 12px;border-bottom:1px solid #dbe6f2}.ciapi-side--collapsed .ciapi-side__heading{justify-content:space-between}.ciapi-side__items{max-height:240px;overflow:auto}.ciapi-entry{margin:6px auto}.ciapi-existing-module{padding:8px}}
