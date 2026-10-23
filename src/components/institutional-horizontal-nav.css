@@ -27,3 +27,13 @@
  .ciapi-hnav__dropdown button svg{color:#94c7fd}
  .ciapi-hnav__dropdown button:hover{background:#27567d;color:#fff}
 }
+
+/* Integração com App.tsx: sobrepõe o layout lateral antigo sem tocar no SAE. */
+.ciapi-horizontal-layout.app-shell.institutional-app{display:flex;flex-direction:column;align-items:stretch;min-height:100vh;width:100%;overflow-x:clip}
+.ciapi-horizontal-layout>.institutional-header,.ciapi-horizontal-layout>.ciapi-hnav,.ciapi-horizontal-layout>.app-content-column{width:100%;flex:none;min-width:0}
+.ciapi-horizontal-layout>.app-content-column{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;margin-left:0!important;max-width:none!important}
+.ciapi-horizontal-layout .app-main{width:100%;min-width:0;overflow-x:auto}
+.ciapi-horizontal-layout .app-main-inner,.ciapi-horizontal-layout .app-page{max-width:none;min-width:0}
+.ciapi-horizontal-layout>.ciapi-hnav{flex-shrink:0;overflow:visible}
+.ciapi-horizontal-layout>.ciapi-hnav .ciapi-hnav__dropdown{z-index:200}
+@media(max-width:800px){.ciapi-horizontal-layout>.ciapi-hnav .ciapi-hnav__items{width:100%}}

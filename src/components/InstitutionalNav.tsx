@@ -3,7 +3,7 @@ import {
   Activity, CalendarDays, ChevronDown, ClipboardList, Clock3, FileText,
   HeartPulse, Home, LogOut, Map, Menu, Settings, Stethoscope, Users, X,
   UserPlus, ListFilter, UserRound, Layers3, Building2, ScrollText,
-  BarChart3, ShieldCheck
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './institutional-horizontal-nav.css';
@@ -105,7 +105,7 @@ export function InstitutionalNav({ activeTab, onNavigate, onLogout }: {
                 <Icon size={16} aria-hidden="true"/><span>{g.label}</span>{g.children && <ChevronDown size={13} aria-hidden="true"/>}
               </button>
               {g.children && visible && <div className="ciapi-hnav__dropdown" role="menu" aria-label={g.label}>
-                {g.children.map((item, index) => {
+                {g.children.filter(item => isAdmin || !adminTabs.has(item.tab)).map((item, index) => {
                   const ItemIcon = item.icon;
                   return <button key={`${item.tab}-${index}`} role="menuitem" type="button" onClick={() => select(item)}>
                     <ItemIcon size={15} aria-hidden="true"/><span>{item.label}</span>
