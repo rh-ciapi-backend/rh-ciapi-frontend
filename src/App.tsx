@@ -78,6 +78,16 @@ export default function App() {
   }, []);
 
   const moduleByTab: Record<string,string> = { dashboard:'dashboard', servidores:'servidores', frequencia:'frequencia', ferias:'ferias', mapas:'mapas', atestados:'atestados', requerimentos:'requerimentos', admin:'admin', 'admin-usuarios':'admin', 'admin-categorias':'admin', 'admin-setores':'admin', 'admin-logs':'admin', diagnostico:'diagnostico' };
+  // Abre o módulo contextual quando o usuário clica na barra horizontal.
+  const openModule = (module: string, tab: string) => {
+    const target: AppTab = isValidTab(tab) ? tab : 'dashboard';
+    setSelectedModule(module);
+    setActiveTab(target);
+    setInitialAction(null);
+    setShowModulePage(false);
+    setSidebarCollapsed(false);
+  };
+
   const openFromSide = (tab:string, action?:string) => {
     navigateWithAction(tab, action || 'open');
   };
