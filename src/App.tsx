@@ -166,7 +166,7 @@ export default function App() {
       ) : (
         <div className="ciapi-horizontal-layout ciapi-contextual-app app-shell institutional-app min-h-screen min-w-0">
           <InstitutionalHeader compact subtitle="Sistema Integrado de Gestão de Recursos Humanos" />
-          <InstitutionalNav activeTab={activeTab} onNavigate={navigateWithAction} onLogout={handleLogout} />
+          <InstitutionalNav activeTab={activeTab} selectedModule={displayedModule} onOpenModule={openModule} onNavigate={navigateWithAction} onLogout={handleLogout} />
           <div className="app-content-column flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
             {acesso?.is_master && (

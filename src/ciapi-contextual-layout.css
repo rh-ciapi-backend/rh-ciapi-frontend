@@ -53,3 +53,8 @@
 /* Evitar que o menu horizontal seja sobreposto pelo conteúdo principal. */
 .ciapi-contextual-app .ciapi-hnav{z-index:100}
 .ciapi-contextual-app .ciapi-contextual-workspace{position:relative;z-index:1}
+
+/* Ensure menus and buttons are clickable without overlay interference. */
+.ciapi-contextual-app .ciapi-hnav{z-index:100}
+.ciapi-contextual-app .ciapi-side{z-index:1}
+.ciapi-contextual-app .ciapi-side__item,.ciapi-contextual-app .ciapi-entry button{pointer-events:auto}

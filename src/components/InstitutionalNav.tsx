@@ -55,8 +55,8 @@ const groups: NavGroup[] = [
 const adminTabs = new Set(['admin', 'admin-usuarios', 'admin-categorias', 'admin-setores', 'admin-logs']);
 export function InstitutionalNav({ activeTab, selectedModule, onOpenModule, onNavigate, onLogout }: {
   activeTab: string;
-  selectedModule: string;
-  onOpenModule: (module: string, tab: string) => void;
+  selectedModule?: string;
+  onOpenModule?: (module: string, tab: string) => void;
   onNavigate: (tab: string, action?: string) => void;
   onLogout: () => void;
 }) {
@@ -84,7 +84,7 @@ export function InstitutionalNav({ activeTab, selectedModule, onOpenModule, onNa
     setExpanded(null);
     setMobileOpen(false);
   };
-  const groupActive = (g: NavGroup) => g.id === selectedModule || g.id === activeTab ||
+  const groupActive = (g: NavGroup) => (selectedModule || activeTab) === g.id ||
     (g.id === 'admin' && adminTabs.has(activeTab)) ||
     (g.id !== 'relatorios' && Boolean(g.children?.some(i => i.tab === activeTab)));
 
@@ -103,14 +103,21 @@ export function InstitutionalNav({ activeTab, selectedModule, onOpenModule, onNa
               <button className={`ciapi-hnav__trigger${groupActive(g) ? ' ciapi-hnav__trigger--active' : ''}`}
                 type="button" aria-expanded={g.children ? visible : undefined}
                 aria-haspopup={g.children ? 'menu' : undefined}
-                onClick={() => { if (g.id === 'dashboard') { onOpenModule('dashboard','dashboard'); setExpanded(null); setMobileOpen(false); } else if (g.children && selectedModule === g.id) { setExpanded(visible ? null : g.id); } else { onOpenModule(g.id, g.children?.[0]?.tab || g.target?.tab || 'dashboard'); setExpanded(null); } }}>
+                onClick={() => {
+                  if (onOpenModule) {
+                    const tab = g.id === 'relatorios' ? 'dashboard' : g.id;
+                    onOpenModule(g.id, tab);
+                    setExpanded(null); setMobileOpen(false);
+                  } else if (g.children) setExpanded(visible ? null : g.id);
+                  else if (g.target) select(g.target);
+                }}>
                 <Icon size={16} aria-hidden="true"/><span>{g.label}</span>{g.children && <ChevronDown size={13} aria-hidden="true"/>}
               </button>
-              {g.children && visible && <div className="ciapi-hnav__dropdown" role="group" aria-label={`Opções de ${g.label}`}>
-                {g.children.filter(item => isAdmin || !item.tab.startsWith('admin-')).map((item,index) => {
+              {g.children && !onOpenModule && visible && <div className="ciapi-hnav__dropdown" role="menu" aria-label={g.label}>
+                {g.children.map((item, index) => {
                   const ItemIcon = item.icon;
-                  return <button type="button" key={`${item.tab}-${index}`} onClick={() => { onNavigate(item.tab,item.action || 'open'); setExpanded(null); setMobileOpen(false); }}>
-                    <ItemIcon size={15} aria-hidden="true" /> {item.label}
+                  return <button key={`${item.tab}-${index}`} role="menuitem" type="button" onClick={() => select(item)}>
+                    <ItemIcon size={15} aria-hidden="true"/><span>{item.label}</span>
                   </button>;
                 })}
               </div>}
