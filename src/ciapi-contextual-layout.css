@@ -39,3 +39,17 @@
 /* Dropdown horizontal disponível; menu lateral contextual também permanece acessível. */
 .ciapi-contextual-app .ciapi-hnav__dropdown{display:flex}
 @media(max-width:800px){.ciapi-contextual-app .ciapi-contextual-workspace{flex-direction:column}.ciapi-side,.ciapi-side--collapsed{flex:none;width:100%;padding:9px 12px;border-bottom:1px solid #dbe6f2}.ciapi-side--collapsed .ciapi-side__heading{justify-content:space-between}.ciapi-side__items{max-height:240px;overflow:auto}.ciapi-entry{margin:6px auto}.ciapi-existing-module{padding:8px}}
+
+/* Tema claro específico do dashboard; não altera o SAE. */
+.ciapi-contextual-app .ciapi-dashboard-light{color:#15365a;background:#f3f6fb}
+.ciapi-contextual-app .ciapi-dashboard-light .app-surface{background:#fff!important;border:1px solid #dbe6f1!important;box-shadow:0 6px 20px rgba(20,52,82,.06)}
+.ciapi-contextual-app .ciapi-dashboard-light .text-white{color:#143657!important}
+.ciapi-contextual-app .ciapi-dashboard-light .text-slate-400,.ciapi-contextual-app .ciapi-dashboard-light .text-slate-500{color:#617893!important}
+.ciapi-contextual-app .ciapi-dashboard-light .bg-slate-800\/70{background:#edf4fb!important;border-color:#d9e5f2!important}
+.ciapi-contextual-app .ciapi-dashboard-light .bg-primary.text-white{color:#fff!important}
+.ciapi-contextual-app .ciapi-dashboard-light .border-border-dark{border-color:#d8e4f0!important}
+.ciapi-contextual-app .ciapi-dashboard-light .bg-\[\#172033\]{background:#fff!important}
+.ciapi-contextual-app .ciapi-dashboard-light :is(input,select,textarea){background:#fff;color:#183452}
+/* Evitar que o menu horizontal seja sobreposto pelo conteúdo principal. */
+.ciapi-contextual-app .ciapi-hnav{z-index:100}
+.ciapi-contextual-app .ciapi-contextual-workspace{position:relative;z-index:1}

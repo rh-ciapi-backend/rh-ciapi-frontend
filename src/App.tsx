@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { InstitutionalHeader } from './components/InstitutionalHeader';
 import { InstitutionalNav } from './components/InstitutionalNav';
+import { ContextualModuleMenu } from './components/ContextualModuleMenu';
+import './ciapi-contextual-layout.css';
 import { Topbar } from './components/Topbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -58,6 +60,9 @@ export default function App() {
     isMaster: acesso.is_master || acesso.perfil === 'MASTER' } : null;
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [initialAction, setInitialAction] = useState<string | null>(null);
+  const [selectedModule, setSelectedModule] = useState('dashboard');
+  const [showModulePage, setShowModulePage] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = useCallback(async () => {
     try { await signOut(); } catch (error) { console.error('Erro ao sair da sessão:', error); }
@@ -66,8 +71,31 @@ export default function App() {
   const navigateWithAction = useCallback((tab: string, action?: string) => {
     const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setActiveTab(safeTab);
-    setInitialAction(action ?? null);
+    setSelectedModule(safeTab === 'dashboard' ? 'dashboard' : (['admin','admin-usuarios','admin-categorias','admin-setores','admin-logs'].includes(safeTab) ? 'admin' : safeTab));
+    setInitialAction(action === 'add' ? 'add' : null);
+    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open');
+    setSidebarCollapsed(false);
   }, []);
+
+  const moduleByTab: Record<string,string> = { dashboard:'dashboard', servidores:'servidores', frequencia:'frequencia', ferias:'ferias', mapas:'mapas', atestados:'atestados', requerimentos:'requerimentos', admin:'admin', 'admin-usuarios':'admin', 'admin-categorias':'admin', 'admin-setores':'admin', 'admin-logs':'admin', diagnostico:'diagnostico' };
+  const openFromSide = (tab:string, action?:string) => {
+    navigateWithAction(tab, action || 'open');
+  };
+  const moduleHeading: Record<string,string> = { servidores:'Consulta de servidores', frequencia:'Frequência mensal', ferias:'Consulta e plano de férias', mapas:'Mapas institucionais', atestados:'Consulta de atestados', requerimentos:'Consulta de requerimentos', admin:'Administração', diagnostico:'Diagnóstico' };
+  const displayedModule = selectedModule === 'dashboard' ? moduleByTab[activeTab] : selectedModule;
+  const guardedModule = displayedModule !== 'dashboard';
+  const renderSelectedContent = () => {
+    if (guardedModule && !showModulePage) {
+      return <section className="ciapi-entry" aria-label="Abertura do módulo">
+        <div className="ciapi-entry__icon" aria-hidden="true">⌕</div>
+        <p className="ciapi-entry__eyebrow">CIAPI RH · {displayedModule.toUpperCase()}</p>
+        <h2>{moduleHeading[displayedModule] || 'Consulta institucional'}</h2>
+        <p>Selecione uma opção no menu lateral ou abra a consulta para visualizar os registros. As tabelas não são carregadas nesta tela inicial.</p>
+        <button type="button" onClick={() => setShowModulePage(true)}>Abrir consulta / gerenciamento →</button>
+      </section>;
+    }
+    return <div className={guardedModule ? 'ciapi-existing-module' : 'ciapi-dashboard-light'}>{renderContent()}</div>;
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -136,13 +164,13 @@ export default function App() {
       {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
-        <div className="ciapi-horizontal-layout app-shell institutional-app min-h-screen min-w-0 bg-bg-dark">
+        <div className="ciapi-horizontal-layout ciapi-contextual-app app-shell institutional-app min-h-screen min-w-0">
           <InstitutionalHeader compact subtitle="Sistema Integrado de Gestão de Recursos Humanos" />
           <InstitutionalNav activeTab={activeTab} onNavigate={navigateWithAction} onLogout={handleLogout} />
           <div className="app-content-column flex min-w-0 flex-1 flex-col">
             <Topbar title={getPageTitle()} />
             {acesso?.is_master && (
-              <div className="flex justify-end border-b border-[#26344a] px-3 py-2 sm:px-6">
+              <div className="ciapi-secondary-actions flex justify-end px-3 py-2 sm:px-6">
                 <button
                   type="button"
                   onClick={() => setAmbiente('sae')}
@@ -152,15 +180,18 @@ export default function App() {
                 </button>
               </div>
             )}
-            <main className="app-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
-              <div className="app-page app-main-inner">
-                <AnimatePresence mode="wait">
-                  <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
-                    {renderContent()}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </main>
+            <div className="ciapi-contextual-workspace">
+              {guardedModule && <ContextualModuleMenu module={displayedModule} activeTab={activeTab} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} onSelect={openFromSide} isAdmin={Boolean(acessoAtual?.isMaster || acessoAtual?.perfil === 'ADMINISTRADOR')} />}
+              <main className="app-main ciapi-contextual-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
+                <div className="app-page app-main-inner">
+                  <AnimatePresence mode="wait">
+                    <motion.div key={`${activeTab}-${showModulePage}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                      {renderSelectedContent()}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </main>
+            </div>
           </div>
         </div>
       )}
