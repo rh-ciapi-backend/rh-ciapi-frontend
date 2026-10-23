@@ -103,9 +103,17 @@ export function InstitutionalNav({ activeTab, selectedModule, onOpenModule, onNa
               <button className={`ciapi-hnav__trigger${groupActive(g) ? ' ciapi-hnav__trigger--active' : ''}`}
                 type="button" aria-expanded={g.children ? visible : undefined}
                 aria-haspopup={g.children ? 'menu' : undefined}
-                onClick={() => { if (g.id === 'dashboard') { onOpenModule('dashboard','dashboard'); } else { onOpenModule(g.id, g.children?.[0]?.tab || g.target?.tab || 'dashboard'); } setMobileOpen(false); setExpanded(null); }}>
+                onClick={() => { if (g.id === 'dashboard') { onOpenModule('dashboard','dashboard'); setExpanded(null); setMobileOpen(false); } else if (g.children && selectedModule === g.id) { setExpanded(visible ? null : g.id); } else { onOpenModule(g.id, g.children?.[0]?.tab || g.target?.tab || 'dashboard'); setExpanded(null); } }}>
                 <Icon size={16} aria-hidden="true"/><span>{g.label}</span>{g.children && <ChevronDown size={13} aria-hidden="true"/>}
               </button>
+              {g.children && visible && <div className="ciapi-hnav__dropdown" role="group" aria-label={`Opções de ${g.label}`}>
+                {g.children.filter(item => isAdmin || !item.tab.startsWith('admin-')).map((item,index) => {
+                  const ItemIcon = item.icon;
+                  return <button type="button" key={`${item.tab}-${index}`} onClick={() => { onNavigate(item.tab,item.action || 'open'); setExpanded(null); setMobileOpen(false); }}>
+                    <ItemIcon size={15} aria-hidden="true" /> {item.label}
+                  </button>;
+                })}
+              </div>}
             </div>;
           })}
           {allowedSAE && <button type="button" className="ciapi-hnav__trigger ciapi-hnav__sae"

@@ -20,6 +20,6 @@ export function ContextualModuleMenu({module,activeTab,collapsed,onToggle,onSele
   const entries=section.entries.filter(e=>isAdmin || !e.tab.startsWith('admin-'));
   return <aside className={`ciapi-side${collapsed?' ciapi-side--collapsed':''}`} aria-label={`Opções de ${section.title}`}>
     <div className="ciapi-side__heading"><Icon size={20}/>{!collapsed&&<strong>{section.title}</strong>}<button type="button" onClick={onToggle} aria-label={collapsed?'Expandir menu':'Recolher menu'}>{collapsed?<PanelLeftOpen size={17}/>:<PanelLeftClose size={17}/>}</button></div>
-    {!collapsed&&<div className="ciapi-side__items">{entries.map((entry,i)=><button key={`${entry.tab}-${i}`} type="button" className={activeTab===entry.tab?'ciapi-side__item ciapi-side__item--active':'ciapi-side__item'} onClick={()=>onSelect(entry.tab,entry.action)}>{entry.label}<span aria-hidden="true">›</span></button>)}</div>}
+    {!collapsed&&<div className="ciapi-side__items">{entries.map((entry,i)=><button key={`${entry.tab}-${i}`} type="button" className={'ciapi-side__item'} onClick={()=>onSelect(entry.tab,entry.action)}>{entry.label}<span aria-hidden="true">›</span></button>)}</div>}
   </aside>;
 }

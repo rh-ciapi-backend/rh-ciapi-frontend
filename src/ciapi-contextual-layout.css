@@ -22,6 +22,20 @@
 .ciapi-entry button{background:#116cc3;color:white;border:0;padding:13px 23px;border-radius:9px;cursor:pointer;font-weight:700}
 .ciapi-entry button:hover{background:#07559e}
 /* As páginas antigas são preservadas em superfície própria até sua conversão visual. */
-.ciapi-existing-module{background:#0b1220;color:#e5edfa;border-radius:14px;padding:15px;min-width:0}
-.ciapi-contextual-app .ciapi-hnav__dropdown{display:none!important}
+/* Apresentação clara dos módulos legados sem alterar lógica das páginas. */
+.ciapi-existing-module{background:#ffffff;color:#183452;border:1px solid #dce5f1;border-radius:14px;padding:20px;min-width:0;box-shadow:0 6px 24px #1633560b}
+.ciapi-existing-module :is(h1,h2,h3,h4){color:#11365c}
+.ciapi-existing-module :is(input,select,textarea){color:#183452;background-color:#fff;border-color:#ccdae9}
+.ciapi-existing-module :is(input,textarea)::placeholder{color:#7187a2}
+.ciapi-existing-module :is(table,th,td){border-color:#e1e9f2}
+.ciapi-existing-module th{color:#183d61}
+.ciapi-existing-module :is(button,a){cursor:pointer}
+.ciapi-contextual-app .ciapi-secondary-actions{background:#f3f6fb;border-bottom:1px solid #dce6f0}
+.ciapi-contextual-app .ciapi-secondary-actions button{color:#13446f;background:#fff;border-color:#cfdeec}
+.ciapi-contextual-app .app-main{background:#f3f6fb!important}
+.ciapi-contextual-app .ciapi-contextual-workspace{flex:1 1 auto}
+.ciapi-contextual-app .ciapi-side{position:relative;z-index:5}
+
+/* Dropdown horizontal disponível; menu lateral contextual também permanece acessível. */
+.ciapi-contextual-app .ciapi-hnav__dropdown{display:flex}
 @media(max-width:800px){.ciapi-contextual-app .ciapi-contextual-workspace{flex-direction:column}.ciapi-side,.ciapi-side--collapsed{flex:none;width:100%;padding:9px 12px;border-bottom:1px solid #dbe6f2}.ciapi-side--collapsed .ciapi-side__heading{justify-content:space-between}.ciapi-side__items{max-height:240px;overflow:auto}.ciapi-entry{margin:6px auto}.ciapi-existing-module{padding:8px}}
