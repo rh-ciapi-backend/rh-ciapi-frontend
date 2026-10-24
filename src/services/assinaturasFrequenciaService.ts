@@ -1,9 +1,3 @@
-/**
- * Assinaturas institucionais da frequência CIAPI.
- * Reutiliza o cliente Supabase autenticado do sistema; não cria sessão paralela.
- * Requer tabela ciapi_config_assinaturas_frequencia e políticas RLS compatíveis
- * com os perfis autorizados (leitura do RH; gravação somente administradores).
- */
 import { supabase } from '../lib/supabaseClient';
 
 export type AutoridadeAssinatura = { nome: string; matricula: string; cargo: string };
@@ -18,69 +12,69 @@ export const ASSINATURAS_INICIAIS: AssinaturasFrequencia = {
   secretario: { nome: '', matricula: '', cargo: 'Secretário(a) de Estado' },
 };
 
-const TABLE_NAME = 'ciapi_config_assinaturas_frequencia';
-const clean = (value: unknown) => String(value ?? '').trim();
+const table = 'ciapi_config_assinaturas_frequencia';
 
-function toMessage(error: { message?: string; code?: string } | null, operation: string) {
-  if (!error) return '';
+function mensagemErro(error: { code?: string; message?: string }): string {
   if (error.code === '42P01' || error.code === 'PGRST205') {
-    return `A tabela ${TABLE_NAME} não foi encontrada. Confira se o SQL de configuração foi executado no Supabase correto.`;
+    return 'Tabela de assinaturas não encontrada no Supabase.';
   }
-  if (error.code === '42501' || /permission denied|row.level.security|42501/i.test(error.message ?? '')) {
-    return `Sem permissão para ${operation} as assinaturas. Confira as políticas RLS e o perfil autenticado.`;
+  if (error.code === '42501' || /permission denied|row.level security|policy/i.test(error.message || '')) {
+    return 'Sem permissão para salvar as assinaturas. Verifique o login Supabase Auth e as políticas RLS.';
   }
-  return `Não foi possível ${operation} as assinaturas: ${error.message || 'erro desconhecido'}`;
+  return error.message || 'Erro desconhecido ao acessar o Supabase.';
+}
+
+async function verificarSessao(): Promise<void> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    throw new Error('Não existe uma sessão Supabase Auth válida neste navegador. Entre novamente pelo login integrado do RH CIAPI.');
+  }
 }
 
 export async function carregarAssinaturas(): Promise<AssinaturasFrequencia> {
+  await verificarSessao();
   const { data, error } = await supabase
-    .from(TABLE_NAME)
-    .select('gerente_nome, gerente_matricula, gerente_cargo, secretario_nome, secretario_matricula, secretario_cargo')
+    .from(table)
+    .select('gerente_nome,gerente_matricula,gerente_cargo,secretario_nome,secretario_matricula,secretario_cargo')
     .eq('id', 1)
     .maybeSingle();
 
-  if (error) throw new Error(toMessage(error, 'consultar'));
-  if (!data) return {
-    gerente: { ...ASSINATURAS_INICIAIS.gerente },
-    secretario: { ...ASSINATURAS_INICIAIS.secretario },
-  };
+  if (error) throw new Error(`Não foi possível consultar responsáveis: ${mensagemErro(error)}`);
+  if (!data) throw new Error('Registro de assinaturas não está visível para este usuário. Confira a política SELECT e a sessão autenticada.');
 
   return {
     gerente: {
-      nome: clean(data.gerente_nome),
-      matricula: clean(data.gerente_matricula),
-      cargo: clean(data.gerente_cargo),
+      nome: data.gerente_nome || '',
+      matricula: data.gerente_matricula || '',
+      cargo: data.gerente_cargo || '',
     },
     secretario: {
-      nome: clean(data.secretario_nome),
-      matricula: clean(data.secretario_matricula),
-      cargo: clean(data.secretario_cargo),
+      nome: data.secretario_nome || '',
+      matricula: data.secretario_matricula || '',
+      cargo: data.secretario_cargo || '',
     },
   };
 }
 
 export async function salvarAssinaturas(a: AssinaturasFrequencia): Promise<void> {
-  if (!clean(a.gerente.nome) || !clean(a.gerente.cargo)) {
-    throw new Error('Preencha o nome e o cargo do gerente.');
+  await verificarSessao();
+  // O registro id=1 é criado pelo SQL de instalação. UPDATE evita exigir INSERT do upsert.
+  const { data, error } = await supabase
+    .from(table)
+    .update({
+      gerente_nome: a.gerente.nome.trim(),
+      gerente_matricula: a.gerente.matricula.trim(),
+      gerente_cargo: a.gerente.cargo.trim(),
+      secretario_nome: a.secretario.nome.trim(),
+      secretario_matricula: a.secretario.matricula.trim(),
+      secretario_cargo: a.secretario.cargo.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', 1)
+    .select('id');
+
+  if (error) throw new Error(`Não foi possível salvar: ${mensagemErro(error)}`);
+  if (!data?.length) {
+    throw new Error('Nenhum registro foi atualizado. A política RLS pode estar bloqueando o UPDATE ou a leitura do registro id=1.');
   }
-  if (!clean(a.secretario.nome) || !clean(a.secretario.cargo)) {
-    throw new Error('Preencha o nome e o cargo do secretário.');
-  }
-
-  const payload = {
-    id: 1,
-    gerente_nome: clean(a.gerente.nome),
-    gerente_matricula: clean(a.gerente.matricula),
-    gerente_cargo: clean(a.gerente.cargo),
-    secretario_nome: clean(a.secretario.nome),
-    secretario_matricula: clean(a.secretario.matricula),
-    secretario_cargo: clean(a.secretario.cargo),
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabase
-    .from(TABLE_NAME)
-    .upsert(payload, { onConflict: 'id' });
-
-  if (error) throw new Error(toMessage(error, 'salvar'));
 }
