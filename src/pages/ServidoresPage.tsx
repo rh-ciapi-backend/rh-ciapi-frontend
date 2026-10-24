@@ -210,6 +210,8 @@ export const ServidoresPage = ({
   const [searchResults, setSearchResults] = useState<ServidorComVinculo[]>([]);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = useState('');
+  const [formPhotoUrl, setFormPhotoUrl] = useState<string | null>(null);
+  const [formPhotoNotice, setFormPhotoNotice] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -440,6 +442,9 @@ export const ServidoresPage = ({
   const closeEditModal = () => {
     setIsModalOpen(false);
     setEditingEmployee(null);
+    if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
+    setFormPhotoUrl(null);
+    setFormPhotoNotice('');
     resetConfirmSaveState();
   };
 
@@ -463,12 +468,16 @@ export const ServidoresPage = ({
 
   const handleAddEmployee = () => {
     setEditingEmployee(null);
+    setFormPhotoUrl(null);
+    setFormPhotoNotice('');
     setIsModalOpen(true);
     resetConfirmSaveState();
   };
 
   const handleEditEmployee = (emp: ServidorComVinculo) => {
     setEditingEmployee(emp);
+    setFormPhotoUrl(null);
+    setFormPhotoNotice('');
     setIsModalOpen(true);
     resetConfirmSaveState();
   };
@@ -576,6 +585,8 @@ export const ServidoresPage = ({
       resetConfirmSaveState();
       setIsModalOpen(false);
       setEditingEmployee(null);
+      if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
+      setFormPhotoUrl(null);
       await fetchEmployees();
       setSelectedEmployee(null);
       setHasSearched(false);
@@ -651,7 +662,7 @@ export const ServidoresPage = ({
 
   return (
     <div className="ciapi-servidores-page">
-      <section className="ciapi-servidores-search">
+      {!isModalOpen && <section className="ciapi-servidores-search">
         <header><strong>Localizar Servidor</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
         <form onSubmit={runSearch}>
           <label htmlFor="ciapi-search-servidor">Buscar por nome, CPF ou matrícula</label>
@@ -666,12 +677,12 @@ export const ServidoresPage = ({
             <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={handleAddEmployee}><Plus size={17}/> Novo servidor</button>
           </div>
         </form>
-      </section>
+      </section>}
 
       {(error || successMessage) && <div className="ciapi-servidores-alert" role="status">{error || successMessage}{error && <button onClick={fetchEmployees}>Tentar novamente</button>}</div>}
       {isLoading && <p className="ciapi-servidores-loading">Carregando informações...</p>}
 
-      {hasSearched && !selectedEmployee && !isLoading && (
+      {!isModalOpen && hasSearched && !selectedEmployee && !isLoading && (
         <section className="ciapi-servidores-results">
           <header><strong>Resultado da pesquisa</strong><span>{searchResults.length} registro(s)</span></header>
           {!searchResults.length ? <p className="ciapi-servidores-empty">Nenhum servidor encontrado. Confira os dados e tente novamente.</p> : (
@@ -686,7 +697,7 @@ export const ServidoresPage = ({
         </section>
       )}
 
-      {selectedEmployee && (
+      {!isModalOpen && selectedEmployee && (
         <article className="ciapi-servidores-profile">
           <header className="ciapi-servidores-profile-top">
             <strong>Ficha do servidor</strong>
@@ -729,38 +740,33 @@ export const ServidoresPage = ({
         </article>
       )}
 
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (!isConfirmSaveOpen) closeEditModal();
-              }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative z-[71] max-h-[calc(100dvh-1rem)] w-full max-w-4xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-border-dark p-4 sm:p-6">
-                <h2 className="text-xl font-bold text-white">
-                  {editingEmployee ? 'Editar Servidor' : 'Novo Servidor'}
-                </h2>
-                <button
-                  onClick={() => closeEditModal()}
-                  className="text-slate-500 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="max-h-[calc(100dvh-10rem)] overflow-y-auto p-4 scrollbar-hide sm:max-h-[75vh] sm:p-6">
+      {isModalOpen && (
+        <section className="ciapi-servidores-editor" aria-label={editingEmployee ? 'Editar servidor' : 'Novo servidor'}>
+          <header className="ciapi-servidores-editor-header">
+            <div><span>Gestão de pessoas / Cadastro</span><h2>{editingEmployee ? 'Editar servidor' : 'Novo servidor'}</h2><p>Preencha os dados e confira as informações antes de salvar.</p></div>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={closeEditModal}><ChevronLeft size={16}/> Voltar à pesquisa</button>
+          </header>
+          <div className="ciapi-servidores-editor-content">
                 <form id="servidor-form" onSubmit={handleSave} className="space-y-8">
+<section className="ciapi-servidores-edit-photo">
+  <div className="ciapi-servidores-edit-photo-image">
+    {(formPhotoUrl || (editingEmployee && profileValue(editingEmployee,'fotoUrl','foto_url','foto','avatarUrl','fotoPerfil'))) ?
+      <img src={formPhotoUrl || profileValue(editingEmployee,'fotoUrl','foto_url','foto','avatarUrl','fotoPerfil')} alt="Fotografia do servidor" /> :
+      <div><Camera size={32}/><span>Sem fotografia</span></div>}
+  </div>
+  <div><h3>Fotografia do servidor</h3><p>JPG, PNG ou WebP, até 3 MB.</p>
+    <label className="ciapi-btn ciapi-btn-muted ciapi-servidores-photo-picker"><ImagePlus size={16}/> Selecionar fotografia
+      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => {
+        const file = event.target.files?.[0]; if (!file) return;
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>3*1024*1024) {setFormPhotoNotice('Selecione uma imagem JPG, PNG ou WebP de até 3 MB.');return;}
+        if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
+        setFormPhotoUrl(URL.createObjectURL(file));
+        setFormPhotoNotice('Pré-visualização apenas. O armazenamento de fotos ainda precisa de integração com o backend.');
+      }}/>
+    </label>{formPhotoUrl && <button type="button" className="ciapi-servidores-remove-photo" onClick={() => { URL.revokeObjectURL(formPhotoUrl); setFormPhotoUrl(null); setFormPhotoNotice('');}}>Remover pré-visualização</button>}
+    {formPhotoNotice && <p role="status" className="ciapi-servidores-photo-notice">{formPhotoNotice}</p>}
+  </div>
+</section>
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Dados Pessoais</h3>
@@ -1038,7 +1044,6 @@ export const ServidoresPage = ({
                     </div>
                   </section>
                 </form>
-              </div>
 
               <div className="grid grid-cols-1 gap-2 border-t border-border-dark bg-slate-800/20 p-4 sm:flex sm:justify-end sm:gap-3 sm:p-6">
                 <button
@@ -1056,10 +1061,9 @@ export const ServidoresPage = ({
                   {editingEmployee ? 'Salvar Alterações' : 'Cadastrar Servidor'}
                 </button>
               </div>
-            </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+        </section>
+      )}
 
       <AnimatePresence>
         {isConfirmSaveOpen && (
