@@ -45,6 +45,9 @@ const filtrosIniciais: MapaFilters = {
 
 export default function MapasPage() {
   const [grupo, setGrupo] = useState<Grupo>(PRIMEIRO_GRUPO);
+  const [aba, setAba] = useState<string>(PRIMEIRO_GRUPO.chave);
+  const [mapasParaExportar, setMapasParaExportar] = useState<string[]>([PRIMEIRO_GRUPO.chave]);
+  const [formatoExportacao, setFormatoExportacao] = useState<'pdf'|'docx'|'zip'>('pdf');
   const [filtros, setFiltros] = useState<MapaFilters>(filtrosIniciais);
   const [preview, setPreview] = useState<MapaPreviewResponse | null>(null);
   const [busca, setBusca] = useState('');
@@ -58,6 +61,7 @@ export default function MapasPage() {
 
   const selecionarGrupo = (novo: Grupo) => {
     setGrupo(novo);
+    setAba(novo.chave);
     setBusca('');
     setPagina(1);
     setMostrarDiagnostico(false);
@@ -105,6 +109,32 @@ export default function MapasPage() {
     } catch(e: unknown) { setErro(e instanceof Error ? e.message : 'Erro ao exportar o mapa.'); }
     finally { setExportando(''); }
   };
+  const baixarSelecionados = async () => {
+    if (!mapasParaExportar.length) { setErro('Selecione pelo menos um mapa para exportar.'); return; }
+    setErro(''); setExportando('selecionados');
+    const falhas: string[] = [];
+    try {
+      for (const chave of mapasParaExportar) {
+        const grupoAtual = GRUPOS.find(g => g.chave === chave);
+        if (!grupoAtual) continue;
+        const parametros: MapaFilters = {
+          ...filtros, categoria: chave,
+          layout: 'automatico',
+          modoExportacao: formatoExportacao === 'zip' ? 'arquivos_separados' : 'arquivo_unico',
+        };
+        try {
+          if (formatoExportacao === 'pdf') await mapasService.exportarPdf(parametros);
+          else if (formatoExportacao === 'docx') await mapasService.exportarDocx(parametros);
+          else await mapasService.exportarZip(parametros);
+        } catch (error) {
+          falhas.push(`${grupoAtual.titulo} ${grupoAtual.subtitulo}: ${error instanceof Error ? error.message : 'falha ao exportar'}`);
+        }
+      }
+      if (falhas.length) setErro(`Algumas exportações falharam: ${falhas.join(' | ')}`);
+    } finally { setExportando(''); }
+  };
+  const marcarMapa = (chave: string) => setMapasParaExportar(lista => lista.includes(chave) ? lista.filter(c => c !== chave) : [...lista, chave]);
+  const todosMarcados = mapasParaExportar.length === GRUPOS.length;
   const validar = async () => {
     setValidando(true);
     setErro('');
@@ -119,22 +149,55 @@ export default function MapasPage() {
   return <main className="ciapi-mapas-page">
     <header className="ciapi-mapas-header">
       <div><div className="ciapi-mapas-eyebrow">CIAPI RH / MAPAS DE FREQUÊNCIA</div>
-        <h1>Mapas por categoria funcional</h1>
-        <p>Selecione um grupo para consultar o mapa completo na área de trabalho.</p>
+        <h1>Mapas de frequência</h1>
+        <p>Escolha uma guia para visualizar o mapa ou exportar uma ou todas as categorias.</p>
       </div>
       <button type="button" className="ciapi-mapas-button subtle" onClick={() => setRecarregar(i => i + 1)} disabled={carregando}>
         <RefreshCw size={16} className={carregando ? 'ciapi-spin' : ''}/> Atualizar dados
       </button>
     </header>
 
-    <nav className="ciapi-mapas-tabs" aria-label="Mapas por categoria">
-      {GRUPOS.map(item => <button type="button" key={item.chave} className={item.chave === grupo.chave ? 'active' : ''}
-        aria-pressed={item.chave === grupo.chave} onClick={() => selectGrupo(item.chave)}>
-        <span>{item.titulo}</span><small>{item.subtitulo}</small>
+    <nav className="ciapi-mapas-tabs ciapi-mapas-guide-tabs" role="tablist" aria-label="Guias de mapas de frequência">
+      {GRUPOS.map(item => <button role="tab" type="button" key={item.chave} className={aba === item.chave ? 'active' : ''}
+        aria-selected={aba === item.chave} onClick={() => selecionarGrupo(item)}>
+        {item.titulo} {item.subtitulo}
       </button>)}
+      <button role="tab" type="button" className={aba === 'exportar' ? 'active' : ''}
+        aria-selected={aba === 'exportar'} onClick={() => { setAba('exportar'); setErro(''); }}>
+        <Download size={16}/> Exportar mapas
+      </button>
     </nav>
 
-    <section className="ciapi-mapas-workspace">
+    {aba === 'exportar' ? <section className="ciapi-mapas-workspace ciapi-mapas-export" role="tabpanel">
+      <div className="ciapi-mapas-panel-title"><div><div className="ciapi-mapas-eyebrow">EXPORTAÇÃO DE MAPAS</div>
+        <h2>Exportar mapas de frequência</h2><p>Marque uma categoria, várias categorias ou todos os mapas. Os arquivos são gerados com os dados do banco.</p></div></div>
+      <div className="ciapi-mapas-export-section"><strong>Mapas para exportação</strong>
+        <label className="ciapi-mapas-check-all"><input type="checkbox" checked={todosMarcados}
+          onChange={e => setMapasParaExportar(e.target.checked ? GRUPOS.map(g => g.chave) : [])}/>
+          Todos os mapas (6 categorias)</label>
+        <div className="ciapi-mapas-choice-grid">{GRUPOS.map(item => <label key={item.chave}>
+          <input type="checkbox" checked={mapasParaExportar.includes(item.chave)} onChange={() => marcarMapa(item.chave)}/>
+          {item.titulo} {item.subtitulo}</label>)}</div>
+      </div>
+      <div className="ciapi-mapas-export-section"><strong>Competência e filtros</strong>
+        <div className="ciapi-mapas-filters">
+          <label><span>Mês</span><select value={filtros.mes} onChange={e => setFiltros(f => ({...f, mes: Number(e.target.value)}))}>{MESES.map((m,i) => <option key={m} value={i+1}>{m}</option>)}</select></label>
+          <label><span>Ano</span><input type="number" min={2020} max={2100} value={filtros.ano} onChange={e => setFiltros(f => ({...f,ano:Number(e.target.value)||new Date().getFullYear()}))}/></label>
+          <label><span>Setor / lotação (opcional)</span><input placeholder="Todos os setores" value={filtros.setor||''} onChange={e => setFiltros(f => ({...f,setor:e.target.value}))}/></label>
+          <label><span>Situação</span><select value={filtros.status||''} onChange={e => setFiltros(f => ({...f,status:e.target.value}))}><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="">Todos</option></select></label>
+        </div>
+      </div>
+      <div className="ciapi-mapas-export-section"><strong>Formato do arquivo</strong>
+        <div className="ciapi-mapas-radio-row">{(['pdf','docx','zip'] as const).map(tipo => <label key={tipo}>
+          <input type="radio" checked={formatoExportacao === tipo} onChange={() => setFormatoExportacao(tipo)}/>
+          {tipo==='docx'?'Word (DOCX)':tipo.toUpperCase()}</label>)}</div>
+      </div>
+      <p className="ciapi-mapas-export-note">{mapasParaExportar.length} mapa(s) selecionado(s). Ao selecionar todos, o sistema solicita até seis downloads individuais. Seu navegador pode pedir autorização para downloads múltiplos. O ZIP usa o gerador existente e não necessariamente consolida todas as categorias num único arquivo.</p>
+      {erro && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={17}/>{erro}</div>}
+      <button type="button" className="ciapi-mapas-button primary" onClick={baixarSelecionados} disabled={!!exportando||!mapasParaExportar.length}>
+        <Download size={16}/> {exportando ? 'Gerando arquivos...' : `Baixar ${mapasParaExportar.length} mapa(s)`}</button>
+    </section> : <section className="ciapi-mapas-workspace" role="tabpanel">
+
       <div className="ciapi-mapas-panel-title">
         <div><div className="ciapi-mapas-eyebrow">MAPA DE FREQUÊNCIA · {grupo.subtitulo}</div>
           <h2>{grupo.titulo} {grupo.subtitulo}</h2>
@@ -205,6 +268,6 @@ export default function MapasPage() {
         {paginas > 1 && <div className="ciapi-mapas-buttons"><button className="ciapi-mapas-button subtle" onClick={() => setPagina(x => Math.max(1,x-1))} disabled={pagina === 1}>Anterior</button><button className="ciapi-mapas-button subtle" onClick={() => setPagina(x => Math.min(paginas,x+1))} disabled={pagina === paginas}>Próximo</button></div>}
       </div>
       {mostrarDiagnostico && preview && <aside className="ciapi-mapas-diagnostic"><strong>Validação do mapa</strong><p>Registros inválidos: {preview.diagnostics?.registrosInvalidos?.length ?? 0} · Páginas previstas: {preview.diagnostics?.paginasPrevistas ?? '—'}</p>{(preview.diagnostics?.alertas || []).map((a, i) => <p key={i}>{String(a)}</p>)}</aside>}
-    </section>
+    </section>}
   </main>;
 }

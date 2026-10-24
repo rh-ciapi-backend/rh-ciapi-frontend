@@ -3,3 +3,15 @@
 @media(max-width:1100px){.ciapi-mapas-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.ciapi-mapas-search{grid-column:span 2}}
 @media(max-width:690px){.ciapi-mapas-page{padding:8px}.ciapi-mapas-header{align-items:flex-start}.ciapi-mapas-header h1{font-size:20px}.ciapi-mapas-tabs{display:grid;grid-template-columns:repeat(2,1fr)}.ciapi-mapas-tabs button{min-width:0}.ciapi-mapas-workspace{padding:11px}.ciapi-mapas-filters{grid-template-columns:1fr 1fr}.ciapi-mapas-filters label:nth-child(3),.ciapi-mapas-search{grid-column:span 2}.ciapi-mapas-paper{padding:12px 6px}}
 @media print{.ciapi-mapas-header,.ciapi-mapas-tabs,.ciapi-mapas-filters,.ciapi-mapas-actions,.ciapi-mapas-footer,.ciapi-mapas-diagnostic,.ciapi-mapas-footnote{display:none!important}.ciapi-mapas-page,.ciapi-mapas-workspace,.ciapi-mapas-paper{border:0!important;box-shadow:none!important;padding:0!important;background:#fff!important}.ciapi-mapas-table{min-width:0;font-size:9px}.ciapi-mapas-table th,.ciapi-mapas-table td{padding:4px 3px}}
+
+/* Guias horizontais e exportação */
+.ciapi-mapas-guide-tabs{display:flex!important;gap:0!important;align-items:stretch;overflow-x:auto;border-bottom:2px solid #d4e1f1;background:transparent!important;padding:0!important;border-radius:0!important;flex-wrap:nowrap!important;}
+.ciapi-mapas-guide-tabs button{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex:0 0 auto;border:1px solid #d4e1f1!important;border-bottom:0!important;border-radius:9px 9px 0 0!important;padding:15px 16px!important;min-height:54px;color:#173c62!important;background:#fff!important;font-weight:700!important;box-shadow:none!important}
+.ciapi-mapas-guide-tabs button.active{background:#185faf!important;color:white!important;border-color:#185faf!important}
+.ciapi-mapas-export-section{border:1px solid #d9e5f2;background:#fff;border-radius:12px;padding:18px;margin:15px 0;display:grid;gap:14px;color:#163b5e}
+.ciapi-mapas-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ciapi-mapas-choice-grid label,.ciapi-mapas-check-all,.ciapi-mapas-radio-row label{display:flex;gap:10px;align-items:center;cursor:pointer;font-size:14px;color:#173b5a}
+.ciapi-mapas-choice-grid label{padding:12px;border:1px solid #dfebf5;border-radius:9px;background:#f8fbff}
+.ciapi-mapas-choice-grid input,.ciapi-mapas-check-all input,.ciapi-mapas-radio-row input{accent-color:#1861ba;width:17px;height:17px;flex-shrink:0}
+.ciapi-mapas-radio-row{display:flex;gap:30px;flex-wrap:wrap}.ciapi-mapas-export-note{background:#eef5ff;border-radius:9px;padding:13px;color:#365e83;font-size:13px}
+@media(max-width:900px){.ciapi-mapas-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ciapi-mapas-choice-grid{grid-template-columns:1fr}}
