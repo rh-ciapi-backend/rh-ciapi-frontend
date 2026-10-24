@@ -4,7 +4,7 @@ import { PanelLeftClose, PanelLeftOpen, Search, Users, CalendarDays, Map, Clock3
 type Entry = { label:string; tab:string; action?:string };
 const sections: Record<string,{title:string; entries:Entry[]}> = {
   servidores:{title:'Servidores',entries:[{label:'Pesquisar servidores',tab:'servidores',action:'open'},{label:'Novo servidor',tab:'servidores',action:'add'},{label:'Painel de Pessoal',tab:'servidores',action:'painel-pessoal'}]},
-  frequencia:{title:'Frequência',entries:[{label:'Pesquisar frequência',tab:'frequencia',action:'pesquisar'},{label:'Gerenciar feriados',tab:'frequencia',action:'feriados'},{label:'Exportação',tab:'frequencia',action:'exportar'},{label:'Visão mensal',tab:'frequencia',action:'mensal'}]},
+  frequencia:{title:'Frequência',entries:[{label:'Pesquisar frequência',tab:'frequencia',action:'pesquisar'},{label:'Gerenciar feriados',tab:'frequencia',action:'feriados'},{label:'Exportação',tab:'frequencia',action:'exportar'}]},
   ferias:{title:'Férias',entries:[{label:'Pesquisar férias',tab:'ferias',action:'open'},{label:'Plano de férias',tab:'ferias',action:'open'},{label:'Férias não marcadas',tab:'ferias',action:'open'},{label:'Períodos registrados',tab:'ferias',action:'open'},{label:'Exportar férias',tab:'ferias',action:'open'}]},
   mapas:{title:'Mapas',entries:[{label:'Mapa de frequência',tab:'mapas',action:'open'},{label:'Mapa SESAU',tab:'mapas',action:'open'},{label:'Mapa padrão',tab:'mapas',action:'open'},{label:'Mapas por categoria / setor',tab:'mapas',action:'open'},{label:'Exportar mapas',tab:'mapas',action:'open'}]},
   atestados:{title:'Atestados',entries:[{label:'Consultar atestados',tab:'atestados',action:'open'},{label:'Lançamentos',tab:'atestados',action:'open'}]},
