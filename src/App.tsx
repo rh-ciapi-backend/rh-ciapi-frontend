@@ -73,8 +73,8 @@ export default function App() {
     const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setActiveTab(safeTab);
     setSelectedModule(safeTab === 'dashboard' ? 'dashboard' : (['admin','admin-usuarios','admin-categorias','admin-setores','admin-logs'].includes(safeTab) ? 'admin' : safeTab));
-    setInitialAction(action === 'add' || action === 'painel-pessoal' ? action : null);
-    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open' || action === 'painel-pessoal');
+    setInitialAction(['add','painel-pessoal','pesquisar','feriados','exportar','mensal'].includes(action || '') ? action! : null);
+    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open' || action === 'painel-pessoal' || ['pesquisar','feriados','exportar','mensal'].includes(action || ''));
     setSidebarCollapsed(false);
   }, []);
 
@@ -114,7 +114,7 @@ export default function App() {
       case 'servidores': return initialAction === 'painel-pessoal' ? <PainelPessoalPage /> : <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
       case 'atestados': return <AtestadosPage />;
       case 'ferias': return <FeriasPage />;
-      case 'frequencia': return <FrequenciaPage />;
+      case 'frequencia': return <FrequenciaPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
       case 'mapas': return <MapasPage />;
       case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
