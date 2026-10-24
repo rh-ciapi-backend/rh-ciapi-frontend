@@ -1,283 +1,210 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, FileText, ShieldCheck } from 'lucide-react';
-import { MapasHero } from '../components/mapas/MapasHero';
-import { MapasStats } from '../components/mapas/MapasStats';
-import { MapasFilters } from '../components/mapas/MapasFilters';
-import { MapasDiagnostics } from '../components/mapas/MapasDiagnostics';
-import { MapasPreviewTable } from '../components/mapas/MapasPreviewTable';
-import { MapasExportActions } from '../components/mapas/MapasExportActions';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Download, FileArchive, FileText, RefreshCw, Search, Users } from 'lucide-react';
 import { mapasService } from '../services/mapasService';
-import { LinhaMapa, MapaFilters, MapaPreviewResponse } from '../types/mapas';
+import type { MapaFilters, MapaPreviewResponse } from '../types/mapas';
+import './mapas-setores-claro.css';
 
-type TabMapa = 'resumo' | 'preview' | 'diagnostico';
+/**
+ * Cada guia representa uma categoria de mapa institucional. Nenhuma linha é
+ * cadastrada localmente: sempre usamos mapasService.listarPreview().
+ */
+const GRUPOS = [
+  { chave: 'COMISSIONADOS', titulo: 'Comissionados', subtitulo: 'SETRABES', familia: 'setrabes' },
+  { chave: 'FEDERAIS SETRABES', titulo: 'Federais', subtitulo: 'SETRABES', familia: 'setrabes' },
+  { chave: 'EFETIVO SETRABES', titulo: 'Efetivos', subtitulo: 'SETRABES', familia: 'setrabes' },
+  { chave: 'SELETIVO SETRABES', titulo: 'Seletivos', subtitulo: 'SETRABES', familia: 'setrabes' },
+  { chave: 'EFETIVO SESAU', titulo: 'Efetivos', subtitulo: 'SESAU', familia: 'sesau' },
+  { chave: 'SELETIVO SESAU', titulo: 'Seletivos', subtitulo: 'SESAU', familia: 'sesau' },
+] as const;
 
-const CATEGORIAS_CANONICAS = [
-  'EFETIVO SESAU',
-  'SELETIVO SESAU',
-  'EFETIVO SETRABES',
-  'SELETIVO SETRABES',
-  'FEDERAIS SETRABES',
-  'COMISSIONADOS',
-];
+type Grupo = typeof GRUPOS[number];
+type Linha = Record<string, unknown>;
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const PRIMEIRO_GRUPO = GRUPOS[0];
 
-const SETORES_PADRAO = [
-  'CENTRO DE REFERÊNCIA DO IDOSO – MELHOR IDADE/SETRABES',
-  'CIAPI',
-  'SAE/SAÚDE',
-];
-
-const initialFilters: MapaFilters = {
+function str(value: unknown): string { return value === null || value === undefined ? '' : String(value).trim(); }
+function obter(row: Linha, ...campos: string[]) {
+  for (const campo of campos) {
+    const value = row[campo];
+    if (value !== null && value !== undefined && str(value)) return str(value);
+  }
+  return '—';
+}
+function normalizar(value: unknown) { return str(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); }
+function cell(value: string) { return value === '—' ? '' : value; }
+function countPages(rows: number) { return rows ? Math.ceil(rows / 100) : 0; }
+const filtrosIniciais: MapaFilters = {
   mes: new Date().getMonth() + 1,
   ano: new Date().getFullYear(),
-  categoria: '',
+  categoria: PRIMEIRO_GRUPO.chave,
   setor: '',
   status: 'ATIVO',
   layout: 'automatico',
   modoExportacao: 'arquivo_unico',
 };
 
-const emptyPreview: MapaPreviewResponse = {
-  ok: true,
-  layout: 'setrabes_simples',
-  filtros: initialFilters,
-  stats: {
-    totalServidores: 0,
-    totalPendencias: 0,
-    totalComObservacao: 0,
-    totalAptosExportacao: 0,
-  },
-  diagnostics: {
-    totalRegistros: 0,
-    totalComCpfAusente: 0,
-    totalComMatriculaAusente: 0,
-    totalComCargoAusente: 0,
-    totalComDuplicidadeCpf: 0,
-    totalComDuplicidadeMatricula: 0,
-    totalComObservacao: 0,
-    totalComObservacaoLonga: 0,
-    totalComPendenciaGrave: 0,
-    paginasPrevistas: 0,
-    registrosInvalidos: [],
-    alertas: [],
-    sugestoes: [],
-  },
-  linhas: [],
-};
-
 export default function MapasPage() {
-  const [filters, setFilters] = useState<MapaFilters>(initialFilters);
-  const [preview, setPreview] = useState<MapaPreviewResponse>(emptyPreview);
-  const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabMapa>('resumo');
+  const [grupo, setGrupo] = useState<Grupo>(PRIMEIRO_GRUPO);
+  const [filtros, setFiltros] = useState<MapaFilters>(filtrosIniciais);
+  const [preview, setPreview] = useState<MapaPreviewResponse | null>(null);
+  const [busca, setBusca] = useState('');
+  const [carregando, setCarregando] = useState(false);
+  const [exportando, setExportando] = useState('');
+  const [erro, setErro] = useState('');
+  const [recarregar, setRecarregar] = useState(0);
+  const [pagina, setPagina] = useState(1);
+  const [mostrarDiagnostico, setMostrarDiagnostico] = useState(false);
+  const [validando, setValidando] = useState(false);
 
-  const categorias = useMemo(() => CATEGORIAS_CANONICAS, []);
-  const setores = useMemo(() => SETORES_PADRAO, []);
-
-  const mergePreview = (data: MapaPreviewResponse, linhasOverride?: LinhaMapa[]) => {
-    setPreview({
-      ...data,
-      linhas: linhasOverride || data.linhas || [],
-    });
-  };
-
-  const loadPreview = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await mapasService.listarPreview(filters);
-      mergePreview(data);
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao carregar a pré-visualização do mapa.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const validateData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await mapasService.validar(filters);
-      mergePreview(data, preview.linhas.length ? preview.linhas : data.linhas);
-      setActiveTab('diagnostico');
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao validar os dados do mapa.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runExport = async (type: 'docx' | 'pdf' | 'zip') => {
-    try {
-      setExporting(true);
-      setError(null);
-      if (type === 'docx') await mapasService.exportarDocx(filters);
-      if (type === 'pdf') await mapasService.exportarPdf(filters);
-      if (type === 'zip') await mapasService.exportarZip(filters);
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao exportar mapa.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleObservationChange = (rowIndex: number, value: string) => {
-    setPreview((prev) => {
-      const linhas = [...prev.linhas];
-      const target = linhas[rowIndex];
-      if (!target) return prev;
-
-      linhas[rowIndex] = {
-        ...target,
-        observacao: value,
-      };
-
-      return {
-        ...prev,
-        linhas,
-        stats: {
-          ...prev.stats,
-          totalComObservacao: linhas.filter((item) => String(item.observacao || '').trim()).length,
-        },
-      };
-    });
+  const selecionarGrupo = (novo: Grupo) => {
+    setGrupo(novo);
+    setBusca('');
+    setPagina(1);
+    setMostrarDiagnostico(false);
+    setFiltros(f => ({...f, categoria: novo.chave, layout: 'automatico'}));
   };
 
   useEffect(() => {
-    loadPreview();
+    let ativo = true;
+    setPreview(null);
+    setErro('');
+    setCarregando(true);
+    mapasService.listarPreview(filtros)
+      .then(dados => { if (ativo) setPreview(dados); })
+      .catch((e: unknown) => { if (ativo) setErro(e instanceof Error ? e.message : 'Não foi possível consultar o mapa.'); })
+      .finally(() => { if (ativo) setCarregando(false); });
+    return () => { ativo = false; };
+  }, [filtros, recarregar]);
+
+  const linhas = useMemo(() => (preview?.linhas || []) as unknown as Linha[], [preview]);
+  const filtradas = useMemo(() => {
+    const termo = normalizar(busca);
+    if (!termo) return linhas;
+    return linhas.filter(row => Object.values(row).some(value =>
+      (typeof value === 'string' || typeof value === 'number') && normalizar(value).includes(termo)
+    ));
+  }, [linhas, busca]);
+  const paginas = countPages(filtradas.length);
+  const exibidas = filtradas.slice((pagina - 1) * 100, pagina * 100);
+  const isSesau = grupo.familia === 'sesau';
+  const selectGrupo = useCallback((chave: string) => {
+    const novo = GRUPOS.find(g => g.chave === chave);
+    if (novo) selecionarGrupo(novo);
   }, []);
+  const mudarFiltro = (patch: Partial<MapaFilters>) => {
+    setPagina(1);
+    setFiltros(f => ({...f, ...patch, categoria: grupo.chave}));
+  };
+  const baixar = async (formato: 'pdf'|'docx'|'zip') => {
+    setErro('');
+    setExportando(formato);
+    try {
+      if (formato === 'pdf') await mapasService.exportarPdf(filtros);
+      else if (formato === 'docx') await mapasService.exportarDocx(filtros);
+      else await mapasService.exportarZip(filtros);
+    } catch(e: unknown) { setErro(e instanceof Error ? e.message : 'Erro ao exportar o mapa.'); }
+    finally { setExportando(''); }
+  };
+  const validar = async () => {
+    setValidando(true);
+    setErro('');
+    try {
+      const response = await mapasService.validar(filtros);
+      setPreview(prev => ({ ...response, linhas: prev?.linhas?.length ? prev.linhas : response.linhas }));
+      setMostrarDiagnostico(true);
+    } catch(e: unknown) { setErro(e instanceof Error ? e.message : 'Erro ao validar o mapa.'); }
+    finally { setValidando(false); }
+  };
 
-  const tabs = [
-    { key: 'resumo' as TabMapa, label: 'Resumo', icon: LayoutDashboard },
-    { key: 'preview' as TabMapa, label: 'Pré-visualização', icon: FileText },
-    { key: 'diagnostico' as TabMapa, label: 'Diagnóstico e exportação', icon: ShieldCheck },
-  ];
+  return <main className="ciapi-mapas-page">
+    <header className="ciapi-mapas-header">
+      <div><div className="ciapi-mapas-eyebrow">CIAPI RH / MAPAS DE FREQUÊNCIA</div>
+        <h1>Mapas por categoria funcional</h1>
+        <p>Selecione um grupo para consultar o mapa completo na área de trabalho.</p>
+      </div>
+      <button type="button" className="ciapi-mapas-button subtle" onClick={() => setRecarregar(i => i + 1)} disabled={carregando}>
+        <RefreshCw size={16} className={carregando ? 'ciapi-spin' : ''}/> Atualizar dados
+      </button>
+    </header>
 
-  return (
-    <div className="space-y-5 sm:space-y-6">
-      <MapasHero />
+    <nav className="ciapi-mapas-tabs" aria-label="Mapas por categoria">
+      {GRUPOS.map(item => <button type="button" key={item.chave} className={item.chave === grupo.chave ? 'active' : ''}
+        aria-pressed={item.chave === grupo.chave} onClick={() => selectGrupo(item.chave)}>
+        <span>{item.titulo}</span><small>{item.subtitulo}</small>
+      </button>)}
+    </nav>
 
-      {error && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          {error}
+    <section className="ciapi-mapas-workspace">
+      <div className="ciapi-mapas-panel-title">
+        <div><div className="ciapi-mapas-eyebrow">MAPA DE FREQUÊNCIA · {grupo.subtitulo}</div>
+          <h2>{grupo.titulo} {grupo.subtitulo}</h2>
+          <p>{isSesau ? 'Modelo SESAU com informações específicas de lotação e vínculo.' : 'Modelo SETRABES com frequência, faltas e observações.'}</p>
         </div>
-      )}
-
-      <div className="responsive-scroll rounded-2xl border border-white/10 bg-slate-900/70 p-2 shadow-xl">
-        <div className="flex min-w-max gap-2 sm:min-w-0 sm:flex-wrap">
-          {tabs.map(({ key, label, icon: Icon }) => {
-            const active = activeTab === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveTab(key)}
-                className={[
-                  'inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-semibold transition',
-                  active
-                    ? 'bg-cyan-500 text-slate-950'
-                    : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white',
-                ].join(' ')}
-              >
-                <Icon size={16} />
-                {label}
-              </button>
-            );
-          })}
+        <span className="ciapi-mapas-counter"><Users size={16}/> {linhas.length} registro(s) retornado(s)</span>
+      </div>
+      <div className="ciapi-mapas-filters">
+        <label><span><CalendarDays size={14}/> Mês</span><select value={filtros.mes} onChange={e => mudarFiltro({mes: Number(e.target.value)})}>
+          {MESES.map((m, i) => <option key={m} value={i+1}>{m}</option>)}
+        </select></label>
+        <label><span>Ano</span><input type="number" min={2020} max={2100} value={filtros.ano}
+          onChange={e => mudarFiltro({ano: Number(e.target.value) || new Date().getFullYear()})}/></label>
+        <label><span>Setor / Lotação (opcional)</span><input value={filtros.setor || ''} placeholder="Todos os setores"
+          onChange={e => mudarFiltro({setor: e.target.value})}/></label>
+        <label><span>Situação</span><select value={filtros.status || ''} onChange={e => mudarFiltro({status: e.target.value})}>
+          <option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="">Todos</option>
+        </select></label>
+        <label className="ciapi-mapas-search"><span><Search size={14}/> Buscar neste mapa</span>
+          <input value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Nome ou matrícula..."/>
+        </label>
+      </div>
+      <div className="ciapi-mapas-actions">
+        <span className="ciapi-mapas-period">Competência: <strong>{MESES[(filtros.mes || 1) - 1]}/{filtros.ano}</strong></span>
+        <div className="ciapi-mapas-buttons">
+          <button className="ciapi-mapas-button subtle" onClick={validar} disabled={validando || carregando}><CheckCircle2 size={16}/>{validando ? 'Validando...' : 'Validar'}</button>
+          <button className="ciapi-mapas-button subtle" onClick={() => baixar('docx')} disabled={!!exportando}><FileText size={16}/> Word</button>
+          <button className="ciapi-mapas-button primary" onClick={() => baixar('pdf')} disabled={!!exportando}><Download size={16}/> PDF</button>
+          <button className="ciapi-mapas-button subtle" onClick={() => baixar('zip')} disabled={!!exportando}><FileArchive size={16}/> ZIP</button>
         </div>
       </div>
-
-      {(activeTab === 'resumo' || activeTab === 'preview' || activeTab === 'diagnostico') && (
-        <>
-          <MapasStats stats={preview.stats} />
-
-          <MapasFilters
-            filters={filters}
-            categorias={categorias}
-            setores={setores}
-            onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-            onRefresh={loadPreview}
-          />
-        </>
-      )}
-
-      {activeTab === 'resumo' && (
-        <div className="grid gap-4 sm:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl sm:p-6">
-            <h3 className="text-lg font-bold text-white">Painel executivo</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Visão geral do mapa mensal com foco em quantidade, pendências e observações.
-            </p>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 sm:mt-6">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Layout resolvido</p>
-                <p className="mt-2 text-base font-semibold text-white">{preview.layout}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Páginas previstas</p>
-                <p className="mt-2 text-base font-semibold text-white">{preview.diagnostics.paginasPrevistas}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Registros inválidos</p>
-                <p className="mt-2 text-base font-semibold text-white">{preview.diagnostics.registrosInvalidos.length}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Observações editáveis</p>
-                <p className="mt-2 text-base font-semibold text-white">Sim, na aba de pré-visualização</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-xl sm:p-6">
-            <h3 className="text-lg font-bold text-white">Ações rápidas</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Valide os dados e gere o documento oficial do mapa.
-            </p>
-
-            <div className="mt-5 sm:mt-6">
-              <MapasExportActions
-                isBusy={loading || exporting}
-                onValidate={validateData}
-                onDocx={() => runExport('docx')}
-                onPdf={() => runExport('pdf')}
-                onZip={() => runExport('zip')}
-              />
-            </div>
-          </div>
+      {erro && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={17}/>{erro}</div>}
+      <div className="ciapi-mapas-paper">
+        <div className="ciapi-mapas-paper-heading">
+          <p>GOVERNO DO ESTADO DE RORAIMA</p><p>SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</p>
+          <h3>MAPA DE FREQUÊNCIA DOS SERVIDORES {grupo.titulo.toUpperCase()} — {grupo.subtitulo}</h3>
+          <p>COMPETÊNCIA: {MESES[(filtros.mes || 1) - 1]?.toUpperCase()}/{filtros.ano}</p>
         </div>
-      )}
-
-      {activeTab === 'preview' && (
-        <div className="relative">
-          {(loading || exporting) && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-slate-950/60 backdrop-blur-sm">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-            </div>
-          )}
-          <MapasPreviewTable
-            linhas={preview.linhas}
-            layout={preview.layout}
-            onObservationChange={handleObservationChange}
-          />
-        </div>
-      )}
-
-      {activeTab === 'diagnostico' && (
-        <div className="space-y-5 sm:space-y-6">
-          <MapasExportActions
-            isBusy={loading || exporting}
-            onValidate={validateData}
-            onDocx={() => runExport('docx')}
-            onPdf={() => runExport('pdf')}
-            onZip={() => runExport('zip')}
-          />
-
-          <MapasDiagnostics diagnostics={preview.diagnostics} />
-        </div>
-      )}
-    </div>
-  );
+        {carregando ? <div className="ciapi-mapas-empty">Carregando os registros do RH CIAPI...</div>
+        : <div className="ciapi-mapas-table-scroll"><table className="ciapi-mapas-table">
+          <thead><tr>{(isSesau ? ['Nº','Matrícula','Matrícula SIGRH / Início','Servidor','CPF','Cargo','Frequência','Faltas','Lotação / Setor','CH / Observação'] : ['Nº','Matrícula','Servidor','CPF','Cargo','Frequência','Faltas','Observação']).map(h => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{!exibidas.length ? <tr><td colSpan={isSesau ? 10 : 8} className="ciapi-mapas-empty">Nenhum registro retornado para os filtros selecionados.</td></tr>
+          : exibidas.map((r, index) => {
+            const nome = obter(r, 'nome', 'nome_servidor', 'nomeServidor', 'servidor', 'nome_completo', 'nomeCompleto');
+            const matricula = obter(r, 'matricula', 'matricula_servidor', 'matriculaServidor');
+            const cpf = obter(r, 'cpf');
+            const cargo = obter(r, 'cargo', 'funcao');
+            const freq = obter(r, 'frequencia', 'frequencias', 'freq');
+            const faltas = obter(r, 'faltas', 'totalFaltas', 'total_faltas');
+            const obs = obter(r, 'observacao', 'observacoes');
+            const setor = obter(r, 'lotacao', 'setor', 'setorInterno', 'setor_interno');
+            const carga = obter(r, 'cargaHoraria', 'carga_horaria', 'chSemanal', 'ch_semanal');
+            const inicio = obter(r, 'inicioAtividades', 'inicio_atividades', 'dataInicio', 'data_inicio');
+            const sig = obter(r, 'matriculaSigrh', 'matricula_sigrh', 'matriculaSIGRH');
+            return <tr key={`${matricula}-${index}`}>
+              <td>{String((pagina-1)*100+index+1).padStart(2,'0')}</td><td>{cell(matricula)}</td>
+              {isSesau && <td>{cell(sig !== '—' ? sig : inicio)}</td>}
+              <td className="nome">{cell(nome)}</td><td>{cell(cpf)}</td><td>{cell(cargo)}</td>
+              <td>{cell(freq)}</td><td>{cell(faltas)}</td>
+              {isSesau && <td>{cell(setor)}</td>}
+              <td className="observacao" title={obs}>{cell(isSesau && carga !== '—' ? `${carga}${obs !== '—' ? ' · ' + obs : ''}` : obs)}</td>
+            </tr>;
+          })}</tbody></table></div>}
+        <div className="ciapi-mapas-footnote">A tabela utiliza os registros retornados pelo sistema. O documento oficial é gerado pelos botões de exportação.</div>
+      </div>
+      <div className="ciapi-mapas-footer">
+        <span>{filtradas.length} registro(s) na consulta{paginas > 1 ? ` · página ${pagina} de ${paginas}` : ''}</span>
+        {paginas > 1 && <div className="ciapi-mapas-buttons"><button className="ciapi-mapas-button subtle" onClick={() => setPagina(x => Math.max(1,x-1))} disabled={pagina === 1}>Anterior</button><button className="ciapi-mapas-button subtle" onClick={() => setPagina(x => Math.min(paginas,x+1))} disabled={pagina === paginas}>Próximo</button></div>}
+      </div>
+      {mostrarDiagnostico && preview && <aside className="ciapi-mapas-diagnostic"><strong>Validação do mapa</strong><p>Registros inválidos: {preview.diagnostics?.registrosInvalidos?.length ?? 0} · Páginas previstas: {preview.diagnostics?.paginasPrevistas ?? '—'}</p>{(preview.diagnostics?.alertas || []).map((a, i) => <p key={i}>{String(a)}</p>)}</aside>}
+    </section>
+  </main>;
 }
