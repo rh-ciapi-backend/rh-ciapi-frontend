@@ -65,9 +65,6 @@ export async function salvarAssinaturas(a: AssinaturasFrequencia): Promise<void>
       gerente_nome: a.gerente.nome.trim(),
       gerente_matricula: a.gerente.matricula.trim(),
       gerente_cargo: a.gerente.cargo.trim(),
-      secretario_nome: a.secretario.nome.trim(),
-      secretario_matricula: a.secretario.matricula.trim(),
-      secretario_cargo: a.secretario.cargo.trim(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1)
