@@ -3,14 +3,14 @@ import { PanelLeftClose, PanelLeftOpen, Search, Users, CalendarDays, Map, Clock3
 
 type Entry = { label:string; tab:string; action?:string };
 const sections: Record<string,{title:string; entries:Entry[]}> = {
-  servidores:{title:'Servidores',entries:[{label:'Pesquisar servidores',tab:'servidores',action:'open'},{label:'Novo servidor',tab:'servidores',action:'add'},{label:'Painel de Pessoal',tab:'servidores',action:'painel-pessoal'},{label:'Ficha e cadastros',tab:'servidores',action:'open'},{label:'Categorias',tab:'admin-categorias',action:'open'},{label:'Setores / Lotação',tab:'admin-setores',action:'open'}]},
+  servidores:{title:'Servidores',entries:[{label:'Pesquisar servidores',tab:'servidores',action:'open'},{label:'Novo servidor',tab:'servidores',action:'add'},{label:'Painel de Pessoal',tab:'servidores',action:'painel-pessoal'}]},
   frequencia:{title:'Frequência',entries:[{label:'Consultar frequência',tab:'frequencia',action:'open'},{label:'Faltas T1 / T2',tab:'frequencia',action:'open'},{label:'Atestados',tab:'atestados',action:'open'},{label:'Mapas / Exportações',tab:'frequencia',action:'open'}]},
   ferias:{title:'Férias',entries:[{label:'Pesquisar férias',tab:'ferias',action:'open'},{label:'Plano de férias',tab:'ferias',action:'open'},{label:'Férias não marcadas',tab:'ferias',action:'open'},{label:'Períodos registrados',tab:'ferias',action:'open'},{label:'Exportar férias',tab:'ferias',action:'open'}]},
   mapas:{title:'Mapas',entries:[{label:'Mapa de frequência',tab:'mapas',action:'open'},{label:'Mapa SESAU',tab:'mapas',action:'open'},{label:'Mapa padrão',tab:'mapas',action:'open'},{label:'Mapas por categoria / setor',tab:'mapas',action:'open'},{label:'Exportar mapas',tab:'mapas',action:'open'}]},
   atestados:{title:'Atestados',entries:[{label:'Consultar atestados',tab:'atestados',action:'open'},{label:'Lançamentos',tab:'atestados',action:'open'}]},
   requerimentos:{title:'Requerimentos',entries:[{label:'Consultar requerimentos',tab:'requerimentos',action:'open'},{label:'Recebidos',tab:'requerimentos',action:'open'}]},
   relatorios:{title:'Relatórios',entries:[{label:'Indicadores',tab:'dashboard',action:'open'},{label:'Mapas e relatórios',tab:'mapas',action:'open'},{label:'Frequência',tab:'frequencia',action:'open'},{label:'Férias',tab:'ferias',action:'open'}]},
-  admin:{title:'Administração',entries:[{label:'Painel administrativo',tab:'admin',action:'open'},{label:'Usuários',tab:'admin-usuarios',action:'open'},{label:'Categorias',tab:'admin-categorias',action:'open'},{label:'Setores',tab:'admin-setores',action:'open'},{label:'Logs',tab:'admin-logs',action:'open'}]},
+  admin:{title:'Administração',entries:[{label:'Painel administrativo',tab:'admin',action:'open'},{label:'Usuários',tab:'admin-usuarios',action:'open'},{label:'Setores',tab:'admin-setores',action:'open'},{label:'Logs',tab:'admin-logs',action:'open'}]},
   diagnostico:{title:'Diagnóstico',entries:[{label:'Diagnóstico do sistema',tab:'diagnostico',action:'open'}]},
 };
 const icons: Record<string,React.ElementType> = {servidores:Users,frequencia:Clock3,ferias:CalendarDays,mapas:Map,atestados:Stethoscope,requerimentos:ClipboardList,relatorios:FileText,admin:Settings,diagnostico:Search};
