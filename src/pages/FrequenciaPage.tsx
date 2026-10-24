@@ -32,6 +32,7 @@ import {
 import type { FrequenciaBatchStrategy } from '../types/frequencia';
 import type { EventoCalendario } from '../services/eventosService';
 import GerenciarFeriadosModal from '../components/frequencia/GerenciarFeriadosModal';
+import './frequencia-modern.css';
 
 type StatsCardProps = {
   title: string;
@@ -90,19 +91,19 @@ function StatsCard({ title, value, subtitle, icon, action, onClick, active = fal
       onClick={onClick}
       aria-pressed={active}
       title={subtitle}
-      className={`min-h-[132px] w-full rounded-2xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${active ? 'border-blue-500 bg-blue-500/10' : 'border-[#26344a] bg-[#172033] hover:border-blue-500/40 hover:bg-[#1e293b]'}`}
+      className={`min-h-[132px] w-full rounded-2xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${active ? 'border-blue-500 bg-blue-50' : 'border-[#dce6f1] bg-white hover:border-blue-500/40 hover:bg-[#edf4fc]'}`}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">{value}</h3>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#5e7794]">{title}</p>
+          <h3 className="mt-2 text-2xl font-semibold text-[#102e50]">{value}</h3>
         </div>
-        <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400">
+        <div className="rounded-xl bg-blue-50 p-2.5 text-[#216bd0]">
           {icon}
         </div>
       </div>
-      <p className="min-h-[2.5rem] text-sm text-slate-400">{subtitle}</p>
-      <p className="mt-2 text-xs font-medium text-blue-300">{action}</p>
+      <p className="min-h-[2.5rem] text-sm text-[#5e7794]">{subtitle}</p>
+      <p className="mt-2 text-xs font-medium text-[#1a65c4]">{action}</p>
     </button>
   );
 }
@@ -140,10 +141,10 @@ function getWeekdayLabel(dateIso?: string) {
 
 function statusColor(status: string) {
   const s = normalizeText(status);
-  if (s.includes('inativo')) return 'bg-rose-500/15 text-rose-300 border-rose-400/20';
-  if (s.includes('ativo')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
-  if (s.includes('afast')) return 'bg-amber-500/15 text-amber-300 border-amber-400/20';
-  return 'bg-slate-500/15 text-slate-300 border-slate-400/20';
+  if (s.includes('inativo')) return 'bg-rose-500/15 text-rose-700 border-rose-400/20';
+  if (s.includes('ativo')) return 'bg-emerald-500/15 text-emerald-700 border-emerald-400/20';
+  if (s.includes('afast')) return 'bg-amber-500/15 text-amber-700 border-amber-400/20';
+  return 'bg-slate-500/15 text-[#415c79] border-slate-400/20';
 }
 
 function resolveDayTone(day: FrequenciaDayItem) {
@@ -157,79 +158,79 @@ function resolveDayTone(day: FrequenciaDayItem) {
 
   if (text.includes('feriado')) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-violet-200',
-      muted: 'text-violet-300/80',
-      pill: 'border-violet-400/20 bg-violet-500/12 text-violet-200',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-violet-700',
+      muted: 'text-violet-600',
+      pill: 'border-violet-400/20 bg-violet-50 text-violet-700',
       dot: 'bg-violet-300',
     };
   }
 
   if (text.includes('ponto') || text.includes('facultativo')) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-sky-200',
-      muted: 'text-sky-300/80',
-      pill: 'border-sky-400/20 bg-sky-500/12 text-sky-200',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-sky-700',
+      muted: 'text-sky-600',
+      pill: 'border-sky-400/20 bg-sky-50 text-sky-700',
       dot: 'bg-sky-300',
     };
   }
 
   if (text.includes('atestado')) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-amber-200',
-      muted: 'text-amber-300/80',
-      pill: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-amber-700',
+      muted: 'text-amber-700/80',
+      pill: 'border-amber-400/20 bg-amber-50 text-amber-700',
       dot: 'bg-amber-300',
     };
   }
 
   if (text.includes('falta')) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-rose-200',
-      muted: 'text-rose-300/80',
-      pill: 'border-rose-400/20 bg-rose-500/12 text-rose-200',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-rose-700',
+      muted: 'text-rose-700/80',
+      pill: 'border-rose-400/20 bg-rose-50 text-rose-700',
       dot: 'bg-rose-300',
     };
   }
 
   if (text.includes('ferias') || text.includes('férias')) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-emerald-200',
-      muted: 'text-emerald-300/80',
-      pill: 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-emerald-700',
+      muted: 'text-emerald-700/80',
+      pill: 'border-emerald-400/20 bg-emerald-50 text-emerald-700',
       dot: 'bg-emerald-300',
     };
   }
 
   if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-slate-200',
-      muted: 'text-slate-400',
-      pill: 'border-slate-500/20 bg-slate-500/12 text-slate-300',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-[#314e6b]',
+      muted: 'text-[#5e7794]',
+      pill: 'border-slate-500/20 bg-slate-100 text-[#415c79]',
       dot: 'bg-slate-400',
     };
   }
 
   if (text) {
     return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-blue-300',
-      muted: 'text-blue-400/80',
-      pill: 'border-blue-400/20 bg-blue-500/10 text-blue-300',
+      card: 'border-[#dce6f1] bg-[#f3f7fc]',
+      accent: 'text-[#1a65c4]',
+      muted: 'text-blue-600',
+      pill: 'border-blue-400/20 bg-blue-50 text-[#1a65c4]',
       dot: 'bg-blue-400',
     };
   }
 
   return {
-    card: 'border-[#26344a] bg-[#1e293b]',
-    accent: 'text-white',
-    muted: 'text-slate-400',
-    pill: 'border-white/10 bg-white/[0.04] text-slate-400',
+    card: 'border-[#dce6f1] bg-[#f3f7fc]',
+    accent: 'text-[#102e50]',
+    muted: 'text-[#5e7794]',
+    pill: 'border-[#dce6f1] bg-[#f1f5f9] text-[#5e7794]',
     dot: 'bg-slate-500',
   };
 }
@@ -248,7 +249,7 @@ function buildStatusPill(day: FrequenciaDayItem) {
   if (value === '—') {
     return {
       label: 'Sem status',
-      className: 'border-white/10 bg-white/[0.04] text-slate-400',
+      className: 'border-[#dce6f1] bg-[#f1f5f9] text-[#5e7794]',
     };
   }
 
@@ -260,9 +261,9 @@ function buildStatusPill(day: FrequenciaDayItem) {
 
 function CalendarMiniField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[#26344a] bg-[#172033] px-3 py-2">
-      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-1 truncate text-[13px] font-medium text-slate-100">{value}</p>
+    <div className="rounded-lg border border-[#dce6f1] bg-white px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-[#607994]">{label}</p>
+      <p className="mt-1 truncate text-[13px] font-medium text-[#172f4a]">{value}</p>
     </div>
   );
 }
@@ -274,7 +275,7 @@ export default function FrequenciaPage() {
   const [search, setSearch] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('TODAS');
   const [filterSetor, setFilterSetor] = useState('TODOS');
-  const [filterStatus, setFilterStatus] = useState('ATIVO');
+  const [filterStatus, setFilterStatus] = useState('TODOS');
   const [exportMode, setExportMode] = useState<ExportMode>('individual');
   const [exportScope, setExportScope] = useState<ExportScope>('servidor_selecionado');
   const [batchStrategy, setBatchStrategy] =
@@ -443,11 +444,11 @@ export default function FrequenciaPage() {
   };
 
   const stats = useMemo(() => {
-    const totalServidores = filteredItems.length;
-    const ativos = filteredItems.filter((item) =>
+    const totalServidores = items.length;
+    const ativos = items.filter((item) =>
       normalizeText(item.servidor?.status || '') === 'ativo'
     ).length;
-    const inativos = filteredItems.filter((item) =>
+    const inativos = items.filter((item) =>
       normalizeText(item.servidor?.status || '') === 'inativo'
     ).length;
 
@@ -456,7 +457,7 @@ export default function FrequenciaPage() {
       ativos,
       inativos,
     };
-  }, [filteredItems]);
+  }, [items]);
 
   const exportPreviewLabel = useMemo(() => {
     if (exportMode === 'individual') {
@@ -465,9 +466,9 @@ export default function FrequenciaPage() {
 
     switch (exportScope) {
       case 'todos_ativos':
-        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '').includes('ativo')).length} servidor(es) ativos visíveis`;
+        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '') === 'ativo').length} servidor(es) ativos visíveis`;
       case 'todos_inativos':
-        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '').includes('inativo')).length} servidor(es) inativos visíveis`;
+        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '') === 'inativo').length} servidor(es) inativos visíveis`;
       case 'todos':
         return `${items.length} servidor(es) retornados pela competência`;
       case 'categoria':
@@ -624,19 +625,20 @@ export default function FrequenciaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1220] text-slate-100">
+    <div className="ciapi-frequencia-v2 min-h-screen bg-[#f4f7fb] text-[#193653]">
       <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-5 md:px-6 lg:px-8 lg:py-6">
         <header className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-400">FREQUÊNCIA</p>
-            <h1 className="mt-2 text-[1.65rem] font-semibold tracking-tight text-white sm:text-2xl md:text-3xl">Frequência Mensal</h1>
-            <p className="mt-1 text-sm text-slate-400">Gere, acompanhe e exporte a frequência dos servidores.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#216bd0]">FREQUÊNCIA</p>
+            <h1 className="mt-2 text-[1.65rem] font-semibold tracking-tight text-[#102e50] sm:text-2xl md:text-3xl">Frequência Mensal</h1>
+            <p className="mt-1 text-sm text-[#5e7794]">Consulte por competência, confira ocorrências e gere folhas individuais ou em lote.</p>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <button type="button" onClick={() => setIsEventosModalOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#172033] px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-[#1e293b] sm:w-auto">
+            <button type="button" onClick={refreshFrequencia} disabled={loading} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#dce6f1] bg-white px-4 py-2.5 text-sm font-semibold text-[#193653] transition hover:bg-[#edf4fc] disabled:opacity-50 sm:w-auto"><Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar dados</button>
+            <button type="button" onClick={() => setIsEventosModalOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#dce6f1] bg-white px-4 py-2.5 text-sm font-medium text-[#172f4a] transition hover:bg-[#edf4fc] sm:w-auto">
               <CalendarDays className="h-4 w-4" /> Gerenciar feriados
             </button>
-            <a href="#exportacao-frequencia" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3b82f6] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563eb] sm:w-auto">
+            <a href="#exportacao-frequencia" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1669c8] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563eb] sm:w-auto">
               <Download className="h-4 w-4" /> Exportar
             </a>
           </div>
@@ -647,40 +649,40 @@ export default function FrequenciaPage() {
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-medium">Falha ao carregar ou exportar frequência</p>
-              <p className="mt-1 text-sm text-rose-200/90">{error}</p>
+              <p className="mt-1 text-sm text-rose-700/90">{error}</p>
             </div>
           </div>
         ) : null}
-        <section aria-label="Filtros da frequência" className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:mb-6 md:p-5">
+        <section aria-label="Filtros da frequência" className="mb-5 rounded-2xl border border-[#dce6f1] bg-white p-4 sm:mb-6 md:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-white"><Filter className="h-4 w-4 text-blue-400" /> Filtros</h2>
-            <span className="text-xs text-slate-400">{MONTHS[mes - 1]} de {ano}</span>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-[#102e50]"><Filter className="h-4 w-4 text-[#216bd0]" /> Filtros</h2>
+            <span className="text-xs text-[#5e7794]">{MONTHS[mes - 1]} de {ano}</span>
           </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div className="xl:col-span-2">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                     Busca
                   </label>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#607994]" />
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Nome, CPF, matrícula..."
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                      className="w-full rounded-xl border border-[#dce6f1] bg-white py-3 pl-10 pr-4 text-sm text-[#102e50] outline-none transition placeholder:text-[#607994] focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                   <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                       Mês
                     </label>
                     <select
                       value={mes}
                       onChange={(e) => setMes(Number(e.target.value))}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                      className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                     >
                       {MONTHS.map((label, index) => (
                         <option key={label} value={index + 1}>
@@ -691,7 +693,7 @@ export default function FrequenciaPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                       Ano
                     </label>
                     <input
@@ -700,19 +702,19 @@ export default function FrequenciaPage() {
                       max={2100}
                       value={ano}
                       onChange={(e) => setAno(Number(e.target.value) || today.getFullYear())}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                      className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                     Categoria
                   </label>
                   <select
                     value={filterCategoria}
                     onChange={(e) => setFilterCategoria(e.target.value)}
-                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                    className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                   >
                     <option value="TODAS">Todas</option>
                     {categorias.map((item) => (
@@ -724,13 +726,13 @@ export default function FrequenciaPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                     Setor
                   </label>
                   <select
                     value={filterSetor}
                     onChange={(e) => setFilterSetor(e.target.value)}
-                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                    className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                   >
                     <option value="TODOS">Todos</option>
                     {setores.map((item) => (
@@ -742,13 +744,13 @@ export default function FrequenciaPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                     Status
                   </label>
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                    className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                   >
                     <option value="TODOS">Todos</option>
                     <option value="ATIVO">ATIVO</option>
@@ -788,13 +790,13 @@ export default function FrequenciaPage() {
             onClick={() => mostrarServidores('TODOS')}
           />
         </div>
-        <section id="exportacao-frequencia" aria-label="Exportação da frequência" className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:mb-6 md:p-5">
+        <section id="exportacao-frequencia" aria-label="Exportação da frequência" className="mb-5 rounded-2xl border border-[#dce6f1] bg-white p-4 sm:mb-6 md:p-5">
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-white">Exportação</h2>
-              <p className="mt-1 text-xs text-slate-400">{exportPreviewLabel} · {exportStrategyHint}</p>
+              <h2 className="text-sm font-semibold text-[#102e50]">Exportação</h2>
+              <p className="mt-1 text-xs text-[#5e7794]">{exportPreviewLabel} · {exportStrategyHint}</p>
             </div>
-            <span className="text-xs text-slate-400">{eventosCount} ocorrência(s) de calendário detectada(s)</span>
+            <span className="text-xs text-[#5e7794]">{eventosCount} ocorrência(s) de calendário detectada(s)</span>
           </div>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="min-w-0 flex-1">
@@ -804,13 +806,13 @@ export default function FrequenciaPage() {
                   }`}
                 >
                   <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                       Tipo de exportação
                     </label>
                     <select
                       value={exportMode}
                       onChange={(e) => setExportMode(e.target.value as ExportMode)}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                      className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                     >
                       <option value="individual">Individual</option>
                       <option value="lote">Lote</option>
@@ -818,14 +820,14 @@ export default function FrequenciaPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                       Escopo
                     </label>
                     <select
                       value={exportMode === 'individual' ? 'servidor_selecionado' : exportScope}
                       onChange={(e) => setExportScope(e.target.value as ExportScope)}
                       disabled={exportMode === 'individual'}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {EXPORT_SCOPE_OPTIONS.filter((option) =>
                         exportMode === 'individual'
@@ -841,13 +843,13 @@ export default function FrequenciaPage() {
 
                   {exportMode === 'lote' ? (
                     <div>
-                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
+                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-[#5e7794]">
                         Saída do lote
                       </label>
                       <select
                         value={batchStrategy}
                         onChange={(e) => setBatchStrategy(e.target.value as FrequenciaBatchStrategy)}
-                        className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
+                        className="w-full rounded-xl border border-[#dce6f1] bg-white px-3 py-3 text-sm text-[#102e50] outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
                       >
                         {BATCH_STRATEGY_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -863,7 +865,7 @@ export default function FrequenciaPage() {
                 <button
                   onClick={() => handleExport('docx')}
                   disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dce6f1] bg-[#f3f7fc] px-4 py-3 text-sm font-medium text-[#102e50] transition hover:bg-[#eaf2fb] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {exporting === `${exportMode}-docx` ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -882,7 +884,7 @@ export default function FrequenciaPage() {
                 <button
                   onClick={() => handleExport('pdf')}
                   disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dce6f1] bg-[#f3f7fc] px-4 py-3 text-sm font-medium text-[#102e50] transition hover:bg-[#eaf2fb] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {exporting === `${exportMode}-pdf` ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -897,7 +899,7 @@ export default function FrequenciaPage() {
                 <button
                   onClick={() => handleExport('csv')}
                   disabled={!!exporting || !selectedServidor || exportMode === 'lote'}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-100 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-50 px-4 py-3 text-sm font-medium text-[#1c5cad] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {exporting === 'individual-csv' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -910,17 +912,17 @@ export default function FrequenciaPage() {
           </div>
         </section>
 
-        <div className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5 md:p-6">
+        <div className="mb-5 rounded-2xl border border-[#dce6f1] bg-white p-4 sm:p-5 md:p-6">
               {selectedServidor ? (
                 <>
                   <div className="flex flex-col gap-5">
                     <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:gap-4">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 border border-blue-400/20 bg-blue-500/10 text-blue-300">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 border border-blue-400/20 bg-blue-50 text-[#1a65c4]">
                         <UserRound className="h-8 w-8" />
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <h2 className="break-words text-xl font-semibold leading-tight text-white sm:text-2xl lg:whitespace-nowrap">{selectedServidor.nome}</h2>
+                        <h2 className="break-words text-xl font-semibold leading-tight text-[#102e50] sm:text-2xl lg:whitespace-nowrap">{selectedServidor.nome}</h2>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <span
                             className={`rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${statusColor(
@@ -929,7 +931,7 @@ export default function FrequenciaPage() {
                           >
                             {safeDisplay(selectedServidor.status, 'NÃO INFORMADO')}
                           </span>
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-300">
+                          <span className="rounded-full border border-[#dce6f1] bg-[#f1f5f9] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[#415c79]">
                             {safeDisplay(selectedServidor.categoria, 'NÃO INFORMADA')}
                           </span>
                         </div>
@@ -937,47 +939,47 @@ export default function FrequenciaPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                      <div className="rounded-xl border border-[#dce6f1] bg-white p-4">
+                        <div className="mb-2 flex items-center gap-2 text-[#5e7794]">
                           <Hash className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Matrícula</span>
                         </div>
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-medium text-[#102e50]">
                           {safeDisplay(selectedServidor.matricula)}
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                      <div className="rounded-xl border border-[#dce6f1] bg-white p-4">
+                        <div className="mb-2 flex items-center gap-2 text-[#5e7794]">
                           <ShieldCheck className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">CPF</span>
                         </div>
-                        <p className="text-sm font-medium text-white">{formatCpf(selectedServidor.cpf)}</p>
+                        <p className="text-sm font-medium text-[#102e50]">{formatCpf(selectedServidor.cpf)}</p>
                       </div>
 
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                      <div className="rounded-xl border border-[#dce6f1] bg-white p-4">
+                        <div className="mb-2 flex items-center gap-2 text-[#5e7794]">
                           <Building2 className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Setor</span>
                         </div>
-                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.setor)}</p>
+                        <p className="text-sm font-medium text-[#102e50]">{safeDisplay(selectedServidor.setor)}</p>
                       </div>
 
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
+                      <div className="rounded-xl border border-[#dce6f1] bg-white p-4">
+                        <div className="mb-2 flex items-center gap-2 text-[#5e7794]">
                           <FileText className="h-4 w-4" />
                           <span className="text-xs uppercase tracking-[0.16em]">Cargo</span>
                         </div>
-                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.cargo)}</p>
+                        <p className="text-sm font-medium text-[#102e50]">{safeDisplay(selectedServidor.cargo)}</p>
                       </div>
                     </div>
                   </div>
 
                 </>
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
-                  <p className="text-base font-medium text-white">Nenhum servidor selecionado</p>
-                  <p className="mt-2 text-sm text-slate-400">
+                <div className="rounded-2xl border border-dashed border-[#dce6f1] bg-[#f8fafc] p-10 text-center">
+                  <p className="text-base font-medium text-[#102e50]">Nenhum servidor selecionado</p>
+                  <p className="mt-2 text-sm text-[#5e7794]">
                     Ajuste os filtros ou aguarde o carregamento da lista.
                   </p>
                 </div>
@@ -992,23 +994,23 @@ export default function FrequenciaPage() {
           }`}
         >
           <aside id="lista-servidores-frequencia" className="min-w-0 self-start scroll-mt-24">
-            <div className={`rounded-2xl border border-[#26344a] bg-[#172033] ${isServidoresExpanded ? 'p-3 sm:p-4' : 'p-2'}`}>
+            <div className={`rounded-2xl border border-[#dce6f1] bg-white ${isServidoresExpanded ? 'p-3 sm:p-4' : 'p-2'}`}>
               <div className={`flex items-center ${isServidoresExpanded ? 'mb-4 justify-between gap-2' : 'justify-center'}`}>
                 {isServidoresExpanded ? (
                   <div className="min-w-0">
-                    <h2 className="text-sm font-semibold text-white">Servidores</h2>
-                    <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
+                    <h2 className="text-sm font-semibold text-[#102e50]">Servidores</h2>
+                    <p className="text-xs text-[#5e7794]">{filteredItems.length} encontrado(s)</p>
                   </div>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-2">
-                  {loading && isServidoresExpanded ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
+                  {loading && isServidoresExpanded ? <Loader2 className="h-4 w-4 animate-spin text-[#216bd0]" /> : null}
                   <button
                     type="button"
                     onClick={() => setIsServidoresExpanded((expanded) => !expanded)}
                     aria-label={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
                     aria-expanded={isServidoresExpanded}
                     title={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce6f1] bg-white text-[#415c79] transition hover:border-blue-400/40 hover:text-[#102e50]"
                   >
                     {isServidoresExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
                   </button>
@@ -1017,9 +1019,9 @@ export default function FrequenciaPage() {
 
               {isServidoresExpanded ? <div className="max-h-[52dvh] space-y-2 overflow-y-auto pr-1 xl:max-h-[680px]">
                 {!loading && !filteredItems.length ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
-                    <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
-                    <p className="mt-1 text-xs text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-[#dce6f1] bg-[#f8fafc] p-5 text-center">
+                    <p className="text-sm text-[#415c79]">Nenhum servidor encontrado.</p>
+                    <p className="mt-1 text-xs text-[#607994]">
                       Ajuste os filtros ou confira o retorno da API.
                     </p>
                   </div>
@@ -1036,14 +1038,14 @@ export default function FrequenciaPage() {
                       className={[
                         'w-full rounded-xl border p-3 text-left transition',
                         active
-                          ? 'border-blue-500/50 bg-blue-500/10'
-                          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
+                          ? 'border-blue-500/50 bg-blue-50'
+                          : 'border-[#dce6f1] bg-[#f8fafc] hover:bg-[#eaf2fb]',
                       ].join(' ')}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">{servidor.nome}</p>
-                          <p className="mt-1 truncate text-xs text-slate-400">
+                          <p className="truncate text-sm font-semibold text-[#102e50]">{servidor.nome}</p>
+                          <p className="mt-1 truncate text-xs text-[#5e7794]">
                             {safeDisplay(servidor.categoria, 'NÃO INFORMADA')}
                           </p>
                         </div>
@@ -1056,18 +1058,18 @@ export default function FrequenciaPage() {
                         </span>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
-                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-[#5e7794]">
+                        <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-[#607994]">
                             CPF
                           </span>
-                          <span className="mt-1 block text-slate-200">{formatCpf(servidor.cpf)}</span>
+                          <span className="mt-1 block text-[#314e6b]">{formatCpf(servidor.cpf)}</span>
                         </div>
-                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                        <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
+                          <span className="block text-[10px] uppercase tracking-[0.14em] text-[#607994]">
                             Matrícula
                           </span>
-                          <span className="mt-1 block text-slate-200">
+                          <span className="mt-1 block text-[#314e6b]">
                             {safeDisplay(servidor.matricula)}
                           </span>
                         </div>
@@ -1079,13 +1081,13 @@ export default function FrequenciaPage() {
             </div>
           </aside>
 
-            <div id="calendario-mensal" className="min-w-0 self-start scroll-mt-24 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
+            <div id="calendario-mensal" className="min-w-0 self-start scroll-mt-24 rounded-2xl border border-[#dce6f1] bg-white p-4 sm:p-5">
               <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${isCalendarioExpanded ? 'mb-4' : ''}`}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">
+                  <h3 className="text-base font-semibold text-[#102e50]">
                     Calendário mensal · {MONTHS[mes - 1]} / {ano}
                   </h3>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-[#5e7794]">
                     Rubricas e ocorrências do servidor selecionado.
                   </p>
                 </div>
@@ -1094,12 +1096,12 @@ export default function FrequenciaPage() {
                   <button
                     type="button"
                     onClick={() => setIsEventosModalOpen(true)}
-                    className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-100 transition hover:bg-blue-500/20"
+                    className="rounded-full border border-blue-400/20 bg-blue-50 px-3 py-1.5 text-xs text-[#1c5cad] transition hover:bg-blue-100"
                   >
                     Gerenciar feriados
                   </button>
 
-                  <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
+                  <div className="rounded-full border border-[#dce6f1] bg-[#f8fafc] px-3 py-1.5 text-xs text-[#415c79]">
                     {calendarioDias.length} de {selectedDias.length} dia(s)
                   </div>
                   <button
@@ -1109,7 +1111,7 @@ export default function FrequenciaPage() {
                     aria-expanded={isCalendarioExpanded}
                     aria-controls="calendario-mensal-conteudo"
                     title={isCalendarioExpanded ? 'Minimizar calendário' : 'Maximizar calendário'}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#dce6f1] bg-white text-[#415c79] transition hover:border-blue-400/40 hover:text-[#102e50]"
                   >
                     {isCalendarioExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </button>
@@ -1118,10 +1120,10 @@ export default function FrequenciaPage() {
 
               <div id="calendario-mensal-conteudo" hidden={!isCalendarioExpanded}>
               {!calendarioDias.length ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
-                  <CalendarDays className="mx-auto h-10 w-10 text-slate-600" />
-                  <p className="mt-4 text-base font-medium text-white">Sem dias carregados</p>
-                  <p className="mt-2 text-sm text-slate-400">
+                <div className="rounded-2xl border border-dashed border-[#dce6f1] bg-[#f8fafc] p-10 text-center">
+                  <CalendarDays className="mx-auto h-10 w-10 text-[#7b8fa4]" />
+                  <p className="mt-4 text-base font-medium text-[#102e50]">Sem dias carregados</p>
+                  <p className="mt-2 text-sm text-[#5e7794]">
                     {selectedDias.length ? 'Nenhum dia corresponde ao indicador selecionado.' : 'O servidor selecionado não trouxe registros de dias nesse retorno da API.'}
                   </p>
                 </div>
@@ -1136,14 +1138,14 @@ export default function FrequenciaPage() {
                         key={`${selectedServidor?.id}-${day.dia}-${day.data}`}
                         className={[
                           'group rounded-xl border p-3.5 transition-colors duration-200',
-                          'hover:border-[#3b82f6]/40',
+                          'hover:border-[#9fc6f5]',
                           tone.card,
                         ].join(' ')}
                       >
                         <div className="mb-3 flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-start gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/15 shadow-inner">
-                              <span className={`text-lg font-semibold leading-none text-white`}>
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#dce6f1] bg-[#f0f5fb] shadow-inner">
+                              <span className={`text-lg font-semibold leading-none text-[#102e50]`}>
                                 {String(day.dia).padStart(2, '0')}
                               </span>
                             </div>
@@ -1151,13 +1153,13 @@ export default function FrequenciaPage() {
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <span
-                                  className={`text-xs font-semibold uppercase tracking-[0.18em] text-slate-400`}
+                                  className={`text-xs font-semibold uppercase tracking-[0.18em] text-[#5e7794]`}
                                 >
                                   {getWeekdayLabel(day.data)}
                                 </span>
                                 <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
                               </div>
-                              <p className="mt-1 text-[11px] text-slate-400">{day.data}</p>
+                              <p className="mt-1 text-[11px] text-[#5e7794]">{day.data}</p>
                             </div>
                           </div>
 
@@ -1169,16 +1171,16 @@ export default function FrequenciaPage() {
                           </span>
                         </div>
 
-                        <div className="rounded-xl border border-[#26344a] bg-[#172033] px-3 py-3">
+                        <div className="rounded-xl border border-[#dce6f1] bg-white px-3 py-3">
                           <div className="mb-1 flex items-center gap-2">
                             <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
-                            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Rubrica</p>
+                            <p className="text-[10px] uppercase tracking-[0.16em] text-[#607994]">Rubrica</p>
                           </div>
                           <p
                             className={`truncate text-sm font-semibold ${
                               compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica) === '—'
-                                ? 'text-slate-400'
-                                : 'text-slate-100'
+                                ? 'text-[#5e7794]'
+                                : 'text-[#172f4a]'
                             }`}
                             title={compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica)}
                           >

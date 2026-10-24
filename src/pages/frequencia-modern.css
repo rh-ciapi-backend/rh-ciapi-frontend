@@ -1,0 +1,18 @@
+/* Frequência Mensal • versão clara e institucional. Escopo somente nesta página. */
+.ciapi-frequencia-v2 { color: #173350; background: #f4f7fb; }
+.ciapi-frequencia-v2 section, .ciapi-frequencia-v2 aside > div,
+.ciapi-frequencia-v2 #calendario-mensal { box-shadow: 0 3px 16px rgba(18,48,82,.035); }
+.ciapi-frequencia-v2 input, .ciapi-frequencia-v2 select {
+  background-color:#fff; color:#173350; border-color:#cfdeee; color-scheme:light;
+}
+.ciapi-frequencia-v2 input::placeholder {color:#8497aa;}
+.ciapi-frequencia-v2 input:focus, .ciapi-frequencia-v2 select:focus {
+  outline:none; border-color:#488de3; box-shadow:0 0 0 3px rgba(72,141,227,.13);
+}
+.ciapi-frequencia-v2 button:not(:disabled):hover { filter:brightness(.985); }
+.ciapi-frequencia-v2 a.bg-\[\#3b82f6\],
+.ciapi-frequencia-v2 button.bg-\[\#3b82f6\],
+.ciapi-frequencia-v2 button.bg-\[\#1669c8\] { color:#fff; }
+.ciapi-frequencia-v2 #lista-servidores-frequencia { min-width:0; }
+.ciapi-frequencia-v2 .truncate { min-width:0; }
+@media print { .ciapi-frequencia-v2 {background:#fff!important;} }
