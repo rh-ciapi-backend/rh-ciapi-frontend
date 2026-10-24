@@ -16,6 +16,7 @@ import { useAuth } from './contexts/AuthContext';
 
 import { DashboardPage } from './pages/DashboardPage';
 import { ServidoresPage } from './pages/ServidoresPage';
+import { PainelPessoalPage } from './pages/PainelPessoalPage';
 import FeriasPage from './pages/FeriasPage';
 import FrequenciaPage from './pages/FrequenciaPage';
 import MapasPage from './pages/MapasPage';
@@ -72,8 +73,8 @@ export default function App() {
     const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setActiveTab(safeTab);
     setSelectedModule(safeTab === 'dashboard' ? 'dashboard' : (['admin','admin-usuarios','admin-categorias','admin-setores','admin-logs'].includes(safeTab) ? 'admin' : safeTab));
-    setInitialAction(action === 'add' ? 'add' : null);
-    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open');
+    setInitialAction(action === 'add' || action === 'painel-pessoal' ? action : null);
+    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open' || action === 'painel-pessoal');
     setSidebarCollapsed(false);
   }, []);
 
@@ -110,7 +111,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
-      case 'servidores': return <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
+      case 'servidores': return initialAction === 'painel-pessoal' ? <PainelPessoalPage /> : <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
       case 'atestados': return <AtestadosPage />;
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage />;

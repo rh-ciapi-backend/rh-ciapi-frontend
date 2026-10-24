@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { servidoresService, type ServidorComVinculo } from '../services/servidoresService';
 import { API_BASE_URL } from '../config/api';
+import { uploadServidorFoto, signedServidorFotoUrl } from '../services/servidorFotoService';
 import { CATEGORIAS, SETORES, ESCOLARIDADE, VINCULOS } from '../data/servidores';
 import { Categoria, StatusServidor, Sexo } from '../types';
 import './servidores-page-light.css';
@@ -210,6 +211,9 @@ export const ServidoresPage = ({
   const [searchResults, setSearchResults] = useState<ServidorComVinculo[]>([]);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = useState('');
+  const [persistedPhotoUrl, setPersistedPhotoUrl] = useState('');
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+  const [formPhotoFile, setFormPhotoFile] = useState<File | null>(null);
   const [formPhotoUrl, setFormPhotoUrl] = useState<string | null>(null);
   const [formPhotoNotice, setFormPhotoNotice] = useState('');
 
@@ -444,6 +448,7 @@ export const ServidoresPage = ({
     setEditingEmployee(null);
     if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
     setFormPhotoUrl(null);
+    setFormPhotoFile(null);
     setFormPhotoNotice('');
     resetConfirmSaveState();
   };
@@ -463,12 +468,14 @@ export const ServidoresPage = ({
     setSelectedEmployee(emp);
     setIsDetailsModalOpen(false);
     setLocalPhotoUrl(null);
+    setSelectedPhotoFile(null);
     setPhotoNotice('');
   };
 
   const handleAddEmployee = () => {
     setEditingEmployee(null);
     setFormPhotoUrl(null);
+    setFormPhotoFile(null);
     setFormPhotoNotice('');
     setIsModalOpen(true);
     resetConfirmSaveState();
@@ -477,6 +484,7 @@ export const ServidoresPage = ({
   const handleEditEmployee = (emp: ServidorComVinculo) => {
     setEditingEmployee(emp);
     setFormPhotoUrl(null);
+    setFormPhotoFile(null);
     setFormPhotoNotice('');
     setIsModalOpen(true);
     resetConfirmSaveState();
@@ -574,14 +582,25 @@ export const ServidoresPage = ({
       setIsSaving(true);
       setIsLoading(true);
 
+      let saved: ServidorComVinculo;
       if (editingEmployee) {
-        await servidoresService.editar(editingEmployee.id, pendingEmployeeData);
+        saved = await servidoresService.editar(editingEmployee.id, pendingEmployeeData);
         setSuccessMessage('Servidor atualizado com sucesso!');
       } else {
-        await servidoresService.adicionar(pendingEmployeeData);
+        saved = await servidoresService.adicionar(pendingEmployeeData);
         setSuccessMessage('Servidor cadastrado com sucesso!');
       }
 
+      if (formPhotoFile) {
+        try {
+          const path = await uploadServidorFoto(saved!.id, formPhotoFile);
+          const { servidoresFotoService } = await import('../services/servidorFotoService');
+          await servidoresFotoService.vincular(saved!.id, path);
+          setFormPhotoNotice('Fotografia salva.');
+        } catch (photoError: any) {
+          setError('Cadastro salvo, mas a foto não foi gravada: ' + (photoError?.message || 'erro de armazenamento'));
+        }
+      }
       resetConfirmSaveState();
       setIsModalOpen(false);
       setEditingEmployee(null);
@@ -589,6 +608,7 @@ export const ServidoresPage = ({
       setFormPhotoUrl(null);
       await fetchEmployees();
       setSelectedEmployee(null);
+      setFormPhotoFile(null);
       setHasSearched(false);
       setSearchResults([]);
     } catch (err: any) {
@@ -648,7 +668,14 @@ export const ServidoresPage = ({
     return '';
   };
 
-  const photoSrc = localPhotoUrl || profileValue(selectedEmployee, 'fotoUrl', 'foto_url', 'foto', 'avatarUrl', 'fotoPerfil');
+  const photoSrc = localPhotoUrl || persistedPhotoUrl || profileValue(selectedEmployee, 'fotoUrl', 'foto_url', 'foto', 'avatarUrl', 'fotoPerfil');
+  useEffect(() => {
+    let active = true;
+    setPersistedPhotoUrl('');
+    const path = selectedEmployee && (selectedEmployee as any).fotoPath;
+    if (path) signedServidorFotoUrl(path).then(url => { if(active) setPersistedPhotoUrl(url); }).catch(e => { if(active) setPhotoNotice(e.message); });
+    return () => { active = false; };
+  }, [selectedEmployee]);
   const field = (title: string, value: unknown) => (
     <div className="ciapi-servidores-field" key={title}>
       <span>{title}</span><strong>{displayValue(value)}</strong>
@@ -714,9 +741,11 @@ export const ServidoresPage = ({
                     if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>3*1024*1024) {setPhotoNotice('Use JPG, PNG ou WebP de até 3 MB.');return;}
                     if (localPhotoUrl) URL.revokeObjectURL(localPhotoUrl);
                     setLocalPhotoUrl(URL.createObjectURL(file));
-                    setPhotoNotice('Pré-visualização local: esta foto ainda não foi gravada. A integração com o armazenamento precisa ser configurada.');
+                    setSelectedPhotoFile(file);
+                    setPhotoNotice('Fotografia selecionada. Clique em Salvar foto para gravar no servidor.');
                   }}/>
                 </label>
+                {selectedPhotoFile && <button className="ciapi-btn ciapi-btn-primary" type="button" onClick={async () => {try {setPhotoNotice('Enviando fotografia...'); const path=await uploadServidorFoto(selectedEmployee.id,selectedPhotoFile);const {servidoresFotoService}=await import('../services/servidorFotoService');await servidoresFotoService.vincular(selectedEmployee.id,path);setSelectedEmployee({...selectedEmployee,fotoPath:path} as any);setSelectedPhotoFile(null);setPhotoNotice('Fotografia salva com sucesso.');await fetchEmployees();}catch(e:any){setPhotoNotice('Erro ao salvar fotografia: '+(e?.message||'desconhecido'));}}}>Salvar foto</button>}
                 {photoNotice && <p className="ciapi-servidores-photo-notice">{photoNotice}</p>}
               </div>
               <div className="ciapi-servidores-identity-details">
@@ -761,9 +790,10 @@ export const ServidoresPage = ({
         if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>3*1024*1024) {setFormPhotoNotice('Selecione uma imagem JPG, PNG ou WebP de até 3 MB.');return;}
         if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
         setFormPhotoUrl(URL.createObjectURL(file));
-        setFormPhotoNotice('Pré-visualização apenas. O armazenamento de fotos ainda precisa de integração com o backend.');
+        setFormPhotoFile(file);
+        setFormPhotoNotice('A fotografia será enviada após salvar o cadastro.');
       }}/>
-    </label>{formPhotoUrl && <button type="button" className="ciapi-servidores-remove-photo" onClick={() => { URL.revokeObjectURL(formPhotoUrl); setFormPhotoUrl(null); setFormPhotoNotice('');}}>Remover pré-visualização</button>}
+    </label>{formPhotoUrl && <button type="button" className="ciapi-servidores-remove-photo" onClick={() => { URL.revokeObjectURL(formPhotoUrl); setFormPhotoUrl(null); setFormPhotoFile(null); setFormPhotoNotice('');}}>Remover pré-visualização</button>}
     {formPhotoNotice && <p role="status" className="ciapi-servidores-photo-notice">{formPhotoNotice}</p>}
   </div>
 </section>
