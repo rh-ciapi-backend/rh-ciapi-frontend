@@ -13,6 +13,7 @@ import { motion } from 'motion/react';
 import { servidoresService } from '../services/servidoresService';
 import type { Servidor } from '../types';
 import BirthdayPanel from '../components/dashboard/BirthdayPanel';
+import AniversariantesDoDia from '../components/AniversariantesDoDia';
 import { useAuth } from '../contexts/AuthContext';
 
 type DashboardPageProps = {
@@ -122,32 +123,32 @@ function StatCard({
       disabled={!onClick}
       className={`app-surface w-full p-4 text-left transition sm:p-5 ${
         onClick
-          ? 'cursor-pointer hover:border-blue-300'
+          ? 'cursor-pointer hover:border-slate-500/70'
           : 'cursor-default'
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             {title}
           </p>
 
-          <p className="mt-2 text-2xl font-bold tracking-tight text-[#10345a] sm:text-3xl">
+          <p className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
             {value}
           </p>
 
-          <p className="mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">{subtitle}</p>
+          <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">{subtitle}</p>
         </div>
 
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce8f5] bg-[#eff5fb] ${iconClass}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-dark bg-slate-800/70 ${iconClass}`}
         >
           <Icon size={19} />
         </div>
       </div>
 
       {onClick ? (
-        <div className="mt-4 flex items-center gap-1 text-xs font-medium text-slate-600">
+        <div className="mt-4 flex items-center gap-1 text-xs font-medium text-slate-500">
           Ver detalhes
           <ChevronRight size={14} />
         </div>
@@ -288,7 +289,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }
 
   return (
-    <div className="ciapi-dashboard-page space-y-7">
+    <div className="space-y-7">
       {error ? (
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}
@@ -297,29 +298,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       <section className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Visão geral
           </p>
 
-          <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight text-[#10345a] sm:text-3xl">
+          <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
             {greeting}, {primeiroNome}
           </h2>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400 sm:text-sm">
             <div className="flex items-center gap-2">
-              <CalendarDays size={16} className="text-slate-600" />
+              <CalendarDays size={16} className="text-slate-500" />
               <span>{formattedDate}</span>
             </div>
 
             <span className="text-slate-600">•</span>
 
             <div className="flex items-center gap-2">
-              <Clock3 size={16} className="text-slate-600" />
+              <Clock3 size={16} className="text-slate-500" />
               <span>{formattedTime}</span>
             </div>
           </div>
 
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600">
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-500">
             Acompanhe os principais indicadores do CIAPI em um único lugar.
           </p>
         </div>
@@ -372,6 +373,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         />
       </section>
 
+      <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading} />
       <BirthdayPanel servidores={servidores} isLoading={isLoading} />
     </div>
   );
