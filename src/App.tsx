@@ -73,8 +73,8 @@ export default function App() {
     const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setActiveTab(safeTab);
     setSelectedModule(safeTab === 'dashboard' ? 'dashboard' : (['admin','admin-usuarios','admin-categorias','admin-setores','admin-logs'].includes(safeTab) ? 'admin' : safeTab));
-    setInitialAction(['add','painel-pessoal','pesquisar','feriados','exportar','mensal'].includes(action || '') ? action! : null);
-    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open' || action === 'painel-pessoal' || ['pesquisar','feriados','exportar','mensal'].includes(action || ''));
+    setInitialAction(safeTab === 'mapas' && action?.startsWith('mapa-') ? action : (['add','painel-pessoal','pesquisar','feriados','exportar','mensal'].includes(action || '') ? action! : null));
+    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open' || action === 'painel-pessoal' || (safeTab === 'mapas' && !!action?.startsWith('mapa-')) || ['pesquisar','feriados','exportar','mensal'].includes(action || ''));
     setSidebarCollapsed(false);
   }, []);
 
@@ -115,7 +115,7 @@ export default function App() {
       case 'atestados': return <AtestadosPage />;
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
-      case 'mapas': return <MapasPage />;
+      case 'mapas': return <MapasPage initialAction={initialAction} />;
       case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;

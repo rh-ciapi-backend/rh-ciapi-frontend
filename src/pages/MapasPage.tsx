@@ -22,6 +22,16 @@ type Linha = Record<string, unknown>;
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const PRIMEIRO_GRUPO = GRUPOS[0];
 
+// Códigos enviados pelo menu lateral contextual do RH CIAPI.
+const ACAO_PARA_CATEGORIA: Record<string, string> = {
+  'mapa-comissionados-setrabes': 'COMISSIONADOS',
+  'mapa-federais-setrabes': 'FEDERAIS SETRABES',
+  'mapa-efetivos-setrabes': 'EFETIVO SETRABES',
+  'mapa-seletivos-setrabes': 'SELETIVO SETRABES',
+  'mapa-efetivos-sesau': 'EFETIVO SESAU',
+  'mapa-seletivos-sesau': 'SELETIVO SESAU',
+};
+
 function str(value: unknown): string { return value === null || value === undefined ? '' : String(value).trim(); }
 function obter(row: Linha, ...campos: string[]) {
   for (const campo of campos) {
@@ -76,7 +86,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
       setErro('');
       return;
     }
-    const codigo = initialAction.startsWith('mapa-') ? initialAction.slice(5) : initialAction;
+    const codigo = ACAO_PARA_CATEGORIA[initialAction] || initialAction;
     const selecionado = GRUPOS.find(g => g.chave === codigo);
     if (selecionado) selecionarGrupo(selecionado);
   }, [initialAction]);
