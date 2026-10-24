@@ -58,3 +58,19 @@
 .ciapi-contextual-app .ciapi-hnav{z-index:100}
 .ciapi-contextual-app .ciapi-side{z-index:1}
 .ciapi-contextual-app .ciapi-side__item,.ciapi-contextual-app .ciapi-entry button{pointer-events:auto}
+
+/* Versão SIGRH moderna: painel de trabalho claro, menu contextual e tabelas legíveis. */
+.ciapi-contextual-app .ciapi-contextual-main{background:#f4f7fb!important}
+.ciapi-contextual-app .ciapi-existing-module{background:#fff!important;border:1px solid #d8e4f1;border-radius:14px;box-shadow:0 8px 25px rgba(10,43,78,.055)}
+.ciapi-contextual-app .ciapi-side{background:#fff;border-right:1px solid #d8e4f1}
+.ciapi-contextual-app .ciapi-side__item{min-height:43px}
+.ciapi-contextual-app .ciapi-side__item--active{background:#e6f1ff}
+.ciapi-contextual-app .ciapi-existing-module :is(table){width:100%;border-collapse:collapse}
+.ciapi-contextual-app .ciapi-existing-module :is(th){background:#eff4fb;color:#34526e;font-weight:700}
+.ciapi-contextual-app .ciapi-existing-module :is(td){border-bottom:1px solid #e7eef5}
+.ciapi-contextual-app .ciapi-existing-module :is(input,select,textarea){background:white;color:#133455;border:1px solid #d6e2ef;border-radius:8px}
+.ciapi-contextual-app .ciapi-existing-module :is(input,select,textarea):focus{outline:2px solid #9cc8fb;outline-offset:1px}
+.ciapi-contextual-app .ciapi-entry{max-width:960px;text-align:left;padding:clamp(20px,3vw,38px)}
+.ciapi-contextual-app .ciapi-entry__icon{margin:0 0 16px}
+.ciapi-contextual-app .ciapi-entry p:not(.ciapi-entry__eyebrow){margin:0 0 25px}
+@media(max-width:800px){.ciapi-contextual-app .ciapi-existing-module{padding:10px;overflow-x:auto}.ciapi-contextual-app .ciapi-existing-module table{min-width:720px}}

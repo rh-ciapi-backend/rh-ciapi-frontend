@@ -100,8 +100,8 @@ export default function App() {
         <div className="ciapi-entry__icon" aria-hidden="true">⌕</div>
         <p className="ciapi-entry__eyebrow">CIAPI RH · {displayedModule.toUpperCase()}</p>
         <h2>{moduleHeading[displayedModule] || 'Consulta institucional'}</h2>
-        <p>Selecione uma opção no menu lateral ou abra a consulta para visualizar os registros. As tabelas não são carregadas nesta tela inicial.</p>
-        <button type="button" onClick={() => setShowModulePage(true)}>Abrir consulta / gerenciamento →</button>
+        <p>Selecione uma opção no menu lateral para pesquisar, consultar ou editar registros. Os resultados são exibidos quando você abre a consulta.</p>
+        <button type="button" onClick={() => setShowModulePage(true)}>Abrir consulta →</button>
       </section>;
     }
     return <div className={guardedModule ? 'ciapi-existing-module' : 'ciapi-dashboard-light'}>{renderContent()}</div>;
