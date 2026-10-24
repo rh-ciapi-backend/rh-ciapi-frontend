@@ -15,3 +15,11 @@
 .ciapi-mapas-choice-grid input,.ciapi-mapas-check-all input,.ciapi-mapas-radio-row input{accent-color:#1861ba;width:17px;height:17px;flex-shrink:0}
 .ciapi-mapas-radio-row{display:flex;gap:30px;flex-wrap:wrap}.ciapi-mapas-export-note{background:#eef5ff;border-radius:9px;padding:13px;color:#365e83;font-size:13px}
 @media(max-width:900px){.ciapi-mapas-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ciapi-mapas-choice-grid{grid-template-columns:1fr}}
+
+/* Página MAPAS: o mapa é o conteúdo principal, sem filtros/abas acima. */
+.ciapi-mapas-map-only{padding:0!important; background:transparent!important;border:0!important;box-shadow:none!important;max-width:none!important;width:100%!important}
+.ciapi-mapas-map-only .ciapi-mapas-paper{width:100%!important;max-width:none!important;margin:0!important;border-radius:8px!important}
+.ciapi-mapas-map-only .ciapi-mapas-table-scroll{width:100%;max-width:100%;overflow-x:auto}
+.ciapi-mapas-map-only .ciapi-mapas-table{width:100%;min-width:890px;table-layout:auto}
+.ciapi-mapas-page{width:100%;max-width:none!important;min-width:0}
+.ciapi-mapas-map-only .ciapi-mapas-paper-heading{padding-top:8px}

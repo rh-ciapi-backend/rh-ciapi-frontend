@@ -43,7 +43,8 @@ const filtrosIniciais: MapaFilters = {
   modoExportacao: 'arquivo_unico',
 };
 
-export default function MapasPage() {
+type MapasPageProps = { initialAction?: string | null };
+export default function MapasPage({ initialAction }: MapasPageProps) {
   const [grupo, setGrupo] = useState<Grupo>(PRIMEIRO_GRUPO);
   const [aba, setAba] = useState<string>(PRIMEIRO_GRUPO.chave);
   const [mapasParaExportar, setMapasParaExportar] = useState<string[]>([PRIMEIRO_GRUPO.chave]);
@@ -67,6 +68,18 @@ export default function MapasPage() {
     setMostrarDiagnostico(false);
     setFiltros(f => ({...f, categoria: novo.chave, layout: 'automatico'}));
   };
+
+  useEffect(() => {
+    if (!initialAction) return;
+    if (initialAction === 'mapa-exportar') {
+      setAba('exportar');
+      setErro('');
+      return;
+    }
+    const codigo = initialAction.startsWith('mapa-') ? initialAction.slice(5) : initialAction;
+    const selecionado = GRUPOS.find(g => g.chave === codigo);
+    if (selecionado) selecionarGrupo(selecionado);
+  }, [initialAction]);
 
   useEffect(() => {
     let ativo = true;
@@ -147,27 +160,6 @@ export default function MapasPage() {
   };
 
   return <main className="ciapi-mapas-page">
-    <header className="ciapi-mapas-header">
-      <div><div className="ciapi-mapas-eyebrow">CIAPI RH / MAPAS DE FREQUÊNCIA</div>
-        <h1>Mapas de frequência</h1>
-        <p>Escolha uma guia para visualizar o mapa ou exportar uma ou todas as categorias.</p>
-      </div>
-      <button type="button" className="ciapi-mapas-button subtle" onClick={() => setRecarregar(i => i + 1)} disabled={carregando}>
-        <RefreshCw size={16} className={carregando ? 'ciapi-spin' : ''}/> Atualizar dados
-      </button>
-    </header>
-
-    <nav className="ciapi-mapas-tabs ciapi-mapas-guide-tabs" role="tablist" aria-label="Guias de mapas de frequência">
-      {GRUPOS.map(item => <button role="tab" type="button" key={item.chave} className={aba === item.chave ? 'active' : ''}
-        aria-selected={aba === item.chave} onClick={() => selecionarGrupo(item)}>
-        {item.titulo} {item.subtitulo}
-      </button>)}
-      <button role="tab" type="button" className={aba === 'exportar' ? 'active' : ''}
-        aria-selected={aba === 'exportar'} onClick={() => { setAba('exportar'); setErro(''); }}>
-        <Download size={16}/> Exportar mapas
-      </button>
-    </nav>
-
     {aba === 'exportar' ? <section className="ciapi-mapas-workspace ciapi-mapas-export" role="tabpanel">
       <div className="ciapi-mapas-panel-title"><div><div className="ciapi-mapas-eyebrow">EXPORTAÇÃO DE MAPAS</div>
         <h2>Exportar mapas de frequência</h2><p>Marque uma categoria, várias categorias ou todos os mapas. Os arquivos são gerados com os dados do banco.</p></div></div>
@@ -196,39 +188,8 @@ export default function MapasPage() {
       {erro && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={17}/>{erro}</div>}
       <button type="button" className="ciapi-mapas-button primary" onClick={baixarSelecionados} disabled={!!exportando||!mapasParaExportar.length}>
         <Download size={16}/> {exportando ? 'Gerando arquivos...' : `Baixar ${mapasParaExportar.length} mapa(s)`}</button>
-    </section> : <section className="ciapi-mapas-workspace" role="tabpanel">
+    </section> : <section className="ciapi-mapas-workspace ciapi-mapas-map-only" role="tabpanel">
 
-      <div className="ciapi-mapas-panel-title">
-        <div><div className="ciapi-mapas-eyebrow">MAPA DE FREQUÊNCIA · {grupo.subtitulo}</div>
-          <h2>{grupo.titulo} {grupo.subtitulo}</h2>
-          <p>{isSesau ? 'Modelo SESAU com informações específicas de lotação e vínculo.' : 'Modelo SETRABES com frequência, faltas e observações.'}</p>
-        </div>
-        <span className="ciapi-mapas-counter"><Users size={16}/> {linhas.length} registro(s) retornado(s)</span>
-      </div>
-      <div className="ciapi-mapas-filters">
-        <label><span><CalendarDays size={14}/> Mês</span><select value={filtros.mes} onChange={e => mudarFiltro({mes: Number(e.target.value)})}>
-          {MESES.map((m, i) => <option key={m} value={i+1}>{m}</option>)}
-        </select></label>
-        <label><span>Ano</span><input type="number" min={2020} max={2100} value={filtros.ano}
-          onChange={e => mudarFiltro({ano: Number(e.target.value) || new Date().getFullYear()})}/></label>
-        <label><span>Setor / Lotação (opcional)</span><input value={filtros.setor || ''} placeholder="Todos os setores"
-          onChange={e => mudarFiltro({setor: e.target.value})}/></label>
-        <label><span>Situação</span><select value={filtros.status || ''} onChange={e => mudarFiltro({status: e.target.value})}>
-          <option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="">Todos</option>
-        </select></label>
-        <label className="ciapi-mapas-search"><span><Search size={14}/> Buscar neste mapa</span>
-          <input value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Nome ou matrícula..."/>
-        </label>
-      </div>
-      <div className="ciapi-mapas-actions">
-        <span className="ciapi-mapas-period">Competência: <strong>{MESES[(filtros.mes || 1) - 1]}/{filtros.ano}</strong></span>
-        <div className="ciapi-mapas-buttons">
-          <button className="ciapi-mapas-button subtle" onClick={validar} disabled={validando || carregando}><CheckCircle2 size={16}/>{validando ? 'Validando...' : 'Validar'}</button>
-          <button className="ciapi-mapas-button subtle" onClick={() => baixar('docx')} disabled={!!exportando}><FileText size={16}/> Word</button>
-          <button className="ciapi-mapas-button primary" onClick={() => baixar('pdf')} disabled={!!exportando}><Download size={16}/> PDF</button>
-          <button className="ciapi-mapas-button subtle" onClick={() => baixar('zip')} disabled={!!exportando}><FileArchive size={16}/> ZIP</button>
-        </div>
-      </div>
       {erro && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={17}/>{erro}</div>}
       <div className="ciapi-mapas-paper">
         <div className="ciapi-mapas-paper-heading">
