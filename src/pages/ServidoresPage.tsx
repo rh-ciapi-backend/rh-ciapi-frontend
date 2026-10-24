@@ -11,13 +11,15 @@ import {
   X,
   AlertTriangle,
   Download,
-  Link2
+  Link2, Camera, ImagePlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { servidoresService, type ServidorComVinculo } from '../services/servidoresService';
 import { API_BASE_URL } from '../config/api';
+import { uploadServidorFoto, signedServidorFotoUrl } from '../services/servidorFotoService';
 import { CATEGORIAS, SETORES, ESCOLARIDADE, VINCULOS } from '../data/servidores';
 import { Categoria, StatusServidor, Sexo } from '../types';
+import './servidores-page-light.css';
 
 const FALLBACK_SEXO = 'NÃO INFORMADO';
 const FALLBACK_SETOR = 'NÃO INFORMADO';
@@ -204,6 +206,17 @@ export const ServidoresPage = ({
   onActionHandled?: () => void;
 }) => {
   const [employees, setEmployees] = useState<ServidorComVinculo[]>([]);
+  const [query, setQuery] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchResults, setSearchResults] = useState<ServidorComVinculo[]>([]);
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
+  const [photoNotice, setPhotoNotice] = useState('');
+  const [persistedPhotoUrl, setPersistedPhotoUrl] = useState('');
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+  const [formPhotoFile, setFormPhotoFile] = useState<File | null>(null);
+  const [formPhotoUrl, setFormPhotoUrl] = useState<string | null>(null);
+  const [formPhotoNotice, setFormPhotoNotice] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
@@ -427,11 +440,16 @@ export const ServidoresPage = ({
   const closeDetailsModal = () => {
     setIsDetailsModalOpen(false);
     setSelectedEmployee(null);
+    setLocalPhotoUrl(null);
   };
 
   const closeEditModal = () => {
     setIsModalOpen(false);
     setEditingEmployee(null);
+    if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
+    setFormPhotoUrl(null);
+    setFormPhotoFile(null);
+    setFormPhotoNotice('');
     resetConfirmSaveState();
   };
 
@@ -448,17 +466,26 @@ export const ServidoresPage = ({
 
   const handleOpenDetails = (emp: ServidorComVinculo) => {
     setSelectedEmployee(emp);
-    setIsDetailsModalOpen(true);
+    setIsDetailsModalOpen(false);
+    setLocalPhotoUrl(null);
+    setSelectedPhotoFile(null);
+    setPhotoNotice('');
   };
 
   const handleAddEmployee = () => {
     setEditingEmployee(null);
+    setFormPhotoUrl(null);
+    setFormPhotoFile(null);
+    setFormPhotoNotice('');
     setIsModalOpen(true);
     resetConfirmSaveState();
   };
 
   const handleEditEmployee = (emp: ServidorComVinculo) => {
     setEditingEmployee(emp);
+    setFormPhotoUrl(null);
+    setFormPhotoFile(null);
+    setFormPhotoNotice('');
     setIsModalOpen(true);
     resetConfirmSaveState();
   };
@@ -555,18 +582,35 @@ export const ServidoresPage = ({
       setIsSaving(true);
       setIsLoading(true);
 
+      let saved: ServidorComVinculo;
       if (editingEmployee) {
-        await servidoresService.editar(editingEmployee.id, pendingEmployeeData);
+        saved = await servidoresService.editar(editingEmployee.id, pendingEmployeeData);
         setSuccessMessage('Servidor atualizado com sucesso!');
       } else {
-        await servidoresService.adicionar(pendingEmployeeData);
+        saved = await servidoresService.adicionar(pendingEmployeeData);
         setSuccessMessage('Servidor cadastrado com sucesso!');
       }
 
+      if (formPhotoFile) {
+        try {
+          const path = await uploadServidorFoto(saved!.id, formPhotoFile);
+          const { servidoresFotoService } = await import('../services/servidorFotoService');
+          await servidoresFotoService.vincular(saved!.id, path);
+          setFormPhotoNotice('Fotografia salva.');
+        } catch (photoError: any) {
+          setError('Cadastro salvo, mas a foto não foi gravada: ' + (photoError?.message || 'erro de armazenamento'));
+        }
+      }
       resetConfirmSaveState();
       setIsModalOpen(false);
       setEditingEmployee(null);
+      if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
+      setFormPhotoUrl(null);
       await fetchEmployees();
+      setSelectedEmployee(null);
+      setFormPhotoFile(null);
+      setHasSearched(false);
+      setSearchResults([]);
     } catch (err: any) {
       setError(err?.message || 'Erro ao salvar servidor.');
     } finally {
@@ -600,509 +644,159 @@ export const ServidoresPage = ({
       }
     : null;
 
+  void debouncedSearchTerm; void setDebouncedSearchTerm; void filterOptions; void setFilterCategory; void setFilterSetor; void setFilterStatus; void setFilterSexo; void summary; void handleExportCsv; void handleOpenDetails; void resetAllModalStates; void handleEditFromDetails; void handleDeleteFromDetails; void detailEmployee; void isDetailsModalOpen; void setIsDetailsModalOpen; void filteredEmployees; void ChevronRight; void MoreHorizontal; void Download; void Link2;
+
+  const runSearch = (event?: React.FormEvent) => {
+    event?.preventDefault();
+    const term = normalizeText(query);
+    setSelectedEmployee(null);
+    setLocalPhotoUrl(null);
+    if (!term) { setHasSearched(false); setSearchResults([]); return; }
+    const matches = employees.filter((emp) => {
+      const text = normalizeText(`${getEmployeeName(emp)} ${getEmployeeMatricula(emp)} ${emp.matriculaSegunda || ''} ${emp.cpf || ''}`);
+      return text.includes(term);
+    });
+    setSearchResults(matches);
+    setHasSearched(true);
+    if (matches.length === 1) handleOpenDetails(matches[0]);
+  };
+
+  const profileValue = (emp: ServidorComVinculo | null, ...keys: string[]) => {
+    if (!emp) return '';
+    const data = emp as unknown as Record<string, unknown>;
+    for (const key of keys) if (data[key]) return String(data[key]);
+    return '';
+  };
+
+  const photoSrc = localPhotoUrl || persistedPhotoUrl || profileValue(selectedEmployee, 'fotoUrl', 'foto_url', 'foto', 'avatarUrl', 'fotoPerfil');
+  useEffect(() => {
+    let active = true;
+    setPersistedPhotoUrl('');
+    const path = selectedEmployee && (selectedEmployee as any).fotoPath;
+    if (path) signedServidorFotoUrl(path).then(url => { if(active) setPersistedPhotoUrl(url); }).catch(e => { if(active) setPhotoNotice(e.message); });
+    return () => { active = false; };
+  }, [selectedEmployee]);
+  const field = (title: string, value: unknown) => (
+    <div className="ciapi-servidores-field" key={title}>
+      <span>{title}</span><strong>{displayValue(value)}</strong>
+    </div>
+  );
+  const group = (title: string, content: React.ReactNode) => (
+    <section className="ciapi-servidores-section" key={title}>
+      <h3>{title}</h3><div className="ciapi-servidores-fields">{content}</div>
+    </section>
+  );
+
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <section className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Gestão de pessoas
-          </p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            Servidores
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-            Consulte, filtre e mantenha os registros dos servidores do CIAPI.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-row">
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-border-dark bg-card-dark/70 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white sm:w-auto"
-            title="Exportar os servidores filtrados para CSV"
-          >
-            <Download size={18} />
-            Exportar CSV
-          </button>
-
-          <button
-            type="button"
-            onClick={handleAddEmployee}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
-          >
-            <Plus size={18} />
-            Novo Servidor
-          </button>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="app-subtle-surface p-3 sm:p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Total
-          </p>
-          <p className="mt-2 text-xl font-bold text-white sm:text-2xl">{summary.total}</p>
-          <p className="mt-1 text-xs text-slate-600">servidores cadastrados</p>
-        </div>
-
-        <div className="app-subtle-surface p-3 sm:p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Ativos
-          </p>
-          <p className="mt-2 text-xl font-bold text-emerald-400 sm:text-2xl">{summary.ativos}</p>
-          <p className="mt-1 text-xs text-slate-600">em situação ativa</p>
-        </div>
-
-        <div className="app-subtle-surface p-3 sm:p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Inativos
-          </p>
-          <p className="mt-2 text-xl font-bold text-slate-300 sm:text-2xl">{summary.inativos}</p>
-          <p className="mt-1 text-xs text-slate-600">em situação inativa</p>
-        </div>
-
-        <div className="app-subtle-surface p-3 sm:p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Exibidos
-          </p>
-          <p className="mt-2 text-xl font-bold text-primary sm:text-2xl">{summary.filtrados}</p>
-          <p className="mt-1 text-xs text-slate-600">após busca e filtros</p>
-        </div>
-      </section>
-
-      <section className="app-surface overflow-hidden">
-        <div className="border-b border-border-dark/70 p-4 sm:p-5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div className="relative min-w-0 flex-1">
-              <Search
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="Buscar por nome ou matrícula..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-border-dark bg-slate-900/35 pl-11 pr-4 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-4 xl:flex xl:items-center">
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
-              >
-                <option value="">Todas categorias</option>
-                {filterOptions.categorias.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-
-              <select
-                value={filterSetor}
-                onChange={(e) => setFilterSetor(e.target.value)}
-                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
-              >
-                <option value="">Todos setores</option>
-                {filterOptions.setores.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
-              >
-                <option value="">Todos status</option>
-                {filterOptions.status.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-
-              <select
-                value={filterSexo}
-                onChange={(e) => setFilterSexo(e.target.value)}
-                className="h-11 min-w-0 rounded-xl border border-border-dark bg-slate-900/35 px-3 text-sm text-slate-300 outline-none focus:border-primary/40"
-              >
-                <option value="">Todos sexos</option>
-                {filterOptions.sexo.map((s) => (
-                  <option key={s} value={s}>
-                    {s === 'M' ? 'MASCULINO' : s === 'F' ? 'FEMININO' : s === 'OUTRO' ? 'OUTRO' : s}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => fetchEmployees()}
-              className="flex h-11 w-full items-center justify-center rounded-xl border border-border-dark bg-slate-900/35 px-4 text-sm font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white xl:w-auto"
-              title="Recarregar lista"
-            >
-              <motion.div
-                animate={isLoading ? { rotate: 360 } : {}}
-                transition={isLoading ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
-              >
-                <MoreHorizontal size={18} />
-              </motion.div>
-            </button>
+    <div className="ciapi-servidores-page">
+      {!isModalOpen && <section className="ciapi-servidores-search">
+        <header><strong>Localizar Servidor</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
+        <form onSubmit={runSearch}>
+          <label htmlFor="ciapi-search-servidor">Buscar por nome, CPF ou matrícula</label>
+          <div className="ciapi-servidores-search-row">
+            <Search size={20} aria-hidden="true" />
+            <input id="ciapi-search-servidor" value={query} onChange={event => setQuery(event.target.value)} placeholder="Digite nome, CPF, matrícula ou segundo vínculo" />
           </div>
-        </div>
-
-        <AnimatePresence>
-          {(error || loadTimeout) && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mx-4 mt-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-400 sm:mx-5 sm:flex-row"
-            >
-              <div className="flex items-center gap-3">
-                <X
-                  size={18}
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setError(null);
-                    setLoadTimeout(false);
-                  }}
-                />
-                <span>{error}</span>
-              </div>
-
-              <button
-                onClick={() => fetchEmployees()}
-                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-600"
-              >
-                Tentar novamente
-              </button>
-            </motion.div>
-          )}
-
-          {successMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400 sm:mx-5"
-            >
-              <UserPlus size={18} />
-              {successMessage}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="relative min-h-[220px]">
-          {isLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-card-dark/55 backdrop-blur-[2px]">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          )}
-
-          {displayedEmployees.length === 0 && !isLoading ? (
-            <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-12 text-center">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/70 text-slate-500">
-                <Search size={20} />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">
-                Nenhum servidor encontrado
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Ajuste a busca ou os filtros para ver outros resultados.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border-dark/60">
-              {displayedEmployees.map((emp) => {
-                const safeName = getEmployeeName(emp);
-                const safeMatricula = getEmployeeMatricula(emp);
-                const categoria = getEmployeeCategoria(emp);
-                const setor = getEmployeeSetor(emp);
-                const status = getEmployeeStatus(emp);
-
-                return (
-                  <div
-                    key={emp.id}
-                    className="group flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-800/20 sm:gap-4 sm:px-5 lg:flex-row lg:items-center"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDetails(emp)}
-                      className="flex min-w-0 flex-1 items-start gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:items-center sm:gap-4"
-                      title={`Abrir detalhes de ${safeName}`}
-                    >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-sm font-bold text-primary ring-1 ring-primary/15">
-                        {getInitials(safeName)}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-[15px] font-semibold text-white transition group-hover:text-primary">
-                            {safeName}
-                          </span>
-                          {getStatusBadge(status)}
-                        </div>
-
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-                          <span>
-                            {safeMatricula ? `Matrícula ${safeMatricula}` : 'Matrícula não informada'}
-                          </span>
-                          <span className="text-slate-700">•</span>
-                          <span>{categoria}</span>
-                          <span className="text-slate-700">•</span>
-                          <span>{setor}</span>
-                        </div>
-                      </div>
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-1 lg:pl-4">
-                      <button
-                        type="button"
-                        onClick={() => handleEditEmployee(emp)}
-                        className="flex min-h-10 w-full items-center justify-center rounded-xl border border-border-dark/60 text-slate-500 transition hover:bg-primary/10 hover:text-primary sm:h-9 sm:w-9 sm:border-0"
-                        title="Editar"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteEmployee(emp.id)}
-                        className="flex min-h-10 w-full items-center justify-center rounded-xl border border-border-dark/60 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-400 sm:h-9 sm:w-9 sm:border-0"
-                        title="Excluir"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-border-dark/70 bg-slate-900/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <p className="text-xs text-slate-500">
-            Mostrando <span className="font-semibold text-slate-300">{displayedEmployees.length}</span> servidor(es)
-          </p>
-
-          <div className="flex items-center gap-1">
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 disabled:opacity-40"
-              disabled
-            >
-              <ChevronLeft size={18} />
-            </button>
-
-            <button className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 text-xs font-bold text-white">
-              1
-            </button>
-
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 disabled:opacity-40"
-              disabled
-            >
-              <ChevronRight size={18} />
-            </button>
+          <p className="ciapi-servidores-hint">Informe o nome, CPF ou matrícula para localizar o servidor.</p>
+          <div className="ciapi-servidores-actions">
+            <button className="ciapi-btn ciapi-btn-search" type="submit"><Search size={17}/> Pesquisar</button>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={() => {setQuery('');setHasSearched(false);setSearchResults([]);closeDetailsModal();}}>Limpar</button>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={handleAddEmployee}><Plus size={17}/> Novo servidor</button>
           </div>
-        </div>
-      </section>
+        </form>
+      </section>}
 
-      <AnimatePresence>
-        {isDetailsModalOpen && detailEmployee && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeDetailsModal}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            />
+      {(error || successMessage) && <div className="ciapi-servidores-alert" role="status">{error || successMessage}{error && <button onClick={fetchEmployees}>Tentar novamente</button>}</div>}
+      {isLoading && <p className="ciapi-servidores-loading">Carregando informações...</p>}
 
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.96, opacity: 0, y: 20 }}
-              className="relative z-[61] max-h-[calc(100dvh-1rem)] w-full max-w-5xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
-            >
-              <div className="border-b border-border-dark bg-slate-900/60 px-4 py-4 sm:px-6 sm:py-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-800 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-inner shrink-0">
-                      {getInitials(detailEmployee.nomeCompleto)}
-                    </div>
+      {!isModalOpen && hasSearched && !selectedEmployee && !isLoading && (
+        <section className="ciapi-servidores-results">
+          <header><strong>Resultado da pesquisa</strong><span>{searchResults.length} registro(s)</span></header>
+          {!searchResults.length ? <p className="ciapi-servidores-empty">Nenhum servidor encontrado. Confira os dados e tente novamente.</p> : (
+            <div className="ciapi-servidores-matches">
+              {searchResults.map(emp => <button key={emp.id} type="button" onClick={() => handleOpenDetails(emp)}>
+                <span className="ciapi-servidores-avatar-small">{getInitials(getEmployeeName(emp))}</span>
+                <span><strong>{getEmployeeName(emp)}</strong><small>Matrícula {getEmployeeMatricula(emp)} · {getEmployeeCategoria(emp)}</small></span>
+                <ChevronRight size={19}/>
+              </button>)}
+            </div>
+          )}
+        </section>
+      )}
 
-                    <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">
-                        Ficha do Servidor
-                      </p>
-                      <h2 className="break-words text-xl font-bold text-white sm:text-2xl sm:truncate">
-                        {detailEmployee.nomeCompleto}
-                      </h2>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border-dark bg-slate-800 text-slate-300">
-                          Matrícula: {displayValue(detailEmployee.matricula)}
-                        </span>
-                        {detailEmployee.matriculaSegunda && <span className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border-dark bg-slate-800 text-slate-300">2º vínculo: {detailEmployee.matriculaSegunda}</span>}
-                        {getStatusBadge(detailEmployee.status)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid w-full grid-cols-2 gap-2 self-stretch sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end md:self-start">
-                    <button
-                      type="button"
-                      disabled
-                      title="O convite será ativado após o vínculo seguro entre a conta e o cadastro do servidor"
-                      className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-300 opacity-60"
-                    >
-                      <Link2 size={16} />
-                      Gerar link (em preparação)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleEditFromDetails}
-                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold transition-all shadow-lg shadow-primary/20"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteFromDetails}
-                      className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-sm font-bold transition-all"
-                    >
-                      Excluir
-                    </button>
-                    <button
-                      type="button"
-                      onClick={closeDetailsModal}
-                      className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-                      title="Fechar"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
+      {!isModalOpen && selectedEmployee && (
+        <article className="ciapi-servidores-profile">
+          <header className="ciapi-servidores-profile-top">
+            <strong>Ficha do servidor</strong>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={() => {setSelectedEmployee(null);setLocalPhotoUrl(null);}}><ChevronLeft size={16}/> Voltar aos resultados</button>
+          </header>
+          <div className="ciapi-servidores-profile-body">
+            <div className="ciapi-servidores-identity">
+              <div className="ciapi-servidores-photo-wrap">
+                {photoSrc ? <img className="ciapi-servidores-photo" src={photoSrc} alt={`Foto de ${getEmployeeName(selectedEmployee)}`} /> : <div className="ciapi-servidores-photo-placeholder"><Camera size={37}/><span>Sem fotografia</span></div>}
+                <label className="ciapi-servidores-photo-picker"><ImagePlus size={17}/> Escolher foto
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {
+                    const file=event.target.files?.[0];
+                    if (!file) return;
+                    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>3*1024*1024) {setPhotoNotice('Use JPG, PNG ou WebP de até 3 MB.');return;}
+                    if (localPhotoUrl) URL.revokeObjectURL(localPhotoUrl);
+                    setLocalPhotoUrl(URL.createObjectURL(file));
+                    setSelectedPhotoFile(file);
+                    setPhotoNotice('Fotografia selecionada. Clique em Salvar foto para gravar no servidor.');
+                  }}/>
+                </label>
+                {selectedPhotoFile && <button className="ciapi-btn ciapi-btn-primary" type="button" onClick={async () => {try {setPhotoNotice('Enviando fotografia...'); const path=await uploadServidorFoto(selectedEmployee.id,selectedPhotoFile);const {servidoresFotoService}=await import('../services/servidorFotoService');await servidoresFotoService.vincular(selectedEmployee.id,path);setSelectedEmployee({...selectedEmployee,fotoPath:path} as any);setSelectedPhotoFile(null);setPhotoNotice('Fotografia salva com sucesso.');await fetchEmployees();}catch(e:any){setPhotoNotice('Erro ao salvar fotografia: '+(e?.message||'desconhecido'));}}}>Salvar foto</button>}
+                {photoNotice && <p className="ciapi-servidores-photo-notice">{photoNotice}</p>}
+              </div>
+              <div className="ciapi-servidores-identity-details">
+                <span className="ciapi-servidores-eyebrow">Cadastro institucional</span>
+                <h2>{getEmployeeName(selectedEmployee)}</h2>
+                <div className="ciapi-servidores-pills"><span>Matrícula: {getEmployeeMatricula(selectedEmployee)}</span>{selectedEmployee.matriculaSegunda && <span>2º vínculo: {selectedEmployee.matriculaSegunda}</span>}{getStatusBadge(getEmployeeStatus(selectedEmployee))}</div>
+                <div className="ciapi-servidores-identity-buttons">
+                  <button className="ciapi-btn ciapi-btn-primary" type="button" onClick={() => handleEditEmployee(selectedEmployee)}><Edit2 size={16}/> Editar cadastro</button>
+                  <button className="ciapi-btn ciapi-btn-danger" type="button" onClick={() => handleDeleteEmployee(selectedEmployee.id)}><Trash2 size={16}/> Excluir</button>
                 </div>
               </div>
-
-              <div className="max-h-[calc(100dvh-9rem)] space-y-6 overflow-y-auto px-4 py-4 sm:max-h-[calc(90vh-110px)] sm:space-y-8 sm:px-6 sm:py-6">
-                <section className="space-y-4">
-                  <div className="border-b border-border-dark pb-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
-                      Dados Pessoais
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <DetailItem label="Nome Completo" value={displayValue(detailEmployee.nomeCompleto)} />
-                    <DetailItem label="Matrícula" value={displayValue(detailEmployee.matricula)} mono />
-                    {detailEmployee.matriculaSegunda && <DetailItem label="Segunda matrícula" value={detailEmployee.matriculaSegunda} mono />}
-                    <DetailItem label="Sexo" value={formatSexoLabel(detailEmployee.sexo)} />
-                    <DetailItem label="Data de Nascimento" value={formatDate(detailEmployee.dataNascimento)} />
-                    <DetailItem
-                      label="Aniversário"
-                      value={formatDate(detailEmployee.aniversario, { day: '2-digit', month: '2-digit' })}
-                    />
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <div className="border-b border-border-dark pb-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
-                      Documentação
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <DetailItem label="CPF" value={displayValue(detailEmployee.cpf)} mono />
-                    <DetailItem label="RG Número" value={displayValue(detailEmployee.rgNumero)} />
-                    <DetailItem label="Órgão Emissor" value={displayValue(detailEmployee.rgOrgaoEmissor)} />
-                    <DetailItem label="UF do RG" value={displayValue(detailEmployee.rgUf)} />
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <div className="border-b border-border-dark pb-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
-                      Contato
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailItem label="Telefone" value={displayValue(detailEmployee.telefone)} />
-                    <DetailItem label="Email" value={displayValue(detailEmployee.email)} />
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <div className="border-b border-border-dark pb-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
-                      Dados Funcionais
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <DetailItem label="Categoria" value={displayValue(detailEmployee.categoria)} />
-                    <DetailItem label="Setor" value={displayValue(detailEmployee.setor)} />
-                    <DetailItem label="Cargo" value={displayValue(detailEmployee.cargo)} />
-                    <DetailItem label="Função" value={displayValue(detailEmployee.funcao)} />
-                    <DetailItem label="Vínculo" value={displayValue(detailEmployee.vinculo)} />
-                    <DetailItem label="Profissão" value={displayValue(detailEmployee.profissao)} />
-                    <DetailItem label="Escolaridade" value={displayValue(detailEmployee.escolaridade)} />
-                    <DetailItem label="Carga Horária" value={displayValue(detailEmployee.cargaHoraria)} />
-                    <DetailItem label="Início de Exercício" value={formatDate(detailEmployee.inicioExercicio)} />
-                    <DetailItem label="Lotação Interna" value={displayValue(detailEmployee.lotacaoInterna)} />
-                    <DetailItem label="Turno" value={displayValue(detailEmployee.turno)} />
-                    <DetailItem label="Status">
-                      {getStatusBadge(detailEmployee.status)}
-                    </DetailItem>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <div className="border-b border-border-dark pb-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
-                      Observações
-                    </h3>
-                  </div>
-                  <DetailItem label="Observação" value={displayValue(detailEmployee.observacao)} />
-                </section>
-              </div>
-            </motion.div>
+            </div>
+            <div className="ciapi-servidores-grid">
+              {group('Dados pessoais', <>{field('Nome completo', getEmployeeName(selectedEmployee))}{field('Matrícula', selectedEmployee.matricula)}{field('Sexo',formatSexoLabel(getEmployeeSexo(selectedEmployee)))}{field('Nascimento',formatDate(selectedEmployee.dataNascimento))}{field('Aniversário',formatDate(selectedEmployee.aniversario,{day:'2-digit',month:'2-digit'}))}</>)}
+              {group('Documentação', <>{field('CPF',selectedEmployee.cpf)}{field('RG',selectedEmployee.rgNumero)}{field('Órgão emissor',selectedEmployee.rgOrgaoEmissor)}{field('UF do RG',selectedEmployee.rgUf)}</>)}
+              {group('Contato', <>{field('Telefone',selectedEmployee.telefone)}{field('E-mail',selectedEmployee.email)}</>)}
+              {group('Dados funcionais', <>{field('Categoria',selectedEmployee.categoria)}{field('Setor',selectedEmployee.setor)}{field('Cargo',selectedEmployee.cargo)}{field('Função',selectedEmployee.funcao)}{field('Vínculo',selectedEmployee.vinculo)}{field('Carga horária',selectedEmployee.cargaHoraria)}{field('Lotação interna',selectedEmployee.lotacaoInterna)}{field('Turno',selectedEmployee.turno)}{field('Início do exercício',formatDate(selectedEmployee.inicioExercicio))}</>)}
+              {group('Outras informações', <>{field('Profissão',selectedEmployee.profissao)}{field('Escolaridade',selectedEmployee.escolaridade)}{field('Observação',selectedEmployee.observacao)}</>)}
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </article>
+      )}
 
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (!isConfirmSaveOpen) closeEditModal();
-              }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative z-[71] max-h-[calc(100dvh-1rem)] w-full max-w-4xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-border-dark p-4 sm:p-6">
-                <h2 className="text-xl font-bold text-white">
-                  {editingEmployee ? 'Editar Servidor' : 'Novo Servidor'}
-                </h2>
-                <button
-                  onClick={() => closeEditModal()}
-                  className="text-slate-500 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="max-h-[calc(100dvh-10rem)] overflow-y-auto p-4 scrollbar-hide sm:max-h-[75vh] sm:p-6">
+      {isModalOpen && (
+        <section className="ciapi-servidores-editor" aria-label={editingEmployee ? 'Editar servidor' : 'Novo servidor'}>
+          <header className="ciapi-servidores-editor-header">
+            <div><span>Gestão de pessoas / Cadastro</span><h2>{editingEmployee ? 'Editar servidor' : 'Novo servidor'}</h2><p>Preencha os dados e confira as informações antes de salvar.</p></div>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={closeEditModal}><ChevronLeft size={16}/> Voltar à pesquisa</button>
+          </header>
+          <div className="ciapi-servidores-editor-content">
                 <form id="servidor-form" onSubmit={handleSave} className="space-y-8">
+<section className="ciapi-servidores-edit-photo">
+  <div className="ciapi-servidores-edit-photo-image">
+    {(formPhotoUrl || (editingEmployee && profileValue(editingEmployee,'fotoUrl','foto_url','foto','avatarUrl','fotoPerfil'))) ?
+      <img src={formPhotoUrl || profileValue(editingEmployee,'fotoUrl','foto_url','foto','avatarUrl','fotoPerfil')} alt="Fotografia do servidor" /> :
+      <div><Camera size={32}/><span>Sem fotografia</span></div>}
+  </div>
+  <div><h3>Fotografia do servidor</h3><p>JPG, PNG ou WebP, até 3 MB.</p>
+    <label className="ciapi-btn ciapi-btn-muted ciapi-servidores-photo-picker"><ImagePlus size={16}/> Selecionar fotografia
+      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => {
+        const file = event.target.files?.[0]; if (!file) return;
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>3*1024*1024) {setFormPhotoNotice('Selecione uma imagem JPG, PNG ou WebP de até 3 MB.');return;}
+        if (formPhotoUrl) URL.revokeObjectURL(formPhotoUrl);
+        setFormPhotoUrl(URL.createObjectURL(file));
+        setFormPhotoFile(file);
+        setFormPhotoNotice('A fotografia será enviada após salvar o cadastro.');
+      }}/>
+    </label>{formPhotoUrl && <button type="button" className="ciapi-servidores-remove-photo" onClick={() => { URL.revokeObjectURL(formPhotoUrl); setFormPhotoUrl(null); setFormPhotoFile(null); setFormPhotoNotice('');}}>Remover pré-visualização</button>}
+    {formPhotoNotice && <p role="status" className="ciapi-servidores-photo-notice">{formPhotoNotice}</p>}
+  </div>
+</section>
                   <section className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-border-dark pb-2">
                       <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Dados Pessoais</h3>
@@ -1380,7 +1074,6 @@ export const ServidoresPage = ({
                     </div>
                   </section>
                 </form>
-              </div>
 
               <div className="grid grid-cols-1 gap-2 border-t border-border-dark bg-slate-800/20 p-4 sm:flex sm:justify-end sm:gap-3 sm:p-6">
                 <button
@@ -1398,10 +1091,9 @@ export const ServidoresPage = ({
                   {editingEmployee ? 'Salvar Alterações' : 'Cadastrar Servidor'}
                 </button>
               </div>
-            </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+        </section>
+      )}
 
       <AnimatePresence>
         {isConfirmSaveOpen && (

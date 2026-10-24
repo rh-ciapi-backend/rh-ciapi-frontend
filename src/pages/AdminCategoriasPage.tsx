@@ -1,3 +1,4 @@
+import './admin-cadastros-light.css';
 import React, { useEffect, useState } from 'react';
 import { categoriasService } from '../services/categoriasService';
 import { CategoriaAdmin } from '../types';
@@ -47,6 +48,13 @@ const AdminCategoriasPage = () => {
     }
   };
 
+  const handleToggle = async (item: CategoriaAdmin) => {
+    try {
+      await categoriasService.editar(item.id, { ativo: !item.ativo });
+      await fetchCategorias();
+    } catch(err:any) { window.alert(err?.message || 'Falha ao atualizar status.'); }
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Tem certeza que deseja excluir esta categoria?')) return;
     await categoriasService.excluir(id);
@@ -54,7 +62,7 @@ const AdminCategoriasPage = () => {
   };
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-6">
+    <div className="ciapi-admin-light min-w-0 space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-bold text-white">Gestão de Categorias</h2>
 
@@ -127,6 +135,7 @@ const AdminCategoriasPage = () => {
                           <Edit2 size={14} />
                         </button>
 
+                        <button type="button" onClick={() => handleToggle(cat)} className="ciapi-toggle-status" title={ cat.ativo ? 'Inativar' : 'Ativar' }>{cat.ativo ? 'Inativar' : 'Ativar'}</button>
                         <button
                           onClick={() => handleDelete(cat.id)}
                           className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-rose-400/10 hover:text-rose-400"

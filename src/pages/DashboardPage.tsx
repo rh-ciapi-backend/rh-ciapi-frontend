@@ -13,6 +13,7 @@ import { motion } from 'motion/react';
 import { servidoresService } from '../services/servidoresService';
 import type { Servidor } from '../types';
 import BirthdayPanel from '../components/dashboard/BirthdayPanel';
+import AniversariantesDoDia from '../components/AniversariantesDoDia';
 import { useAuth } from '../contexts/AuthContext';
 
 type DashboardPageProps = {
@@ -372,6 +373,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         />
       </section>
 
+      <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading} />
       <BirthdayPanel servidores={servidores} isLoading={isLoading} />
     </div>
   );

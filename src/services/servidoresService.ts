@@ -3,7 +3,7 @@ import type { Categoria, Servidor, Sexo, StatusServidor } from '../types';
 import type { ListarServidoresParams } from './apiTypes';
 
 type DbServidorRow = Record<string, unknown>;
-export type ServidorComVinculo = Servidor & { matriculaSegunda?: string };
+export type ServidorComVinculo = Servidor & { matriculaSegunda?: string; fotoPath?: string };
 
 const TABLE_SERVIDORES = 'servidores';
 
@@ -87,6 +87,7 @@ const mapFromDB = (row: DbServidorRow): ServidorComVinculo => {
     nomeCompleto,
     matricula,
     matriculaSegunda: firstFilled(row.matricula_segunda),
+    fotoPath: firstFilled(row.foto_path),
     cpf: formatCpf(cpfDigits),
     dataNascimento: firstFilled(row.data_nascimento, row.dataNascimento, row.nascimento) || null,
     sexo: normalizeSexo(firstFilled(row.sexo, row.genero)),

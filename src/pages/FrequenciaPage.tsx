@@ -1,1218 +1,155 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  AlertCircle,
-  BadgeCheck,
-  Building2,
-  CalendarDays,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  FileArchive,
-  FileSpreadsheet,
-  FileText,
-  Filter,
-  Hash,
-  Layers3,
-  Loader2,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Search,
-  ShieldCheck,
-  UserRound,
-  Users,
-} from 'lucide-react';
-import {
-  baixarFrequenciaArquivo,
-  listarFrequenciaMensal,
-  type FrequenciaDayItem,
-  type FrequenciaMensalItem,
-  type FrequenciaServidor,
-  type FrequenciaExportPayload,
-} from '../services/frequenciaService';
-import type { FrequenciaBatchStrategy } from '../types/frequencia';
-import type { EventoCalendario } from '../services/eventosService';
-import GerenciarFeriadosModal from '../components/frequencia/GerenciarFeriadosModal';
+import { CalendarDays, Download, FileText, Loader2, Printer, Search, RefreshCw, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { listarFrequenciaMensal, baixarFrequenciaArquivo, type FrequenciaMensalItem, type FrequenciaDayItem, type FrequenciaExportPayload } from '../services/frequenciaService';
+import { criarEvento, excluirEvento, listarEventos, type EventoCalendario, type EventoInput, type TipoEvento } from '../services/eventosService';
+import { servidoresService, type ServidorComVinculo } from '../services/servidoresService';
+import './frequencia-tres-guias.css';
+import { carregarAssinaturas, salvarAssinaturas, ASSINATURAS_INICIAIS, type AssinaturasFrequencia, type AutoridadeAssinatura } from '../services/assinaturasFrequenciaService';
 
-type StatsCardProps = {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: React.ReactNode;
-  action: string;
-  onClick: () => void;
-  active?: boolean;
-};
-
-type ExportMode = 'individual' | 'lote';
-type ExportScope =
-  | 'servidor_selecionado'
-  | 'todos_ativos'
-  | 'todos_inativos'
-  | 'todos'
-  | 'categoria'
-  | 'setor'
-  | 'filtros_atuais';
-
-const MONTHS = [
-  'Janeiro',
-  'Fevereiro',
-  'Março',
-  'Abril',
-  'Maio',
-  'Junho',
-  'Julho',
-  'Agosto',
-  'Setembro',
-  'Outubro',
-  'Novembro',
-  'Dezembro',
-];
-
-const EXPORT_SCOPE_OPTIONS: Array<{ value: ExportScope; label: string }> = [
-  { value: 'servidor_selecionado', label: 'Servidor selecionado' },
-  { value: 'todos_ativos', label: 'Todos os ativos' },
-  { value: 'todos_inativos', label: 'Todos os inativos' },
-  { value: 'todos', label: 'Todos' },
-  { value: 'categoria', label: 'Por categoria' },
-  { value: 'setor', label: 'Por setor' },
-  { value: 'filtros_atuais', label: 'Pelos filtros atuais' },
-];
-
-const BATCH_STRATEGY_OPTIONS: Array<{ value: FrequenciaBatchStrategy; label: string }> = [
-  { value: 'documento_unico', label: 'Documento único' },
-  { value: 'zip', label: 'Arquivos separados (ZIP)' },
-];
-
-function StatsCard({ title, value, subtitle, icon, action, onClick, active = false }: StatsCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      title={subtitle}
-      className={`min-h-[132px] w-full rounded-2xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${active ? 'border-blue-500 bg-blue-500/10' : 'border-[#26344a] bg-[#172033] hover:border-blue-500/40 hover:bg-[#1e293b]'}`}
-    >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">{value}</h3>
-        </div>
-        <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400">
-          {icon}
-        </div>
-      </div>
-      <p className="min-h-[2.5rem] text-sm text-slate-400">{subtitle}</p>
-      <p className="mt-2 text-xs font-medium text-blue-300">{action}</p>
-    </button>
-  );
-}
-
-function normalizeText(value: string) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-function formatCpf(cpf?: string) {
-  const digits = String(cpf || '').replace(/\D/g, '');
-  if (digits.length !== 11) return cpf || 'Não informado';
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-}
-
-function safeDisplay(value?: string, fallback = 'Não informado') {
-  const text = String(value || '').trim();
-  return text || fallback;
-}
-
-function compactDisplay(value?: string) {
-  const text = String(value || '').trim();
-  return text || '—';
-}
-
-function getWeekdayLabel(dateIso?: string) {
-  if (!dateIso) return 'Dia';
-  const date = new Date(`${dateIso}T12:00:00`);
-  const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  return labels[date.getDay()] || 'Dia';
-}
-
-function statusColor(status: string) {
-  const s = normalizeText(status);
-  if (s.includes('inativo')) return 'bg-rose-500/15 text-rose-300 border-rose-400/20';
-  if (s.includes('ativo')) return 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20';
-  if (s.includes('afast')) return 'bg-amber-500/15 text-amber-300 border-amber-400/20';
-  return 'bg-slate-500/15 text-slate-300 border-slate-400/20';
-}
-
-function resolveDayTone(day: FrequenciaDayItem) {
-  const text = normalizeText(
-    day.statusFinal ||
-      day.turno1?.rubrica ||
-      day.turno2?.rubrica ||
-      day.turno1?.ocorrencia ||
-      day.turno2?.ocorrencia
-  );
-
-  if (text.includes('feriado')) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-violet-200',
-      muted: 'text-violet-300/80',
-      pill: 'border-violet-400/20 bg-violet-500/12 text-violet-200',
-      dot: 'bg-violet-300',
-    };
-  }
-
-  if (text.includes('ponto') || text.includes('facultativo')) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-sky-200',
-      muted: 'text-sky-300/80',
-      pill: 'border-sky-400/20 bg-sky-500/12 text-sky-200',
-      dot: 'bg-sky-300',
-    };
-  }
-
-  if (text.includes('atestado')) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-amber-200',
-      muted: 'text-amber-300/80',
-      pill: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
-      dot: 'bg-amber-300',
-    };
-  }
-
-  if (text.includes('falta')) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-rose-200',
-      muted: 'text-rose-300/80',
-      pill: 'border-rose-400/20 bg-rose-500/12 text-rose-200',
-      dot: 'bg-rose-300',
-    };
-  }
-
-  if (text.includes('ferias') || text.includes('férias')) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-emerald-200',
-      muted: 'text-emerald-300/80',
-      pill: 'border-emerald-400/20 bg-emerald-500/12 text-emerald-200',
-      dot: 'bg-emerald-300',
-    };
-  }
-
-  if (text.includes('sábado') || text.includes('sabado') || text.includes('domingo')) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-slate-200',
-      muted: 'text-slate-400',
-      pill: 'border-slate-500/20 bg-slate-500/12 text-slate-300',
-      dot: 'bg-slate-400',
-    };
-  }
-
-  if (text) {
-    return {
-      card: 'border-[#26344a] bg-[#1e293b]',
-      accent: 'text-blue-300',
-      muted: 'text-blue-400/80',
-      pill: 'border-blue-400/20 bg-blue-500/10 text-blue-300',
-      dot: 'bg-blue-400',
-    };
-  }
-
-  return {
-    card: 'border-[#26344a] bg-[#1e293b]',
-    accent: 'text-white',
-    muted: 'text-slate-400',
-    pill: 'border-white/10 bg-white/[0.04] text-slate-400',
-    dot: 'bg-slate-500',
-  };
-}
-
-function buildStatusPill(day: FrequenciaDayItem) {
-  const source =
-    day.statusFinal ||
-    day.turno1?.rubrica ||
-    day.turno2?.rubrica ||
-    day.turno1?.ocorrencia ||
-    day.turno2?.ocorrencia;
-
-  const value = compactDisplay(source);
-  const tone = resolveDayTone(day);
-
-  if (value === '—') {
-    return {
-      label: 'Sem status',
-      className: 'border-white/10 bg-white/[0.04] text-slate-400',
-    };
-  }
-
-  return {
-    label: value,
-    className: tone.pill,
-  };
-}
-
-function CalendarMiniField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-[#26344a] bg-[#172033] px-3 py-2">
-      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-1 truncate text-[13px] font-medium text-slate-100">{value}</p>
-    </div>
-  );
-}
-
-export default function FrequenciaPage() {
-  const today = new Date();
-  const [ano, setAno] = useState<number>(today.getFullYear());
-  const [mes, setMes] = useState<number>(today.getMonth() + 1);
-  const [search, setSearch] = useState('');
-  const [filterCategoria, setFilterCategoria] = useState('TODAS');
-  const [filterSetor, setFilterSetor] = useState('TODOS');
-  const [filterStatus, setFilterStatus] = useState('ATIVO');
-  const [exportMode, setExportMode] = useState<ExportMode>('individual');
-  const [exportScope, setExportScope] = useState<ExportScope>('servidor_selecionado');
-  const [batchStrategy, setBatchStrategy] =
-    useState<FrequenciaBatchStrategy>('documento_unico');
-
-  const [items, setItems] = useState<FrequenciaMensalItem[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [exporting, setExporting] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [isEventosModalOpen, setIsEventosModalOpen] = useState(false);
-  const [isServidoresExpanded, setIsServidoresExpanded] = useState(true);
-  const [isCalendarioExpanded, setIsCalendarioExpanded] = useState(true);
-  const [eventosCount, setEventosCount] = useState(0);
-  const [reloadToken, setReloadToken] = useState(0);
-
-  const refreshFrequencia = useCallback(() => {
-    setReloadToken((prev) => prev + 1);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError('');
-
-        const result = await listarFrequenciaMensal({
-          ano,
-          mes,
-          categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
-          setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
-          status: filterStatus !== 'TODOS' ? filterStatus : undefined,
-        });
-
-        if (!active) return;
-
-        const safeItems = Array.isArray(result?.data) ? result.data : [];
-        setItems(safeItems);
-
-        const feriadoDays = safeItems.flatMap((item) => item.dayItems || []);
-        const totalComEvento = feriadoDays.filter((day) => {
-          const text = normalizeText(
-            day.statusFinal ||
-              day.turno1?.rubrica ||
-              day.turno2?.rubrica ||
-              day.turno1?.ocorrencia ||
-              day.turno2?.ocorrencia
-          );
-          return text.includes('feriado') || text.includes('facultativo');
-        }).length;
-
-        setEventosCount(totalComEvento);
-
-        setSelectedId((current) => {
-          if (!safeItems.length) return '';
-          const exists = safeItems.some(
-            (item) => String(item.servidor?.id ?? '') === String(current)
-          );
-          return exists ? current : String(safeItems[0].servidor?.id ?? '');
-        });
-      } catch (err: any) {
-        if (!active) return;
-        setItems([]);
-        setSelectedId('');
-        setEventosCount(0);
-        setError(err?.message || 'Falha ao carregar os dados da frequência.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, [ano, mes, filterCategoria, filterSetor, filterStatus, reloadToken]);
-
-  const categorias = useMemo(() => {
-    const values = items
-      .map((item) => safeDisplay(item.servidor?.categoria, 'NÃO INFORMADA'))
-      .filter(Boolean) as string[];
-
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [items]);
-
-  const setores = useMemo(() => {
-    const values = items
-      .map((item) => safeDisplay(item.servidor?.setor, 'NÃO INFORMADO'))
-      .filter(Boolean) as string[];
-
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [items]);
-
-  const filteredItems = useMemo(() => {
-    const term = normalizeText(search);
-
-    return items.filter((item) => {
-      const servidor = item.servidor || ({} as FrequenciaServidor);
-
-      const matchesSearch =
-        !term ||
-        normalizeText(servidor.nome || '').includes(term) ||
-        normalizeText(servidor.cpf || '').includes(term) ||
-        normalizeText(servidor.matricula || '').includes(term) ||
-        normalizeText(servidor.setor || '').includes(term) ||
-        normalizeText(servidor.categoria || '').includes(term);
-
-      const matchesCategoria =
-        filterCategoria === 'TODAS' ||
-        safeDisplay(servidor.categoria, 'NÃO INFORMADA') === filterCategoria;
-
-      const matchesSetor =
-        filterSetor === 'TODOS' ||
-        safeDisplay(servidor.setor, 'NÃO INFORMADO') === filterSetor;
-
-      const matchesStatus =
-        filterStatus === 'TODOS' ||
-        safeDisplay(servidor.status, 'NÃO INFORMADO') === filterStatus;
-
-      return matchesSearch && matchesCategoria && matchesSetor && matchesStatus;
+type Guia = 'pesquisar' | 'feriados' | 'exportar';
+type ActionProps = { initialAction?: string | null; onActionHandled?: () => void };
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const now = new Date();
+const initialYear = now.getFullYear();
+const initialMonth = now.getMonth() + 1;
+const text = (v: unknown) => String(v ?? '').trim();
+const norm = (v: unknown) => text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const dateBr = (d:string) => { const [y,m,day]=d.split('-'); return y&&m&&day?`${day}/${m}/${y}`:d; };
+const iso = (y:number,m:number) => `${y}-${String(m).padStart(2,'0')}`;
+const next = (y:number,m:number,offset:number) => { const d=new Date(y,m-1+offset,1); return {ano:d.getFullYear(),mes:d.getMonth()+1}; };
+const label = (y:number,m:number) => `${MESES[m-1]} de ${y}`;
+const parseState = (action?:string|null):Guia => action==='feriados'?'feriados':action==='exportar'?'exportar':'pesquisar';
+const Btn=({children,onClick,disabled,variant='default'}:{children:React.ReactNode;onClick:()=>void;disabled?:boolean;variant?:'default'|'primary'|'danger'})=><button type="button" onClick={onClick} disabled={disabled} className={`cf-btn cf-btn--${variant}`} >{children}</button>;
+function MonthChooser({ano,mes,onChange}:{ano:number;mes:number;onChange:(ano:number,mes:number)=>void}) { return <div className="cf-row"><label>Mês<select value={mes} onChange={e=>onChange(ano,Number(e.target.value))}>{MESES.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select></label><label>Ano<input type="number" min="2020" max="2100" value={ano} onChange={e=>onChange(Number(e.target.value)||initialYear,mes)}/></label></div>; }
+function Ficha({item,ano,mes,assinante}:{item:FrequenciaMensalItem;ano:number;mes:number;assinante:AutoridadeAssinatura}) {
+  const s=item.servidor;
+  const entries=useMemo(()=>{
+    const map=new Map<number,FrequenciaDayItem>();
+    (item.dayItems||[]).forEach(d=>map.set(Number(d.dia),d));
+    return Array.from({length:new Date(ano,mes,0).getDate()},(_,i)=>{
+      const dia=i+1;
+      const weekday=new Date(ano,mes-1,dia).getDay();
+      const entry=map.get(dia);
+      const weekend=weekday===0?'DOMINGO':weekday===6?'SÁBADO':'';
+      return {dia,first:entry?.turno1,second:entry?.turno2,weekend,final:text(entry?.statusFinal)};
     });
-  }, [items, search, filterCategoria, filterSetor, filterStatus]);
-
-  useEffect(() => {
-    if (!filteredItems.length) {
-      setSelectedId('');
-      return;
-    }
-
-    const exists = filteredItems.some(
-      (item) => String(item.servidor?.id ?? '') === String(selectedId)
-    );
-
-    if (!exists) {
-      setSelectedId(String(filteredItems[0].servidor?.id ?? ''));
-    }
-  }, [filteredItems, selectedId]);
-
-  useEffect(() => {
-    if (exportMode === 'individual') {
-      setExportScope('servidor_selecionado');
-    } else if (exportScope === 'servidor_selecionado') {
-      setExportScope('filtros_atuais');
-    }
-  }, [exportMode, exportScope]);
-
-  const selectedItem = useMemo(() => {
-    return (
-      filteredItems.find((item) => String(item.servidor?.id ?? '') === String(selectedId)) ||
-      filteredItems[0] ||
-      null
-    );
-  }, [filteredItems, selectedId]);
-
-  const selectedServidor = selectedItem?.servidor || null;
-  const selectedDias = selectedItem?.dayItems || [];
-  const calendarioDias = selectedDias;
-
-  const mostrarServidores = (status: 'TODOS' | 'ATIVO' | 'INATIVO') => {
-    setFilterStatus(status);
-    setIsServidoresExpanded(true);
-    window.requestAnimationFrame(() => document.getElementById('lista-servidores-frequencia')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
-
-  const stats = useMemo(() => {
-    const totalServidores = filteredItems.length;
-    const ativos = filteredItems.filter((item) =>
-      normalizeText(item.servidor?.status || '') === 'ativo'
-    ).length;
-    const inativos = filteredItems.filter((item) =>
-      normalizeText(item.servidor?.status || '') === 'inativo'
-    ).length;
-
-    return {
-      totalServidores,
-      ativos,
-      inativos,
-    };
-  }, [filteredItems]);
-
-  const exportPreviewLabel = useMemo(() => {
-    if (exportMode === 'individual') {
-      return selectedServidor ? `1 servidor selecionado` : 'Selecione um servidor';
-    }
-
-    switch (exportScope) {
-      case 'todos_ativos':
-        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '').includes('ativo')).length} servidor(es) ativos visíveis`;
-      case 'todos_inativos':
-        return `${filteredItems.filter((item) => normalizeText(item.servidor?.status || '').includes('inativo')).length} servidor(es) inativos visíveis`;
-      case 'todos':
-        return `${items.length} servidor(es) retornados pela competência`;
-      case 'categoria':
-        return `${filteredItems.length} servidor(es) da categoria atual`;
-      case 'setor':
-        return `${filteredItems.length} servidor(es) do setor atual`;
-      case 'filtros_atuais':
-      default:
-        return `${filteredItems.length} servidor(es) conforme filtros atuais`;
-    }
-  }, [exportMode, exportScope, filteredItems, items.length, selectedServidor]);
-
-  const exportStrategyHint = useMemo(() => {
-    if (exportMode !== 'lote') return 'Exportação individual do servidor selecionado.';
-    if (batchStrategy === 'documento_unico') {
-      return 'Lote em um único arquivo Word, ideal para impressão direta.';
-    }
-    return 'Lote em arquivos separados compactados em ZIP.';
-  }, [exportMode, batchStrategy]);
-
-  function buildExportPayload(formato: 'docx' | 'pdf' | 'csv'): FrequenciaExportPayload {
-    if (formato === 'csv') {
-      return {
-        ano,
-        mes,
-        formato,
-        modoExportacao: 'individual',
-        escopoExportacao: 'servidor_selecionado',
-        servidorId: selectedServidor?.id,
-        servidorCpf: selectedServidor?.cpf,
-        categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
-        setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
-        status: filterStatus !== 'TODOS' ? filterStatus : undefined,
-      };
-    }
-
-    if (exportMode === 'individual') {
-      return {
-        ano,
-        mes,
-        formato,
-        modoExportacao: 'individual',
-        escopoExportacao: 'servidor_selecionado',
-        servidorId: selectedServidor?.id,
-        servidorCpf: selectedServidor?.cpf,
-        categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
-        setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
-        status: filterStatus !== 'TODOS' ? filterStatus : undefined,
-      };
-    }
-
-    const basePayload: FrequenciaExportPayload = {
-      ano,
-      mes,
-      formato,
-      modoExportacao: 'lote',
-      escopoExportacao: exportScope,
-      estrategiaLote: formato === 'pdf' ? 'zip' : batchStrategy,
-      categoria: filterCategoria !== 'TODAS' ? filterCategoria : undefined,
-      setor: filterSetor !== 'TODOS' ? filterSetor : undefined,
-      status: filterStatus !== 'TODOS' ? filterStatus : undefined,
-      usarFiltrosAtuais: exportScope === 'filtros_atuais',
-      apenasAtivos: exportScope === 'todos_ativos',
-    };
-
-    if (exportScope === 'todos_ativos') {
-      basePayload.status = 'ATIVO';
-    }
-
-    if (exportScope === 'todos_inativos') {
-      basePayload.status = 'INATIVO';
-    }
-
-    if (exportScope === 'todos') {
-      basePayload.status = undefined;
-      basePayload.categoria = undefined;
-      basePayload.setor = undefined;
-    }
-
-    if (exportScope === 'categoria' && !basePayload.categoria) {
-      basePayload.categoria = selectedServidor?.categoria;
-    }
-
-    if (exportScope === 'setor' && !basePayload.setor) {
-      basePayload.setor = selectedServidor?.setor;
-    }
-
-    if (exportScope === 'filtros_atuais') {
-      basePayload.servidoresCpf = filteredItems
-        .map((item) => item.servidor?.cpf || '')
-        .filter(Boolean);
-      basePayload.servidoresIds = filteredItems
-        .map((item) => item.servidor?.id)
-        .filter((value) => value !== undefined && value !== null && `${value}` !== '');
-    }
-
-    return basePayload;
-  }
-
-  async function handleExport(formato: 'docx' | 'pdf' | 'csv') {
-    try {
-      if (formato === 'csv' && !selectedServidor) {
-        setError('Selecione um servidor antes de exportar.');
-        return;
-      }
-
-      if (exportMode === 'individual' && formato !== 'csv' && !selectedServidor) {
-        setError('Selecione um servidor antes de exportar.');
-        return;
-      }
-
-      if (exportMode === 'lote' && formato === 'csv') {
-        setError('O CSV permanece individual. Para lote, use DOCX ou PDF.');
-        return;
-      }
-
-      if (
-        exportMode === 'lote' &&
-        exportScope === 'categoria' &&
-        !(filterCategoria !== 'TODAS' || selectedServidor?.categoria)
-      ) {
-        setError('Selecione uma categoria ou escolha um servidor com categoria preenchida.');
-        return;
-      }
-
-      if (
-        exportMode === 'lote' &&
-        exportScope === 'setor' &&
-        !(filterSetor !== 'TODOS' || selectedServidor?.setor)
-      ) {
-        setError('Selecione um setor ou escolha um servidor com setor preenchido.');
-        return;
-      }
-
-      if (exportMode === 'lote' && exportScope === 'filtros_atuais' && !filteredItems.length) {
-        setError('Nenhum servidor encontrado nos filtros atuais para exportação em lote.');
-        return;
-      }
-
-      setError('');
-      setExporting(`${exportMode}-${formato}`);
-
-      await baixarFrequenciaArquivo(buildExportPayload(formato), selectedServidor || undefined);
-    } catch (err: any) {
-      setError(err?.message || `Falha ao exportar ${formato.toUpperCase()}.`);
-    } finally {
-      setExporting('');
-    }
-  }
-
-  function handleEventosSaved(eventos: EventoCalendario[]) {
-    setEventosCount(Array.isArray(eventos) ? eventos.length : 0);
-    refreshFrequencia();
-  }
-
-  return (
-    <div className="min-h-screen bg-[#0b1220] text-slate-100">
-      <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-5 md:px-6 lg:px-8 lg:py-6">
-        <header className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-400">FREQUÊNCIA</p>
-            <h1 className="mt-2 text-[1.65rem] font-semibold tracking-tight text-white sm:text-2xl md:text-3xl">Frequência Mensal</h1>
-            <p className="mt-1 text-sm text-slate-400">Gere, acompanhe e exporte a frequência dos servidores.</p>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <button type="button" onClick={() => setIsEventosModalOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#172033] px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-[#1e293b] sm:w-auto">
-              <CalendarDays className="h-4 w-4" /> Gerenciar feriados
-            </button>
-            <a href="#exportacao-frequencia" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3b82f6] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2563eb] sm:w-auto">
-              <Download className="h-4 w-4" /> Exportar
-            </a>
-          </div>
-        </header>
-
-        {error ? (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-100">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-            <div>
-              <p className="font-medium">Falha ao carregar ou exportar frequência</p>
-              <p className="mt-1 text-sm text-rose-200/90">{error}</p>
-            </div>
-          </div>
-        ) : null}
-        <section aria-label="Filtros da frequência" className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:mb-6 md:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-white"><Filter className="h-4 w-4 text-blue-400" /> Filtros</h2>
-            <span className="text-xs text-slate-400">{MONTHS[mes - 1]} de {ano}</span>
-          </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <div className="xl:col-span-2">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Busca
-                  </label>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Nome, CPF, matrícula..."
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:col-span-2">
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Mês
-                    </label>
-                    <select
-                      value={mes}
-                      onChange={(e) => setMes(Number(e.target.value))}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                    >
-                      {MONTHS.map((label, index) => (
-                        <option key={label} value={index + 1}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Ano
-                    </label>
-                    <input
-                      type="number"
-                      min={2020}
-                      max={2100}
-                      value={ano}
-                      onChange={(e) => setAno(Number(e.target.value) || today.getFullYear())}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Categoria
-                  </label>
-                  <select
-                    value={filterCategoria}
-                    onChange={(e) => setFilterCategoria(e.target.value)}
-                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                  >
-                    <option value="TODAS">Todas</option>
-                    {categorias.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Setor
-                  </label>
-                  <select
-                    value={filterSetor}
-                    onChange={(e) => setFilterSetor(e.target.value)}
-                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                  >
-                    <option value="TODOS">Todos</option>
-                    {setores.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Status
-                  </label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                  >
-                    <option value="TODOS">Todos</option>
-                    <option value="ATIVO">ATIVO</option>
-                    <option value="INATIVO">INATIVO</option>
-                    <option value="AFASTADO">AFASTADO</option>
-                  </select>
-                </div>
-              </div>
-        </section>
-
-        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:mb-6 md:grid-cols-3">
-          <StatsCard
-            title="Servidores ativos"
-            value={stats.ativos}
-            subtitle="Servidores ativos dentro dos filtros atuais."
-            icon={<BadgeCheck className="h-5 w-5" />}
-            action="Ver servidores ativos"
-            active={filterStatus === 'ATIVO'}
-            onClick={() => mostrarServidores('ATIVO')}
-          />
-          <StatsCard
-            title="Servidores inativos"
-            value={stats.inativos}
-            subtitle="Servidores inativos dentro dos filtros atuais."
-            icon={<UserRound className="h-5 w-5" />}
-            action="Ver servidores inativos"
-            active={filterStatus === 'INATIVO'}
-            onClick={() => mostrarServidores('INATIVO')}
-          />
-          <StatsCard
-            title="Total"
-            value={stats.totalServidores}
-            subtitle="Todos os servidores encontrados após os filtros aplicados."
-            icon={<Users className="h-5 w-5" />}
-            action="Ver todos os status"
-            active={filterStatus === 'TODOS'}
-            onClick={() => mostrarServidores('TODOS')}
-          />
-        </div>
-        <section id="exportacao-frequencia" aria-label="Exportação da frequência" className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:mb-6 md:p-5">
-          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-white">Exportação</h2>
-              <p className="mt-1 text-xs text-slate-400">{exportPreviewLabel} · {exportStrategyHint}</p>
-            </div>
-            <span className="text-xs text-slate-400">{eventosCount} ocorrência(s) de calendário detectada(s)</span>
-          </div>
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="min-w-0 flex-1">
-                <div
-                  className={`grid grid-cols-1 gap-3 ${
-                    exportMode === 'lote' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
-                  }`}
-                >
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Tipo de exportação
-                    </label>
-                    <select
-                      value={exportMode}
-                      onChange={(e) => setExportMode(e.target.value as ExportMode)}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                    >
-                      <option value="individual">Individual</option>
-                      <option value="lote">Lote</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                      Escopo
-                    </label>
-                    <select
-                      value={exportMode === 'individual' ? 'servidor_selecionado' : exportScope}
-                      onChange={(e) => setExportScope(e.target.value as ExportScope)}
-                      disabled={exportMode === 'individual'}
-                      className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {EXPORT_SCOPE_OPTIONS.filter((option) =>
-                        exportMode === 'individual'
-                          ? option.value === 'servidor_selecionado'
-                          : option.value !== 'servidor_selecionado'
-                      ).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {exportMode === 'lote' ? (
-                    <div>
-                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-400">
-                        Saída do lote
-                      </label>
-                      <select
-                        value={batchStrategy}
-                        onChange={(e) => setBatchStrategy(e.target.value as FrequenciaBatchStrategy)}
-                        className="w-full rounded-xl border border-[#26344a] bg-[#0b1220] px-3 py-3 text-sm text-white outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]/30"
-                      >
-                        {BATCH_STRATEGY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:w-auto">
-                <button
-                  onClick={() => handleExport('docx')}
-                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting === `${exportMode}-docx` ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : exportMode === 'lote' && batchStrategy === 'zip' ? (
-                    <FileArchive className="h-4 w-4" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-                  )}
-                  {exportMode === 'lote'
-                    ? batchStrategy === 'documento_unico'
-                      ? 'Exportar DOCX único'
-                      : 'Exportar lote DOCX'
-                    : 'Exportar DOCX'}
-                </button>
-
-                <button
-                  onClick={() => handleExport('pdf')}
-                  disabled={!!exporting || (exportMode === 'individual' && !selectedServidor)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#26344a] bg-[#1e293b] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting === `${exportMode}-pdf` ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : exportMode === 'lote' ? (
-                    <Layers3 className="h-4 w-4" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {exportMode === 'lote' ? 'Exportar lote PDF' : 'Exportar PDF'}
-                </button>
-
-                <button
-                  onClick={() => handleExport('csv')}
-                  disabled={!!exporting || !selectedServidor || exportMode === 'lote'}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-100 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting === 'individual-csv' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileSpreadsheet className="h-4 w-4" />
-                  )}
-                  Exportar CSV
-                </button>
-              </div>
-          </div>
-        </section>
-
-        <div className="mb-5 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5 md:p-6">
-              {selectedServidor ? (
-                <>
-                  <div className="flex flex-col gap-5">
-                    <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:gap-4">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 border border-blue-400/20 bg-blue-500/10 text-blue-300">
-                        <UserRound className="h-8 w-8" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <h2 className="break-words text-xl font-semibold leading-tight text-white sm:text-2xl lg:whitespace-nowrap">{selectedServidor.nome}</h2>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <span
-                            className={`rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${statusColor(
-                              selectedServidor.status || ''
-                            )}`}
-                          >
-                            {safeDisplay(selectedServidor.status, 'NÃO INFORMADO')}
-                          </span>
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-300">
-                            {safeDisplay(selectedServidor.categoria, 'NÃO INFORMADA')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
-                          <Hash className="h-4 w-4" />
-                          <span className="text-xs uppercase tracking-[0.16em]">Matrícula</span>
-                        </div>
-                        <p className="text-sm font-medium text-white">
-                          {safeDisplay(selectedServidor.matricula)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
-                          <ShieldCheck className="h-4 w-4" />
-                          <span className="text-xs uppercase tracking-[0.16em]">CPF</span>
-                        </div>
-                        <p className="text-sm font-medium text-white">{formatCpf(selectedServidor.cpf)}</p>
-                      </div>
-
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
-                          <Building2 className="h-4 w-4" />
-                          <span className="text-xs uppercase tracking-[0.16em]">Setor</span>
-                        </div>
-                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.setor)}</p>
-                      </div>
-
-                      <div className="rounded-xl border border-[#26344a] bg-[#0b1220] p-4">
-                        <div className="mb-2 flex items-center gap-2 text-slate-400">
-                          <FileText className="h-4 w-4" />
-                          <span className="text-xs uppercase tracking-[0.16em]">Cargo</span>
-                        </div>
-                        <p className="text-sm font-medium text-white">{safeDisplay(selectedServidor.cargo)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                </>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
-                  <p className="text-base font-medium text-white">Nenhum servidor selecionado</p>
-                  <p className="mt-2 text-sm text-slate-400">
-                    Ajuste os filtros ou aguarde o carregamento da lista.
-                  </p>
-                </div>
-              )}
-            </div>
-
-        <div
-          className={`grid grid-cols-1 items-start gap-5 ${
-            isServidoresExpanded
-              ? 'xl:grid-cols-[300px_minmax(0,1fr)]'
-              : 'xl:grid-cols-[64px_minmax(0,1fr)]'
-          }`}
-        >
-          <aside id="lista-servidores-frequencia" className="min-w-0 self-start scroll-mt-24">
-            <div className={`rounded-2xl border border-[#26344a] bg-[#172033] ${isServidoresExpanded ? 'p-3 sm:p-4' : 'p-2'}`}>
-              <div className={`flex items-center ${isServidoresExpanded ? 'mb-4 justify-between gap-2' : 'justify-center'}`}>
-                {isServidoresExpanded ? (
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-semibold text-white">Servidores</h2>
-                    <p className="text-xs text-slate-400">{filteredItems.length} encontrado(s)</p>
-                  </div>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-2">
-                  {loading && isServidoresExpanded ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : null}
-                  <button
-                    type="button"
-                    onClick={() => setIsServidoresExpanded((expanded) => !expanded)}
-                    aria-label={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
-                    aria-expanded={isServidoresExpanded}
-                    title={isServidoresExpanded ? 'Minimizar lista de servidores' : 'Maximizar lista de servidores'}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
-                  >
-                    {isServidoresExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {isServidoresExpanded ? <div className="max-h-[52dvh] space-y-2 overflow-y-auto pr-1 xl:max-h-[680px]">
-                {!loading && !filteredItems.length ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
-                    <p className="text-sm text-slate-300">Nenhum servidor encontrado.</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Ajuste os filtros ou confira o retorno da API.
-                    </p>
-                  </div>
-                ) : null}
-
-                {filteredItems.map((item) => {
-                  const servidor = item.servidor || ({} as FrequenciaServidor);
-                  const active = String(servidor.id ?? '') === String(selectedId);
-
-                  return (
-                    <button
-                      key={String(servidor.id ?? servidor.cpf ?? servidor.nome)}
-                      onClick={() => setSelectedId(String(servidor.id ?? ''))}
-                      className={[
-                        'w-full rounded-xl border p-3 text-left transition',
-                        active
-                          ? 'border-blue-500/50 bg-blue-500/10'
-                          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
-                      ].join(' ')}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">{servidor.nome}</p>
-                          <p className="mt-1 truncate text-xs text-slate-400">
-                            {safeDisplay(servidor.categoria, 'NÃO INFORMADA')}
-                          </p>
-                        </div>
-                        <span
-                          className={`rounded-full border px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${statusColor(
-                            servidor.status || ''
-                          )}`}
-                        >
-                          {safeDisplay(servidor.status, 'NÃO INFORMADO')}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
-                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
-                            CPF
-                          </span>
-                          <span className="mt-1 block text-slate-200">{formatCpf(servidor.cpf)}</span>
-                        </div>
-                        <div className="rounded-xl bg-[#09111d] px-3 py-2">
-                          <span className="block text-[10px] uppercase tracking-[0.14em] text-slate-500">
-                            Matrícula
-                          </span>
-                          <span className="mt-1 block text-slate-200">
-                            {safeDisplay(servidor.matricula)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div> : null}
-            </div>
-          </aside>
-
-            <div id="calendario-mensal" className="min-w-0 self-start scroll-mt-24 rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
-              <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${isCalendarioExpanded ? 'mb-4' : ''}`}>
-                <div>
-                  <h3 className="text-base font-semibold text-white">
-                    Calendário mensal · {MONTHS[mes - 1]} / {ano}
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Rubricas e ocorrências do servidor selecionado.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEventosModalOpen(true)}
-                    className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-100 transition hover:bg-blue-500/20"
-                  >
-                    Gerenciar feriados
-                  </button>
-
-                  <div className="rounded-full border border-white/10 bg-[#09111d] px-3 py-1.5 text-xs text-slate-300">
-                    {calendarioDias.length} de {selectedDias.length} dia(s)
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsCalendarioExpanded((expanded) => !expanded)}
-                    aria-label={isCalendarioExpanded ? 'Minimizar calendário' : 'Maximizar calendário'}
-                    aria-expanded={isCalendarioExpanded}
-                    aria-controls="calendario-mensal-conteudo"
-                    title={isCalendarioExpanded ? 'Minimizar calendário' : 'Maximizar calendário'}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#26344a] bg-[#0b1220] text-slate-300 transition hover:border-blue-400/40 hover:text-white"
-                  >
-                    {isCalendarioExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div id="calendario-mensal-conteudo" hidden={!isCalendarioExpanded}>
-              {!calendarioDias.length ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
-                  <CalendarDays className="mx-auto h-10 w-10 text-slate-600" />
-                  <p className="mt-4 text-base font-medium text-white">Sem dias carregados</p>
-                  <p className="mt-2 text-sm text-slate-400">
-                    {selectedDias.length ? 'Nenhum dia corresponde ao indicador selecionado.' : 'O servidor selecionado não trouxe registros de dias nesse retorno da API.'}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {calendarioDias.map((day) => {
-                    const tone = resolveDayTone(day);
-                    const pill = buildStatusPill(day);
-
-                    return (
-                      <div
-                        key={`${selectedServidor?.id}-${day.dia}-${day.data}`}
-                        className={[
-                          'group rounded-xl border p-3.5 transition-colors duration-200',
-                          'hover:border-[#3b82f6]/40',
-                          tone.card,
-                        ].join(' ')}
-                      >
-                        <div className="mb-3 flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/15 shadow-inner">
-                              <span className={`text-lg font-semibold leading-none text-white`}>
-                                {String(day.dia).padStart(2, '0')}
-                              </span>
-                            </div>
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`text-xs font-semibold uppercase tracking-[0.18em] text-slate-400`}
-                                >
-                                  {getWeekdayLabel(day.data)}
-                                </span>
-                                <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
-                              </div>
-                              <p className="mt-1 text-[11px] text-slate-400">{day.data}</p>
-                            </div>
-                          </div>
-
-                          <span
-                            className={`max-w-[45%] truncate rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${pill.className}`}
-                            title={pill.label}
-                          >
-                            {pill.label}
-                          </span>
-                        </div>
-
-                        <div className="rounded-xl border border-[#26344a] bg-[#172033] px-3 py-3">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
-                            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Rubrica</p>
-                          </div>
-                          <p
-                            className={`truncate text-sm font-semibold ${
-                              compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica) === '—'
-                                ? 'text-slate-400'
-                                : 'text-slate-100'
-                            }`}
-                            title={compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica)}
-                          >
-                            {compactDisplay(day.turno1?.rubrica || day.turno2?.rubrica)}
-                          </p>
-                        </div>
-
-                        <div className="mt-2.5 grid grid-cols-2 gap-2">
-                          <CalendarMiniField
-                            label="O1"
-                            value={compactDisplay(day.turno1?.ocorrencia)}
-                          />
-                          <CalendarMiniField
-                            label="O2"
-                            value={compactDisplay(day.turno2?.ocorrencia)}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              </div>
-            </div>
-        </div>
-      </div>
-
-      <GerenciarFeriadosModal
-        open={isEventosModalOpen}
-        ano={ano}
-        mes={mes}
-        onClose={() => setIsEventosModalOpen(false)}
-        onSaved={handleEventosSaved}
-      />
+  },[item,ano,mes]);
+  const value=(v:unknown)=>text(v)||'—';
+  const weekendOr=(v:unknown,weekend:string)=>text(v)||weekend;
+  return <article className="cf-paper cf-official-sheet" aria-label="Folha individual de frequência">
+    <header className="cf-paper-head">
+      <img src="/ciapi/brasao-frequencia.png" alt="Brasão do Estado de Roraima" className="cf-official-crest" />
+      <h2>FOLHA INDIVIDUAL DE FREQUÊNCIA</h2>
+    </header>
+    <div className="cf-official-meta">
+      <div className="cf-official-meta-line"><span><b>Unidade:</b> CENTRO INTEGRADO DE ATENÇÃO À PESSOA IDOSA</span><span><b>Lotação:</b> SETRABES</span></div>
+      <div className="cf-official-meta-line"><span><b>Servidor (a):</b> {value(s?.nome)}</span><span><b>Matrícula:</b> {value(s?.matricula)}</span></div>
+      <div className="cf-official-meta-line"><span><b>Categoria:</b> {value(s?.categoria)}</span><span><b>CPF:</b> {value(s?.cpf)}</span></div>
+      <div className="cf-official-meta-line"><span className="cf-full"><b>Cargo:</b> {value(s?.cargo)}</span></div>
+      <div className="cf-official-meta-line cf-official-meta-three"><span><b>Frequência:</b></span><span><b>C.H-Diária:</b> —</span><span><b>C.H-Semanal:</b> —</span></div>
+      <div className="cf-official-meta-line"><span><b>MÊS:</b> {MESES[mes-1]?.toUpperCase()}</span><span><b>Ano:</b> {ano}</span></div>
     </div>
-  );
+    <div className="cf-tablewrap"><table className="cf-sheet cf-official-grid"><colgroup>
+      <col style={{width:'7%'}}/>
+      {[0,1].flatMap(turn=>['9%','8%','13%','10%','7%'].map((width,i)=><col key={`${turn}-${i}`} style={{width}}/>))}
+    </colgroup><thead><tr className="cf-turn-head"><th rowSpan={2}>DIA</th><th colSpan={5}>1º TURNO</th><th colSpan={5}>2º TURNO</th></tr><tr>{[0,1].flatMap(t=>['HORA ENTRADA','HORA SAÍDA','RUBRICA DO SERVIDOR','OCORRÊNCIA','ABONO DO CHEFE'].map((heading,i)=><th key={`${t}-${i}`}>{heading}</th>))}</tr></thead>
+    <tbody>{entries.map(r=><tr key={r.dia}>
+      <td className="cf-day-number">{r.dia}</td>
+      {[r.first,r.second].flatMap((turn,index)=>{
+        const isWeekend=!!r.weekend;
+        const rubrica=weekendOr(turn?.rubrica,r.weekend);
+        const ocorrencia=weekendOr(turn?.ocorrencia,r.final&&!isWeekend?r.final:'');
+        return [
+          <td key={`${index}a`}>{isWeekend?'——':''}</td>,
+          <td key={`${index}b`}>{isWeekend?'——':''}</td>,
+          <td key={`${index}c`}>{rubrica==='—'?'':rubrica}</td>,
+          <td key={`${index}d`}>{ocorrencia==='—'?'':ocorrencia}</td>,
+          <td key={`${index}e`}></td>
+        ];
+      })}
+    </tr>)}</tbody></table></div>
+    <footer className="cf-paper-sign cf-official-signatures">
+      <div><span className="cf-signature-line"/><small>Assinatura do servidor</small></div>
+      <div><span className="cf-signature-line"/><small>{assinante.nome || "Responsável não configurado"}</small><small>{assinante.matricula ? `Mat. ${assinante.matricula}` : ""}</small><small>{assinante.cargo || ""}</small></div>
+    </footer>
+    <p className="cf-hint cf-print-hidden">Consulta em tela. Confira os dados e utilize o PDF oficial para emissão institucional.</p>
+  </article>;
+}
+export default function FrequenciaPage({initialAction,onActionHandled}:ActionProps){
+  const [assinaturas,setAssinaturas]=useState<AssinaturasFrequencia>(ASSINATURAS_INICIAIS);
+  const [assinaturasErro,setAssinaturasErro]=useState('');
+  const [assinaturasSucesso,setAssinaturasSucesso]=useState('');
+  const [assinaturasCarregando,setAssinaturasCarregando]=useState(true);
+  const [assinaturasSalvando,setAssinaturasSalvando]=useState(false);
+  const [guia,setGuia]=useState<Guia>(parseState(initialAction));
+  const [ano,setAno]=useState(initialYear); const [mes,setMes]=useState(initialMonth);
+  const [items,setItems]=useState<FrequenciaMensalItem[]>([]);const [cadastros,setCadastros]=useState<ServidorComVinculo[]>([]);const [cadastrosError,setCadastrosError]=useState('');const [loading,setLoading]=useState(false);const [error,setError]=useState('');const [query,setQuery]=useState('');const [searched,setSearched]=useState(false);const [selected,setSelected]=useState('');const [revision,setRevision]=useState(0);const [busy,setBusy]=useState(false);
+  const [exportQuery,setExportQuery]=useState('');const [categoria,setCategoria]=useState('');const [setor,setSetor]=useState('');
+  const [inicioAno,setInicioAno]=useState(initialYear);const [inicioMes,setInicioMes]=useState(initialMonth);const [fimAno,setFimAno]=useState(initialYear);const [fimMes,setFimMes]=useState(initialMonth);const [periodo,setPeriodo]=useState(false); const [modo,setModo]=useState<'individual'|'lote'>('lote');const [formato,setFormato]=useState<'pdf'|'docx'>('pdf');const [escopo,setEscopo]=useState<'todos_ativos'|'todos'|'categoria'|'setor'>('todos_ativos');const [estrategia,setEstrategia]=useState<'zip'|'documento_unico'>('zip');
+  const [eventos,setEventos]=useState<EventoCalendario[]>([]);const [eventLoading,setEventLoading]=useState(false);const [eventDate,setEventDate]=useState(`${iso(initialYear,initialMonth)}-01`);const [eventTitle,setEventTitle]=useState('');const [eventDesc,setEventDesc]=useState('');const [eventType,setEventType]=useState<TipoEvento>('FERIADO');const [eventActive,setEventActive]=useState(true);
+  useEffect(()=>{if(initialAction){setGuia(parseState(initialAction));onActionHandled?.();}},[initialAction,onActionHandled]);
+  useEffect(()=>{let active=true;carregarAssinaturas().then(data=>{if(active){setAssinaturas(data);setAssinaturasErro('');}}).catch(e=>{if(active)setAssinaturasErro(e instanceof Error?e.message:'Não foi possível carregar os responsáveis.');}).finally(()=>{if(active)setAssinaturasCarregando(false);});return()=>{active=false;};},[]);
+  const setAssinanteField=(key:'gerente'|'secretario',field:keyof AutoridadeAssinatura,value:string)=>setAssinaturas(old=>({...old,[key]:{...old[key],[field]:value}}));
+  const salvarResponsaveis=async()=>{setAssinaturasSalvando(true);setAssinaturasErro('');setAssinaturasSucesso('');try{await salvarAssinaturas(assinaturas);setAssinaturasSucesso('Dados da Gerência salvos no banco de dados.');}catch(e:any){setAssinaturasErro(e?.message||'Falha ao salvar responsáveis.');}finally{setAssinaturasSalvando(false);}};
+  const responsavelPara=(_cargo:unknown)=>assinaturas.gerente;
+
+  const changeMonth=(y:number,m:number)=>{setAno(y);setMes(m);setSearched(false);setSelected('');setEventDate(`${iso(y,m)}-01`);};
+  const load=useCallback(async()=>{setLoading(true);setError('');try{const result=await listarFrequenciaMensal({ano,mes,status:'TODOS'});setItems(Array.isArray(result?.data)?result.data:[]);}catch(e:any){setItems([]);setError(e?.message||'Não foi possível consultar as frequências.');}finally{setLoading(false);}},[ano,mes,revision]);
+  useEffect(()=>{if(guia==='pesquisar'||guia==='exportar')void load();},[load,guia]);
+  useEffect(()=>{let active=true;servidoresService.listar().then(rows=>{if(active){setCadastros(Array.isArray(rows)?rows:[]);setCadastrosError('');}}).catch(e=>{if(active)setCadastrosError(e?.message||'Não foi possível carregar o cadastro de servidores.');});return()=>{active=false;};},[]);
+  const loadEvents=useCallback(async()=>{setEventLoading(true);setError('');try{const rows=await listarEventos({ano,mes});setEventos(Array.isArray(rows)?rows:[]);}catch(e:any){setError(e?.message||'Erro ao carregar feriados.');}finally{setEventLoading(false);}},[ano,mes,revision]);
+  useEffect(()=>{if(guia==='feriados')void loadEvents();},[guia,loadEvents]);
+  // Busca diretamente no cadastro existente: não depende de marcações de frequência no mês.
+  const found=useMemo(()=>{
+    const needle=norm(query);if(!needle)return [] as FrequenciaMensalItem[];
+    const matches=cadastros.filter(s=>[s.nomeCompleto,s.nome,s.matricula,s.matriculaSegunda,s.cpf].some(v=>norm(String(v||'')).includes(needle)));
+    const known=new Set(matches.map(s=>String(s.id)));
+    const fromMonthly=items.filter(i=>{const s=i.servidor;return s&&(known.has(String(s.id))||[s.nome,s.matricula,s.cpf].some(v=>norm(String(v||'')).includes(needle)));});
+    const keys=new Set(fromMonthly.map(i=>String(i.servidor?.id)));
+    const fallback=matches.filter(s=>!keys.has(String(s.id))).map(s=>({
+      servidor:{id:s.id,nome:s.nomeCompleto||s.nome,cpf:s.cpf,matricula:s.matricula,categoria:s.categoria,setor:s.setor,cargo:s.cargo,status:s.status},
+      dayItems:[]
+    } as FrequenciaMensalItem));
+    return [...fromMonthly,...fallback];
+  },[items,cadastros,query]);
+  const chosen=useMemo(()=>found.find(i=>String(i.servidor?.id)===selected)|| (found.length===1?found[0]:null),[found,selected]);
+  const exportMatches=useMemo(()=>{
+    const q=norm(exportQuery);return q?cadastros.filter(s=>[s.nomeCompleto,s.nome,s.matricula,s.matriculaSegunda,s.cpf].some(v=>norm(String(v||'')).includes(q))).slice(0,30):[];
+  },[cadastros,exportQuery]);
+  const chosenForExport=useMemo(()=>{
+    if(modo!=='individual')return null;
+    const person=cadastros.find(s=>String(s.id)===selected);
+    if(person)return {id:person.id,cpf:person.cpf,nome:person.nomeCompleto||person.nome,matricula:person.matricula};
+    return chosen?.servidor||null;
+  },[cadastros,chosen,modo,selected]);
+  const categorias=useMemo(()=>Array.from(new Set(cadastros.map(i=>text(i.categoria)).filter(Boolean))).sort(),[cadastros]);
+  const setores=useMemo(()=>Array.from(new Set(cadastros.map(i=>text(i.setor)).filter(Boolean))).sort(),[cadastros]);
+  const changeGuia=(g:Guia)=>{setGuia(g);setError('');};
+  const exportOne=async(y:number,m:number)=>{const payload:FrequenciaExportPayload={ano:y,mes:m,formato,modoExportacao:modo,escopoExportacao:modo==='individual'?'servidor_selecionado':escopo,estrategiaLote:formato==='pdf'?'zip':estrategia,servidorId:modo==='individual'?chosenForExport?.id:undefined,servidorCpf:modo==='individual'?chosenForExport?.cpf:undefined,categoria:categoria||undefined,setor:setor||undefined,status:escopo==='todos_ativos'?'ATIVO':undefined}; Object.assign(payload, {responsavelAssinatura: modo==='individual'?responsavelPara(chosenForExport?.cargo):null,assinaturasInstitucionais:assinaturas,regraAssinatura:'GERENTE_CIAPI'}); await baixarFrequenciaArquivo(payload, (chosenForExport||undefined) as any);};
+  const exportRun=async()=>{if(modo==='individual'&&!chosenForExport){setError('Pesquise e selecione um servidor no campo ao lado.');return;}if(modo==='lote'&&escopo==='categoria'&&!categoria){setError('Selecione a categoria.');return;}if(modo==='lote'&&escopo==='setor'&&!setor){setError('Selecione o setor.');return;}const from=periodo?inicioAno*12+inicioMes:ano*12+mes;const to=periodo?fimAno*12+fimMes:from;if(to<from||to-from>11){setError('Escolha um período de até 12 competências, com data final igual ou posterior à inicial.');return;}setBusy(true);setError('');try{for(let i=from;i<=to;i++){const year=Math.floor((i-1)/12);const month=i-year*12;await exportOne(year,month);}}catch(e:any){setError(e?.message||'Falha ao exportar.');}finally{setBusy(false);}};
+  const saveEvent=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError('');try{const payload:EventoInput={data:eventDate,tipo:eventType,titulo:eventTitle.trim(),descricao:eventDesc.trim(),ativo:eventActive};await criarEvento(payload);setEventTitle('');setEventDesc('');await loadEvents();setRevision(v=>v+1);}catch(err:any){setError(err?.message||'Falha ao salvar o evento. Confirme sua autenticação.');}finally{setBusy(false);}};
+  const deleteEvent=async(id:string)=>{if(!window.confirm('Excluir este evento?'))return;setBusy(true);setError('');try{await excluirEvento(id);await loadEvents();setRevision(v=>v+1);}catch(e:any){setError(e?.message||'Não foi possível excluir.');}finally{setBusy(false);}};
+  return <main className="cf-root"><header className="cf-top"><div><span className="cf-eyebrow">CIAPI RH / CONTROLE DE PESSOAL</span><h1>Frequência</h1><p>Consulta individual, calendário institucional e emissão de documentos.</p></div><Btn onClick={()=>setRevision(v=>v+1)}><RefreshCw size={15}/> Atualizar</Btn></header>
+  {error&&<div className="cf-alert" role="alert">{error}</div>}
+  {guia==='pesquisar'&&<><section className="cf-panel"><div className="cf-panel-title"><Search size={20}/><h2>Localizar frequência do servidor</h2></div><form className="cf-search-form" onSubmit={e=>{e.preventDefault();setSearched(true);setSelected('');}}><label>Nome, CPF ou matrícula<input value={query} onChange={e=>{setQuery(e.target.value);setSearched(false);setSelected('');}} placeholder="Ex.: Joab" required/></label><MonthChooser ano={ano} mes={mes} onChange={changeMonth}/><div className="cf-buttons"><button className="cf-btn cf-btn--primary" disabled={loading||!query.trim()} type="submit"><Search size={16}/> Pesquisar</button><Btn onClick={()=>{setQuery('');setSearched(false);setSelected('');}}>Limpar</Btn></div></form></section>
+  {loading&&<div className="cf-panel">Carregando frequência…</div>}{cadastrosError&&<div className="cf-alert">{cadastrosError}</div>}{searched&&!loading&&(!found.length?<div className="cf-panel cf-empty">Nenhum servidor encontrado. Confira o nome, CPF ou matrícula.</div>:<><section className="cf-panel"><h2>Resultado da pesquisa · {found.length} servidor(es)</h2>{found.length>1&&<div className="cf-results">{found.map(i=><button type="button" className={String(i.servidor?.id)===selected?'active':''} key={String(i.servidor?.id)} onClick={()=>setSelected(String(i.servidor?.id))}><strong>{i.servidor?.nome}</strong><small>{i.servidor?.matricula} · {i.servidor?.categoria}</small></button>)}</div>}</section>{chosen&&<section className="cf-panel cf-sheet-host"><div className="cf-toolbar"><h2>{chosen.servidor?.nome}</h2><div className="cf-buttons cf-print-hidden"><Btn onClick={()=>changeMonth(next(ano,mes,-1).ano,next(ano,mes,-1).mes)}><ChevronLeft size={15}/> Anterior</Btn><Btn onClick={()=>changeMonth(next(ano,mes,1).ano,next(ano,mes,1).mes)}>Próximo <ChevronRight size={15}/></Btn><Btn onClick={()=>window.print()}><Printer size={16}/> Imprimir tela</Btn><Btn variant="primary" disabled={busy} onClick={async()=>{setBusy(true);try{await baixarFrequenciaArquivo({ano,mes,formato:'pdf',modoExportacao:'individual',escopoExportacao:'servidor_selecionado',servidorId:chosen.servidor?.id,servidorCpf:chosen.servidor?.cpf},chosen.servidor||undefined);}catch(e:any){setError(e?.message||'Erro ao baixar.');}finally{setBusy(false);}}}><Download size={15}/> PDF oficial</Btn></div></div>{!(chosen.dayItems||[]).length&&<div className="cf-note">Este servidor foi encontrado no cadastro, mas não há ocorrências de frequência retornadas para esta competência. A folha abaixo é uma estrutura em branco para consulta; utilize o PDF oficial quando necessário.</div>}<Ficha item={chosen} ano={ano} mes={mes} assinante={responsavelPara(chosen.servidor?.cargo)}/></section>}</>)}</>}
+  {guia==='feriados'&&<div className="cf-events"><section className="cf-panel"><div className="cf-panel-title"><CalendarDays size={20}/><h2>Gerenciar feriados e eventos</h2></div><p>Registros permanentes na base de dados, usados no calendário e nas exportações.</p><MonthChooser ano={ano} mes={mes} onChange={changeMonth}/><form className="cf-form" onSubmit={saveEvent}><label>Data<input type="date" value={eventDate} onChange={e=>setEventDate(e.target.value)} required/></label><label>Tipo<select value={eventType} onChange={e=>setEventType(e.target.value as TipoEvento)}><option value="FERIADO">Feriado</option><option value="PONTO_FACULTATIVO">Ponto facultativo</option><option value="EVENTO">Evento</option></select></label><label>Título<input value={eventTitle} onChange={e=>setEventTitle(e.target.value)} placeholder="Nome do feriado" required/></label><label>Descrição<textarea value={eventDesc} onChange={e=>setEventDesc(e.target.value)} rows={3}/></label><label className="cf-check"><input type="checkbox" checked={eventActive} onChange={e=>setEventActive(e.target.checked)}/> Ativo no calendário</label><button type="submit" className="cf-btn cf-btn--primary" disabled={busy}><Plus size={16}/> Salvar evento</button></form></section><section className="cf-panel"><div className="cf-toolbar"><h2>Eventos — {label(ano,mes)}</h2><Btn onClick={()=>void loadEvents()}><RefreshCw size={15}/> Atualizar lista</Btn></div>{eventLoading?<p>Carregando…</p>:!eventos.length?<div className="cf-empty">Nenhum evento cadastrado para a competência.</div>:<div className="cf-event-list">{eventos.map(e=><div className="cf-event" key={e.id}><div><b>{dateBr(e.data)}</b> <span className="cf-tag">{e.tipo.replace('_',' ')}</span><h3>{e.titulo}</h3><p>{e.descricao}</p></div><Btn variant="danger" disabled={busy} onClick={()=>void deleteEvent(e.id)}><Trash2 size={15}/> Excluir</Btn></div>)}</div>}</section></div>}
+  {guia==='exportar'&&<section className="cf-panel"><div className="cf-panel-title"><Download size={20}/><h2>Exportação de frequências</h2></div><p>Escolha os filtros abaixo. Não é necessário navegar por listas de servidores.</p><div className="cf-form cf-export"><fieldset><legend>Tipo de arquivo</legend><label className="cf-check"><input type="radio" checked={formato==='pdf'} onChange={()=>setFormato('pdf')}/> PDF</label><label className="cf-check"><input type="radio" checked={formato==='docx'} onChange={()=>setFormato('docx')}/> Word (DOCX)</label></fieldset><fieldset><legend>Modalidade</legend><label className="cf-check"><input type="radio" checked={modo==='lote'} onChange={()=>setModo('lote')}/> Em lote</label><label className="cf-check"><input type="radio" checked={modo==='individual'} onChange={()=>setModo('individual')}/> Servidor escolhido na pesquisa</label></fieldset>{modo==='individual'&&<div className="cf-export-person"><label>Pesquisar servidor para exportação<input placeholder="Digite o nome, CPF ou matrícula" value={exportQuery} onChange={e=>{setExportQuery(e.target.value);setSelected('');}} /></label>{exportQuery.trim()&&<div className="cf-export-choices">{exportMatches.length?exportMatches.map(s=><button type="button" key={String(s.id)} className={selected===String(s.id)?'active':''} onClick={()=>{setSelected(String(s.id));setExportQuery(`${s.nomeCompleto||s.nome} (${s.matricula})`);}}>{s.nomeCompleto||s.nome} · {s.matricula}</button>):<p>Nenhum servidor encontrado.</p>}</div>}{chosenForExport&&<p className="cf-selected-person">Selecionado: {chosenForExport.nome} · {chosenForExport.matricula}</p>}</div>}<fieldset><legend>Competência</legend><label className="cf-check"><input type="radio" checked={!periodo} onChange={()=>setPeriodo(false)}/> Mês selecionado</label><label className="cf-check"><input type="radio" checked={periodo} onChange={()=>setPeriodo(true)}/> Intervalo de meses</label></fieldset>{!periodo?<MonthChooser ano={ano} mes={mes} onChange={changeMonth}/>:<div className="cf-period"><div><b>De</b><MonthChooser ano={inicioAno} mes={inicioMes} onChange={(y,m)=>{setInicioAno(y);setInicioMes(m);}}/></div><div><b>Até</b><MonthChooser ano={fimAno} mes={fimMes} onChange={(y,m)=>{setFimAno(y);setFimMes(m);}}/></div></div>}
+  {modo==='lote'&&<><fieldset><legend>Escopo</legend>{([['todos_ativos','Ativos'],['todos','Todos'],['categoria','Por categoria'],['setor','Por setor']] as const).map(([v,t])=><label key={v} className="cf-check"><input type="radio" checked={escopo===v} onChange={()=>setEscopo(v)}/>{t}</label>)}</fieldset><div className="cf-row"><label>Categoria<select value={categoria} onChange={e=>setCategoria(e.target.value)}><option value="">Todas as categorias</option>{categorias.map(c=><option key={c}>{c}</option>)}</select></label><label>Setor<select value={setor} onChange={e=>setSetor(e.target.value)}><option value="">Todos os setores</option>{setores.map(s=><option key={s}>{s}</option>)}</select></label></div><fieldset><legend>Arquivos do lote</legend><label className="cf-check"><input type="radio" checked={estrategia==='zip'} onChange={()=>setEstrategia('zip')}/> ZIP separado</label><label className="cf-check"><input type="radio" checked={estrategia==='documento_unico'} onChange={()=>setEstrategia('documento_unico')}/> Documento único (DOCX)</label></fieldset></>}
+  <section className="cf-sign-settings" aria-label="Responsáveis pelas assinaturas">
+    <div className="cf-panel-title"><FileText size={20}/><h2>Assinaturas da frequência</h2></div>
+    <p>Altere o nome, a matrícula e o cargo da Gerência do CIAPI. A configuração será reutilizada nas prévias após salvar no Supabase.</p>
+    {assinaturasErro&&<div className="cf-alert" role="alert">{assinaturasErro}</div>}
+    {assinaturasSucesso&&<div className="cf-note" role="status">{assinaturasSucesso}</div>}
+    <div className="cf-sign-editors"><fieldset className="cf-sign-form"><legend>Gerência do CIAPI</legend>
+      <label>Nome completo<input value={assinaturas.gerente.nome} onChange={e=>setAssinanteField('gerente','nome',e.target.value)} placeholder="Nome completo" /></label>
+      <label>Matrícula<input value={assinaturas.gerente.matricula} onChange={e=>setAssinanteField('gerente','matricula',e.target.value)} placeholder="Matrícula" /></label>
+      <label>Cargo / função<input value={assinaturas.gerente.cargo} onChange={e=>setAssinanteField('gerente','cargo',e.target.value)} placeholder="Gerente do CIAPI" /></label>
+    </fieldset></div>
+    <div className="cf-sign-actions"><Btn variant="primary" disabled={assinaturasCarregando||assinaturasSalvando||!assinaturas.gerente.nome.trim()} onClick={()=>void salvarResponsaveis()}>{assinaturasSalvando?'Salvando…':'Salvar gerência'}</Btn></div>
+    <div className="cf-sign-preview"><b>Prévia da assinatura institucional</b><p>{modo==='individual'&&chosenForExport?`Servidor: ${chosenForExport.nome}${chosenForExport.cargo ? " — " + chosenForExport.cargo : ""}`:'Selecione um servidor para aplicar a regra individual.'}</p><div className="cf-signature-line"/><strong>{responsavelPara(chosenForExport?.cargo).nome||'Nome não configurado'}</strong><small>{responsavelPara(chosenForExport?.cargo).matricula?`Mat. ${responsavelPara(chosenForExport?.cargo).matricula}`:''}</small><small>{responsavelPara(chosenForExport?.cargo).cargo}</small></div>
+    <p className="cf-sign-warning">A prévia em tela utiliza a configuração. Para o PDF e o DOCX oficiais, é obrigatório aplicar a integração do gerador no backend descrita no LEIA-ME. Não suponha que o arquivo oficial já incorpora esta assinatura sem essa etapa.</p>
+  </section>
+  <div className="cf-note">O backend atual exporta uma competência por requisição. No modo período, serão feitos downloads por mês; não é gerado um PDF único para todo o intervalo. Alguns navegadores pedem autorização para múltiplos downloads.</div><div className="cf-buttons"><Btn variant="primary" onClick={()=>void exportRun()} disabled={busy||loading}><Download size={16}/>{busy?'Gerando arquivos…':'Baixar frequências'}</Btn></div></div></section>}
+  </main>;
 }
