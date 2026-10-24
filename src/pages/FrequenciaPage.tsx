@@ -22,12 +22,57 @@ const Btn=({children,onClick,disabled,variant='default'}:{children:React.ReactNo
 function MonthChooser({ano,mes,onChange}:{ano:number;mes:number;onChange:(ano:number,mes:number)=>void}) { return <div className="cf-row"><label>Mês<select value={mes} onChange={e=>onChange(ano,Number(e.target.value))}>{MESES.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select></label><label>Ano<input type="number" min="2020" max="2100" value={ano} onChange={e=>onChange(Number(e.target.value)||initialYear,mes)}/></label></div>; }
 function Ficha({item,ano,mes}:{item:FrequenciaMensalItem;ano:number;mes:number}) {
   const s=item.servidor;
-  const entries = useMemo(()=>{const map=new Map<number,FrequenciaDayItem>();(item.dayItems||[]).forEach(d=>map.set(Number(d.dia),d)); return Array.from({length:new Date(ano,mes,0).getDate()},(_,i)=>{const dia=i+1; const w=new Date(ano,mes-1,dia).getDay(); const d=map.get(dia);const base=w===0?'DOMINGO':w===6?'SÁBADO':'';const status=text(d?.statusFinal);return {dia,one:d?.turno1,two:d?.turno2,base,status};});},[item,ano,mes]);
-  const val=(v:unknown)=>text(v)||'\u00a0';
-  return <article className="cf-paper" aria-label="Folha individual de frequência"><header className="cf-paper-head"><div className="cf-crest">RR</div><strong>GOVERNO DO ESTADO DE RORAIMA</strong><h2>FOLHA INDIVIDUAL DE FREQUÊNCIA</h2></header>
-  <div className="cf-paper-info"><span><b>Unidade:</b> CENTRO INTEGRADO DE ATENÇÃO À PESSOA IDOSA</span><span><b>Lotação:</b> {val(s?.setor)}</span><span><b>Servidor(a):</b> {val(s?.nome)}</span><span><b>Matrícula:</b> {val(s?.matricula)}</span><span><b>Categoria:</b> {val(s?.categoria)}</span><span><b>CPF:</b> {val(s?.cpf)}</span><span><b>Cargo:</b> {val(s?.cargo)}</span><span><b>Competência:</b> {MESES[mes-1].toUpperCase()}/{ano}</span></div>
-  <div className="cf-tablewrap"><table className="cf-sheet"><thead><tr><th rowSpan={2}>Dia</th><th colSpan={5}>1º turno</th><th colSpan={5}>2º turno</th></tr><tr>{[0,1].flatMap(t=>['Entrada','Saída','Rubrica','Ocorrência','Abono'].map((title,i)=><th key={`${t}-${i}`}>{title}</th>))}</tr></thead><tbody>{entries.map(r=><tr key={r.dia}><td>{String(r.dia).padStart(2,'0')}</td>{[r.one,r.two].flatMap((t,index)=>[<td key={`${index}a`}></td>,<td key={`${index}b`}></td>,<td key={`${index}c`}>{val(t?.rubrica||r.base)}</td>,<td key={`${index}d`}>{val(t?.ocorrencia||r.status)}</td>,<td key={`${index}e`}></td>])}</tr>)}</tbody></table></div>
-  <footer className="cf-paper-sign"><div>____________________________<small>Assinatura do servidor</small></div><div>____________________________<small>Assinatura da chefia imediata</small></div></footer><p className="cf-hint cf-print-hidden">Visualização em tela com dados retornados pela API. O PDF/DOCX oficial é produzido pelo serviço de exportação existente.</p></article>;
+  const entries=useMemo(()=>{
+    const map=new Map<number,FrequenciaDayItem>();
+    (item.dayItems||[]).forEach(d=>map.set(Number(d.dia),d));
+    return Array.from({length:new Date(ano,mes,0).getDate()},(_,i)=>{
+      const dia=i+1;
+      const weekday=new Date(ano,mes-1,dia).getDay();
+      const entry=map.get(dia);
+      const weekend=weekday===0?'DOMINGO':weekday===6?'SÁBADO':'';
+      return {dia,first:entry?.turno1,second:entry?.turno2,weekend,final:text(entry?.statusFinal)};
+    });
+  },[item,ano,mes]);
+  const value=(v:unknown)=>text(v)||'—';
+  const weekendOr=(v:unknown,weekend:string)=>text(v)||weekend;
+  return <article className="cf-paper cf-official-sheet" aria-label="Folha individual de frequência">
+    <header className="cf-paper-head">
+      <img src="/ciapi/brasao-frequencia.png" alt="Brasão do Estado de Roraima" className="cf-official-crest" />
+      <h2>FOLHA INDIVIDUAL DE FREQUÊNCIA</h2>
+    </header>
+    <div className="cf-official-meta">
+      <div className="cf-official-meta-line"><span><b>Unidade:</b> CENTRO INTEGRADO DE ATENÇÃO À PESSOA IDOSA</span><span><b>Lotação:</b> SETRABES</span></div>
+      <div className="cf-official-meta-line"><span><b>Servidor (a):</b> {value(s?.nome)}</span><span><b>Matrícula:</b> {value(s?.matricula)}</span></div>
+      <div className="cf-official-meta-line"><span><b>Categoria:</b> {value(s?.categoria)}</span><span><b>CPF:</b> {value(s?.cpf)}</span></div>
+      <div className="cf-official-meta-line"><span className="cf-full"><b>Cargo:</b> {value(s?.cargo)}</span></div>
+      <div className="cf-official-meta-line cf-official-meta-three"><span><b>Frequência:</b></span><span><b>C.H-Diária:</b> —</span><span><b>C.H-Semanal:</b> —</span></div>
+      <div className="cf-official-meta-line"><span><b>MÊS:</b> {MESES[mes-1]?.toUpperCase()}</span><span><b>Ano:</b> {ano}</span></div>
+    </div>
+    <div className="cf-tablewrap"><table className="cf-sheet cf-official-grid"><colgroup>
+      <col style={{width:'7%'}}/>
+      {[0,1].flatMap(turn=>['9%','8%','13%','10%','7%'].map((width,i)=><col key={`${turn}-${i}`} style={{width}}/>))}
+    </colgroup><thead><tr className="cf-turn-head"><th rowSpan={2}>DIA</th><th colSpan={5}>1º TURNO</th><th colSpan={5}>2º TURNO</th></tr><tr>{[0,1].flatMap(t=>['HORA ENTRADA','HORA SAÍDA','RUBRICA DO SERVIDOR','OCORRÊNCIA','ABONO DO CHEFE'].map((heading,i)=><th key={`${t}-${i}`}>{heading}</th>))}</tr></thead>
+    <tbody>{entries.map(r=><tr key={r.dia}>
+      <td className="cf-day-number">{r.dia}</td>
+      {[r.first,r.second].flatMap((turn,index)=>{
+        const isWeekend=!!r.weekend;
+        const rubrica=weekendOr(turn?.rubrica,r.weekend);
+        const ocorrencia=weekendOr(turn?.ocorrencia,r.final&&!isWeekend?r.final:'');
+        return [
+          <td key={`${index}a`}>{isWeekend?'——':''}</td>,
+          <td key={`${index}b`}>{isWeekend?'——':''}</td>,
+          <td key={`${index}c`}>{rubrica==='—'?'':rubrica}</td>,
+          <td key={`${index}d`}>{ocorrencia==='—'?'':ocorrencia}</td>,
+          <td key={`${index}e`}></td>
+        ];
+      })}
+    </tr>)}</tbody></table></div>
+    <footer className="cf-paper-sign cf-official-signatures">
+      <div><span className="cf-signature-line"/><small>Assinatura do servidor</small></div>
+      <div><span className="cf-signature-line"/><small>RAIMUNDA ARTEMES FREITAS DAS NEVES</small><small>Mat 0164392-4-02</small><small>Gerente do Centro Integrado de Atenção à Pessoa Idosa</small></div>
+    </footer>
+    <p className="cf-hint cf-print-hidden">Consulta em tela. Confira os dados e utilize o PDF oficial para emissão institucional.</p>
+  </article>;
 }
 export default function FrequenciaPage({initialAction,onActionHandled}:ActionProps){
   const [guia,setGuia]=useState<Guia>(parseState(initialAction));

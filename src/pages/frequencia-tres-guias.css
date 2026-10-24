@@ -2,3 +2,30 @@
 
 /* Ajustes: ocupar toda a área do módulo e separar campos sem janelas */
 .cf-root{width:100%;max-width:none;min-width:0;padding:18px 18px 32px}.cf-events{grid-template-columns:minmax(360px, 1fr) minmax(400px, 1.25fr);align-items:stretch;width:100%}.cf-events>.cf-panel{min-height:560px}.cf-events .cf-form{max-width:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}.cf-events .cf-form>label:nth-child(3),.cf-events .cf-form>label:nth-child(4){grid-column:1/-1}.cf-events .cf-form>button{grid-column:1/-1}.cf-events>.cf-panel:first-child>.cf-row{margin:16px 0}.cf-export-person{display:flex;flex-direction:column;gap:9px;padding:14px;border:1px solid #cbdcf0;border-radius:10px;background:#f8fbff}.cf-export-person label{max-width:100%}.cf-export-choices{max-height:180px;overflow-y:auto;display:grid;gap:5px}.cf-export-choices button{border:1px solid #dce6f2;background:white;padding:9px;text-align:left;border-radius:7px;cursor:pointer;color:#183b5c}.cf-export-choices button.active{background:#dceeff;border-color:#206bb4}.cf-selected-person{margin:0!important;font-weight:700;color:#09623d!important}.cf-panel.cf-sheet-host{max-width:100%}.cf-search-form{max-width:none}.cf-paper{max-width:1080px}.cf-root .cf-export>fieldset{width:100%}@media(max-width:1080px){.cf-events{grid-template-columns:1fr}.cf-events .cf-form{grid-template-columns:1fr}.cf-events .cf-form>label:nth-child(3),.cf-events .cf-form>label:nth-child(4){grid-column:auto}}
+
+/* Folha individual proporcional ao modelo oficial de outubro/2026. */
+.cf-sheet-host { overflow: visible; }
+.cf-sheet-host .cf-toolbar { width: 100%; }
+.cf-official-sheet { width: 100%; max-width: none; min-height: 1120px; margin: 18px 0 0; padding: 18px clamp(15px,2vw,30px) 22px; border: 1px solid #dce4ed; box-shadow: none; }
+.cf-official-sheet .cf-paper-head { gap: 2px; font-size: 11px; padding: 0; }
+.cf-official-sheet .cf-paper-head h2 { font-size: clamp(16px,1.45vw,22px); color:#111!important; margin: 4px 0 9px; font-weight: 800; letter-spacing: .1px; }
+.cf-official-crest { display:block; width: 57px; height: 70px; object-fit: contain; object-position:center; }
+.cf-official-meta { border: 1px solid #242424; font: 12px/1.25 Arial, sans-serif; color:#111; }
+.cf-official-meta-line { display:grid; grid-template-columns: 2fr 1fr; min-height: 25px; border-bottom:1px solid #555; }
+.cf-official-meta-line:last-child { border-bottom: 0; }
+.cf-official-meta-line>span { padding:4px 7px; min-width:0; }
+.cf-official-meta-line>span+span { border-left:1px solid #555; }
+.cf-official-meta-line .cf-full { grid-column: 1/-1; }
+.cf-official-meta-three { grid-template-columns: 2fr 1fr 1fr; }
+.cf-official-grid { width:100%; table-layout:fixed; font:11px/1.15 Arial,sans-serif; color:#111; }
+.cf-official-grid th,.cf-official-grid td { border:1px solid #333; padding:4px 2px; overflow-wrap:normal; word-break:normal; }
+.cf-official-grid thead th { font-weight:700; background:#d5d5d5; font-size:10px; text-align:center; }
+.cf-official-grid .cf-turn-head th { background:#c8c8c8; font-size:11px; }
+.cf-official-grid tbody td { height: 25px; }
+.cf-official-grid .cf-day-number { text-align:left; padding-left:7px; font-size:11px; }
+.cf-official-signatures { margin-top: clamp(95px, 12vh, 170px); align-items:flex-start; font-size:11px; }
+.cf-official-signatures>div { width:43%; }
+.cf-signature-line { display:block; border-top:1px solid #111; margin:0 8% 5px; }
+.cf-official-signatures small { font-size:10px; margin-top:2px; }
+@media (max-width: 880px) { .cf-official-sheet{min-width:840px; padding:14px;} .cf-sheet-host{overflow-x:auto;} .cf-official-grid{font-size:10px;} }
+@media print { @page {size:A4 portrait; margin:5mm;} .cf-official-sheet{width:100%;min-width:0;min-height:0;max-width:none;margin:0;padding:0;border:0;} .cf-official-grid{font-size:7px;} .cf-official-grid th,.cf-official-grid td{padding:2px 1px;} .cf-official-grid tbody td{height:15px;} .cf-official-meta{font-size:8px;} .cf-official-meta-line{min-height:18px;} .cf-official-crest{width:39px;height:48px;} .cf-official-sheet .cf-paper-head h2{font-size:11px;margin-bottom:4px;} .cf-official-signatures{margin-top:36px;font-size:8px;} .cf-official-signatures small{font-size:7px;} }
