@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-import SaeSidebar, { SaeTab } from './components/SaeSidebar';
+import type { SaeTab } from './components/SaeSidebar';
+import SaeHorizontalNav from './components/SaeHorizontalNav';
+import { InstitutionalHeader } from '../components/InstitutionalHeader';
+import './sae-layout-horizontal.css';
 import SaeTopbar from './components/SaeTopbar';
 import SaeDashboardPage from './pages/SaeDashboardPage';
 import SaeUsuariosPage from './pages/SaeUsuariosPage';
@@ -180,8 +183,9 @@ export default function SaeApp() {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg-dark text-white">
-      <SaeSidebar
+    <div className="sae-horizontal-shell">
+      <InstitutionalHeader compact subtitle="Serviço de Atenção Especializada · SAE CIAPI" />
+      <SaeHorizontalNav
         activeTab={activeTab}
         onChange={handleChangeTab}
         onLogout={handleLogout}
@@ -193,19 +197,14 @@ export default function SaeApp() {
           setVisaoTriagem(visao);
         }}
       />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <SaeTopbar
-          activeTab={activeTab}
-          restrictedProfessional={restrictedProfessional}
-        />
-
-        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-          <div className="mx-auto w-full max-w-[1600px]">
-            {renderContent()}
-          </div>
-        </main>
+      <div className="sae-horizontal-utility">
+        <SaeTopbar activeTab={activeTab} restrictedProfessional={restrictedProfessional} />
       </div>
+      <main className="sae-horizontal-workspace">
+        <div className="sae-horizontal-workspace-inner">
+          {renderContent()}
+        </div>
+      </main>
     </div>
   );
 }

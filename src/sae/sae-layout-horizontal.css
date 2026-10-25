@@ -1,0 +1,29 @@
+/* Escopo exclusivo SAE. Arquivos do RH nao sao modificados. */
+.sae-horizontal-shell{min-height:100vh;display:flex;flex-direction:column;background:#f1f5fb;color:#15375b}
+.sae-horizontal-shell .institutional-header{flex-shrink:0}
+.sae-hnav{background:#0b2f52;color:#eaf3ff;position:relative;z-index:55;box-shadow:0 4px 16px #0b294022}
+.sae-hnav-inner{padding:0 17px;max-width:1900px;margin:auto}
+.sae-hnav-links{display:flex;align-items:center;gap:3px;flex-wrap:wrap;min-height:48px}
+.sae-hnav-item{position:relative;display:flex;align-items:center}
+.sae-hnav-link,.sae-hnav-exit,.sae-hnav-caret,.sae-hnav-toggle{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:#dceaff;min-height:43px;padding:9px 11px;font-size:12px;font-weight:700;cursor:pointer;border-radius:8px}
+.sae-hnav-link:hover,.sae-hnav-link.is-active,.sae-hnav-caret:hover{color:#fff;background:#1669b0}
+.sae-hnav-caret{padding:9px 4px;min-width:21px}
+.sae-hnav-exit{margin-left:auto;color:#ffd9de}
+.sae-hnav-exit:hover{background:#a52d3a;color:white}
+.sae-hnav-dropdown{position:absolute;top:100%;left:0;min-width:210px;padding:6px;background:#123b64;box-shadow:0 12px 30px #021c3870;border-radius:0 0 10px 10px;z-index:100}
+.sae-hnav-dropdown button{display:block;width:100%;text-align:left;color:white;font-size:12px;padding:12px;border-radius:6px}
+.sae-hnav-dropdown button:hover,.sae-hnav-dropdown button.is-active{background:#246eb1}
+.sae-hnav-toggle{display:none}
+.sae-horizontal-utility{background:#fff;border-bottom:1px solid #dae4f0}
+.sae-horizontal-utility>header{position:relative!important;top:auto!important;z-index:10!important;height:auto!important;min-height:66px!important;background:#f8fafd!important;border-color:#dce6f1!important;padding:10px clamp(14px,2.4vw,34px)!important}
+.sae-horizontal-utility>header h2{color:#0a3155!important}
+.sae-horizontal-utility>header p{color:#5e7795!important}
+.sae-horizontal-utility>header button,.sae-horizontal-utility>header div[class*="bg-card-dark"]{background:#fff!important;border-color:#d2dfed!important;color:#17385e!important}
+.sae-horizontal-utility>header button p[class*="text-white"]{color:#163a61!important}
+.sae-horizontal-utility>header button [class*="bg-primary"]{background:#2878d9!important;color:#fff!important}
+.sae-horizontal-workspace{background:#f1f5fb;flex:1;padding:clamp(14px,2vw,30px);min-width:0}
+.sae-horizontal-workspace-inner{max-width:1700px;margin:0 auto;min-width:0}
+.sae-horizontal-workspace .sae-home{color:#133c67}
+.sae-horizontal-workspace .sae-refresh{min-height:0}
+@media(max-width:980px){.sae-hnav-toggle{display:flex}.sae-hnav-links{display:none;flex-direction:column;align-items:stretch;padding:5px 0 12px}.sae-hnav-links.is-open{display:flex}.sae-hnav-item{flex-wrap:wrap}.sae-hnav-link{flex:1}.sae-hnav-exit{margin-left:0}.sae-hnav-dropdown{position:static;width:100%;box-shadow:none}.sae-horizontal-workspace{padding:12px}}
+@media(max-width:600px){.sae-horizontal-shell .institutional-header__inner{gap:12px}.sae-horizontal-utility>header{gap:8px;flex-wrap:wrap}.sae-horizontal-workspace{overflow-x:hidden}}
