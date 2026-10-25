@@ -3,7 +3,7 @@ import { PanelLeftClose, PanelLeftOpen, Search, Users, CalendarDays, Map, Clock3
 
 type Entry = { label:string; tab:string; action?:string };
 const sections: Record<string,{title:string; entries:Entry[]}> = {
-  servidores:{title:'Servidores',entries:[{label:'Pesquisar servidores',tab:'servidores',action:'pesquisar'},{label:'Servidores ativos',tab:'servidores',action:'ativos'},{label:'Servidores inativos',tab:'servidores',action:'inativos'},{label:'Novo servidor',tab:'servidores',action:'add'},{label:'Painel de Pessoal',tab:'servidores',action:'painel-pessoal'}]},
+  servidores:{title:'Servidores',entries:[{label:'Pesquisar servidor',tab:'servidores',action:'open'},{label:'Servidores inativos',tab:'servidores',action:'inativos'},{label:'Novo servidor',tab:'servidores',action:'add'},{label:'Painel de Pessoal',tab:'servidores',action:'painel-pessoal'}]},
   frequencia:{title:'Frequência',entries:[{label:'Pesquisar frequência',tab:'frequencia',action:'pesquisar'},{label:'Gerenciar feriados',tab:'frequencia',action:'feriados'},{label:'Exportação',tab:'frequencia',action:'exportar'}]},
   ferias:{title:'Férias',entries:[{label:'Pesquisar férias',tab:'ferias',action:'open'},{label:'Plano de férias',tab:'ferias',action:'open'},{label:'Férias não marcadas',tab:'ferias',action:'open'},{label:'Períodos registrados',tab:'ferias',action:'open'},{label:'Exportar férias',tab:'ferias',action:'open'}]},
   mapas:{title:'Mapas',entries:[
