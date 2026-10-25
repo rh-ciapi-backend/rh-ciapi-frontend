@@ -92,7 +92,7 @@ export const saeAgendaService = {
     profissionalId: string,
   ): Promise<SaeAgendaListResponse> {
     return request<SaeAgendaListResponse>(
-      `/profissionais/${profissionalId}`,
+      `/profissionais/${encodeURIComponent(profissionalId)}`,
     );
   },
 
@@ -107,7 +107,7 @@ export const saeAgendaService = {
       ok: true;
       agenda: SaeAgendaPeriodo;
     }>(
-      `/profissionais/${profissionalId}`,
+      `/profissionais/${encodeURIComponent(profissionalId)}`,
       {
         method: 'POST',
         body: JSON.stringify(form),
@@ -119,7 +119,7 @@ export const saeAgendaService = {
     agendaId: string,
   ): Promise<SaeAgendaImpacto> {
     return request<SaeAgendaImpacto>(
-      `/periodos/${agendaId}/impacto`,
+      `/periodos/${encodeURIComponent(agendaId)}/impacto`,
     );
   },
 
@@ -136,7 +136,7 @@ export const saeAgendaService = {
       agenda: SaeAgendaPeriodo;
       impacto: SaeAgendaImpacto;
     }>(
-      `/periodos/${agendaId}`,
+      `/periodos/${encodeURIComponent(agendaId)}`,
       {
         method: 'PUT',
         body: JSON.stringify(payload),
@@ -158,7 +158,7 @@ export const saeAgendaService = {
       ok: true;
       impacto: SaeAgendaImpacto;
     }>(
-      `/periodos/${agendaId}`,
+      `/periodos/${encodeURIComponent(agendaId)}`,
       {
         method: 'DELETE',
         body: JSON.stringify(payload),
@@ -214,7 +214,7 @@ export const saeAgendaService = {
       ok: true;
       solicitacao: SaeSolicitacaoAgenda;
     }>(
-      `/solicitacoes/${solicitacaoId}/cancelar`,
+      `/solicitacoes/${encodeURIComponent(solicitacaoId)}/cancelar`,
       {
         method: 'PATCH',
       },

@@ -107,7 +107,7 @@ export const saeTriagemService = {
     payload: SaeAtualizarEtapaTriagemPayload,
   ): Promise<{ ok: true; triagem: SaeTriagem }> {
     return request<{ ok: true; triagem: SaeTriagem }>(
-      `/${triagemId}/etapas/${etapa}`,
+      `/${encodeURIComponent(triagemId)}/etapas/${etapa}`,
       {
         method: 'PATCH',
         body: JSON.stringify(payload),
@@ -120,7 +120,7 @@ export const saeTriagemService = {
     payload: SaeDecisaoTriagemPayload,
   ): Promise<{ ok: true; triagem: SaeTriagem }> {
     return request<{ ok: true; triagem: SaeTriagem }>(
-      `/${triagemId}/decisao`,
+      `/${encodeURIComponent(triagemId)}/decisao`,
       {
         method: 'PATCH',
         body: JSON.stringify(payload),
@@ -141,7 +141,7 @@ export const saeTriagemService = {
       triagem: SaeTriagem;
       matricula: SaeTriagemMatricula;
     }>(
-      `/${triagemId}/matricular`,
+      `/${encodeURIComponent(triagemId)}/matricular`,
       {
         method: 'POST',
         body: JSON.stringify(payload),

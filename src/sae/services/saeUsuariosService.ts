@@ -58,7 +58,7 @@ const getErrorMessage = (
 const normalizeSituacao = (
   value: unknown,
 ): SituacaoUsuario => {
-  const normalized = safeString(value).toUpperCase();
+  const normalized = safeString(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
   if (normalized.includes('INATIVO')) {
     return 'INATIVO';
@@ -160,7 +160,7 @@ const buildUsuarioPayload = (form: SaeUsuarioForm) => ({
 
   data_ingresso: form.dataIngresso || null,
 
-  situacao_cadastral: form.situacaoCadastral,
+  situacao_cadastral: situacaoParaBanco(normalizeSituacao(form.situacaoCadastral)),
 
   data_desligamento:
     form.situacaoCadastral === 'INATIVO'
@@ -638,11 +638,6 @@ export const saeUsuariosService = {
       if (!usuarioId) {
         throw new Error('Usuário inválido.');
       }
-
-      await validarDuplicidades(
-        form,
-        usuarioId,
-      );
 
       await validarDuplicidades(
         form,

@@ -112,7 +112,7 @@ async function download(path: string, fallbackName: string) {
   const blob = await response.blob();
   const header = response.headers.get('content-disposition') || '';
   const matched = header.match(/filename="?([^"]+)"?/i);
-  const filename = matched?.[1] || fallbackName;
+  const filename = (matched?.[1] || fallbackName).replace(/[\\/\x00-\x1f]/g, '_');
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
