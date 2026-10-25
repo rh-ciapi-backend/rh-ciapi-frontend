@@ -88,6 +88,25 @@ async function request<T>(
 }
 
 export const saeAgendaService = {
+  // Caixa de solicitações da secretaria, conforme rotas existentes /solicitacoes.
+  async listarSolicitacoes(filtros: { status?: string; profissionalId?: string } = {}): Promise<{ solicitacoes: SaeSolicitacaoAgenda[] }> {
+    const query = new URLSearchParams();
+    if (filtros.status) query.set('status', filtros.status);
+    if (filtros.profissionalId) query.set('profissionalId', filtros.profissionalId);
+    const suffix = query.toString();
+    return request<{ solicitacoes: SaeSolicitacaoAgenda[] }>(`/solicitacoes${suffix ? `?${suffix}` : ''}`);
+  },
+
+  async analisarSolicitacao(
+    solicitacaoId: string,
+    payload: { decisao: 'APROVADA' | 'RECUSADA'; observacaoAnalise?: string; confirmarImpacto?: boolean },
+  ): Promise<{ ok: true; solicitacao: SaeSolicitacaoAgenda }> {
+    return request<{ ok: true; solicitacao: SaeSolicitacaoAgenda }>(
+      `/solicitacoes/${encodeURIComponent(solicitacaoId)}/analisar`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    );
+  },
+
   async listarProfissional(
     profissionalId: string,
   ): Promise<SaeAgendaListResponse> {

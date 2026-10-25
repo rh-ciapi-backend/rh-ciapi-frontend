@@ -74,6 +74,9 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
   };
 
   useEffect(() => {
+    setEditor(null);
+    setUploadTarget(null);
+    setDocumentos([]);
     carregar();
   }, [usuarioId]);
 

@@ -309,7 +309,7 @@ export default function GerenciarProfissionaisModal({
 
     if (
       !window.confirm(
-        `Redefinir a senha de ${selecionado.nome} para a senha provisória baseada no CPF?`,
+        `Redefinir a senha de ${selecionado.nome} para uma senha temporária?`,
       )
     ) {
       return;

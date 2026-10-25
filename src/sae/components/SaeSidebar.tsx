@@ -3,7 +3,6 @@ import React, {
   useState,
 } from 'react';
 import {
-  Activity,
   BarChart3,
   CalendarDays,
   ClipboardList,
@@ -11,7 +10,6 @@ import {
   LogOut,
   Map,
   Menu,
-  Settings,
   Stethoscope,
   Users,
   UserCog,
@@ -41,6 +39,7 @@ const MENU: Array<{
   label: string;
   icon: React.ElementType;
 }> = [
+  { id: 'dashboard', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'usuarios', label: 'Usuários', icon: Users },
   { id: 'triagem', label: 'Triagem', icon: ClipboardList },
   { id: 'agendamentos', label: 'Agendamentos', icon: CalendarDays },
@@ -99,8 +98,8 @@ export default function SaeSidebar({
     <>
       <div className="border-b border-border-dark px-5 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-xl font-bold text-white shadow-lg shadow-primary/20">
-            C
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-extrabold text-white shadow-lg shadow-primary/20">
+            SAE
           </div>
 
           <div className="min-w-0 flex-1">

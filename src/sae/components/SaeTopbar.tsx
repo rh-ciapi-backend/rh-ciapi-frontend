@@ -9,11 +9,10 @@ import {
   ChevronDown,
   Layers3,
   KeyRound,
-  Search,
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { SaeTab } from './SaeSidebar';
+import type { SaeTab } from './SaeSidebar';
 import MinhaAgendaModal from './agendamentos/MinhaAgendaModal';
 import CentralSolicitacoesModal from './agendamentos/CentralSolicitacoesModal';
 import { saeAgendaService } from '../services/saeAgendaService';
@@ -184,20 +183,7 @@ export default function SaeTopbar({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-{!restrictedProfessional && (
-          <div className="hidden w-[320px] items-center gap-2 rounded-xl border border-border-dark bg-card-dark px-3 py-2.5 md:flex">
-            <Search
-              size={17}
-              className="text-slate-500"
-            />
 
-            <input
-              type="text"
-              placeholder="Buscar usuário, prontuário..."
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
-            />
-          </div>
-          )}
 
 {!restrictedProfessional && (
           <button
@@ -288,7 +274,7 @@ export default function SaeTopbar({
 
           <button
             type="button"
-            onClick={() => restrictedProfessional && setSenhaAberta(true)}
+            onClick={() => { if (restrictedProfessional) setSenhaAberta(true); }}
             className={[
               'flex items-center gap-2 rounded-xl border border-border-dark bg-card-dark p-1.5 text-left sm:gap-3 sm:px-3 sm:py-2',
               restrictedProfessional
