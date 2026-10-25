@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -144,7 +145,7 @@ export default function SaeUsuarioPerfilPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-6"
+      className="space-y-6 sae-refresh"
     >
       <section className="app-surface relative overflow-hidden p-5 sm:p-6">
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />

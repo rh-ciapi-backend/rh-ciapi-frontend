@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import { BriefcaseMedical, Loader2, RefreshCw, Settings2, UserCog } from 'lucide-react';
 
@@ -31,7 +32,7 @@ export default function SaeProfissionaisPage() {
   );
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6 sae-refresh">
       <section className="app-surface p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

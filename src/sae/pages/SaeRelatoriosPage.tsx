@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useState } from 'react';
 import { FileText, Search, UserRound, AlertCircle } from 'lucide-react';
 
@@ -45,7 +46,7 @@ export default function SaeRelatoriosPage() {
   }, [termo]);
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6 sae-refresh">
       <section className="app-surface p-4 sm:p-6">
         <div className="flex items-start gap-3">
           <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-primary">

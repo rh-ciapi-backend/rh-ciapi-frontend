@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -155,7 +156,7 @@ export default function SaeTriagemPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-6"
+      className="space-y-6 sae-refresh"
     >
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>

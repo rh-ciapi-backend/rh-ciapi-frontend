@@ -1,0 +1,24 @@
+/* SAE CIAPI: tema claro contextual. Escopo restrito às páginas SAE. */
+.sae-refresh{color:#17345a;background:#f4f7fc;border-radius:18px;padding:clamp(12px,2vw,24px);min-height:calc(100vh - 120px);font-family:inherit}
+.sae-refresh .app-surface,.sae-refresh [class~="bg-card-dark"]{background:#fff!important;border:1px solid #dce5f1!important;box-shadow:0 5px 18px rgba(16,48,86,.04)}
+.sae-refresh [class~="text-white"]{color:#102e53!important}
+.sae-refresh [class~="text-slate-200"],.sae-refresh [class~="text-slate-300"]{color:#344e70!important}
+.sae-refresh [class~="text-slate-400"]{color:#526985!important}
+.sae-refresh [class~="text-slate-500"],.sae-refresh [class~="text-slate-600"]{color:#62758e!important}
+.sae-refresh [class~="border-border-dark"]{border-color:#dbe5f0!important}
+.sae-refresh [class*="bg-slate-900/"],.sae-refresh [class*="bg-slate-800/"]{background:rgba(235,242,251,.65)!important}
+.sae-refresh [class~="bg-slate-800"]{background:#e8eef7!important}
+.sae-refresh input:not([type="checkbox"]):not([type="radio"]),.sae-refresh select,.sae-refresh textarea{background:#fff!important;color:#1a3555!important;border-color:#cfdbea!important}
+.sae-refresh input::placeholder,.sae-refresh textarea::placeholder{color:#7d91a8!important}
+.sae-refresh input:focus,.sae-refresh select:focus,.sae-refresh textarea:focus{border-color:#2c7be5!important;outline:2px solid rgba(44,123,229,.15)!important}
+.sae-refresh button[class~="bg-primary"],.sae-refresh button[class*="from-blue-500"]{background:#176bc4!important;color:white!important;border-color:#176bc4!important}
+.sae-refresh button[class~="bg-primary"] [class~="text-white"],.sae-refresh button[class*="from-blue-500"] [class~="text-white"]{color:white!important}
+.sae-refresh .responsive-scroll,.sae-refresh .overflow-x-auto{scrollbar-width:thin}
+.sae-refresh table{border-collapse:collapse}
+.sae-refresh th{color:#355479!important;font-weight:700}
+.sae-refresh tbody tr:hover{background:rgba(223,237,253,.40)}
+.sae-refresh :is(button,a,input,select,textarea):focus-visible{outline:2px solid #2475cb;outline-offset:2px}
+.sae-refresh [class*="text-rose-300"]{color:#be314c!important}
+.sae-refresh [class*="text-emerald-300"]{color:#11795f!important}
+@media(max-width:640px){.sae-refresh{padding:12px;border-radius:12px}.sae-refresh h1{overflow-wrap:anywhere}}
+@media print{.sae-refresh{padding:0;background:white}.sae-refresh .app-surface{box-shadow:none!important}}

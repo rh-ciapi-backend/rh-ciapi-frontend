@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileSpreadsheet, Loader2, Search } from 'lucide-react';
 import { saeAdministrativoService, type SaeAdminAtendimento } from '../services/saeAdministrativoService';
@@ -34,7 +35,7 @@ export default function SaeMapasAdminPage() {
   if (loading) return <div className="flex min-h-[420px] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary"/></div>;
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6 sae-refresh">
       <section className="app-surface p-4 sm:p-6"><div className="flex items-start gap-3"><div className="rounded-xl bg-primary/10 p-3 text-primary"><FileSpreadsheet size={21}/></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-primary">SAE Administrativo</p><h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Mapas</h1><p className="mt-2 text-sm text-slate-400">Prévia consolidada dos atendimentos registrados por profissional.</p></div></div></section>
       <section className="app-surface overflow-hidden">
         <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(260px,1.2fr)_220px_140px_140px]">

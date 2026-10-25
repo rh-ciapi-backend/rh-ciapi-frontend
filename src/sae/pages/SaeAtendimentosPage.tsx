@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -92,7 +93,7 @@ export default function SaeAtendimentosPage() {
   if (carregando) return <div className="flex min-h-[420px] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6 sae-refresh">
       <section className="app-surface p-4 sm:p-6">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">SAE Administrativo</p>
         <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Atendimentos</h1>
