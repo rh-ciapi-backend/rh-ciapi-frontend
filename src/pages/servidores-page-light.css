@@ -24,3 +24,10 @@
 .ciapi-servidores-edit-photo .ciapi-servidores-photo-picker{max-width:235px;color:#175c9d!important;background:#eaf3ff}
 .ciapi-servidores-remove-photo{margin-left:10px;color:#b4233a;font-size:12px;text-decoration:underline}
 @media(max-width:640px){.ciapi-servidores-editor-content{padding:13px}.ciapi-servidores-editor-header{padding:17px}.ciapi-servidores-edit-photo{flex-direction:column;align-items:flex-start}.ciapi-servidores-editor form>section:not(.ciapi-servidores-edit-photo){padding:13px}}
+
+/* Camada adicional: histórico recuperado da versão atual, integrado à ficha clara. */
+.ciapi-servidores-historico{margin-top:22px;min-width:0;border-top:1px solid #dce6f2;padding-top:22px}
+.ciapi-servidores-historico :is(h2,h3,h4){color:#15385d}
+.ciapi-servidores-historico :is(input,select,textarea){max-width:100%}
+.ciapi-servidores-profile-body{min-width:0}
+@media(max-width:640px){.ciapi-servidores-historico{margin-top:15px;padding-top:15px}}
