@@ -209,7 +209,7 @@ export const ServidoresPage = ({
   const [query, setQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [consultaSituacao, setConsultaSituacao] = useState<'TODOS' | 'ATIVO' | 'INATIVO'>('ATIVO');
+  const [consultaSituacao, setConsultaSituacao] = useState<'TODOS' | 'ATIVO' | 'INATIVO'>(initialAction === 'inativos' ? 'INATIVO' : initialAction === 'ativos' ? 'ATIVO' : 'TODOS');
   const [searchResults, setSearchResults] = useState<ServidorComVinculo[]>([]);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = useState('');

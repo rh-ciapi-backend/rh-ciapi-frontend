@@ -16,7 +16,6 @@ import { useAuth } from './contexts/AuthContext';
 
 import { DashboardPage } from './pages/DashboardPage';
 import { ServidoresPage } from './pages/ServidoresPage';
-import { PainelPessoalPage } from './pages/PainelPessoalPage';
 import FeriasPage from './pages/FeriasPage';
 import FrequenciaPage from './pages/FrequenciaPage';
 import MapasPage from './pages/MapasPage';
@@ -64,6 +63,7 @@ export default function App() {
   const [selectedModule, setSelectedModule] = useState('dashboard');
   const [showModulePage, setShowModulePage] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [servidoresNavigationId, setServidoresNavigationId] = useState(0);
 
   const handleLogout = useCallback(async () => {
     try { await signOut(); } catch (error) { console.error('Erro ao sair da sessão:', error); }
@@ -73,49 +73,47 @@ export default function App() {
     const safeTab: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setActiveTab(safeTab);
     setSelectedModule(safeTab === 'dashboard' ? 'dashboard' : (['admin','admin-usuarios','admin-categorias','admin-setores','admin-logs'].includes(safeTab) ? 'admin' : safeTab));
-    setInitialAction(safeTab === 'mapas' && action?.startsWith('mapa-') ? action : (['add','painel-pessoal','pesquisar','feriados','exportar','mensal'].includes(action || '') ? action! : null));
-    setShowModulePage(safeTab === 'dashboard' || action === 'add' || action === 'open' || action === 'painel-pessoal' || (safeTab === 'mapas' && !!action?.startsWith('mapa-')) || ['pesquisar','feriados','exportar','mensal'].includes(action || ''));
-    setSidebarCollapsed(false);
+    setInitialAction(action || (safeTab === 'servidores' ? 'pesquisar' : null));
+    setShowModulePage(safeTab === 'servidores' || Boolean(action));
+    if (safeTab === 'servidores') setServidoresNavigationId(v => v + 1);
   }, []);
 
   const moduleByTab: Record<string,string> = { dashboard:'dashboard', servidores:'servidores', frequencia:'frequencia', ferias:'ferias', mapas:'mapas', atestados:'atestados', requerimentos:'requerimentos', admin:'admin', 'admin-usuarios':'admin', 'admin-categorias':'admin', 'admin-setores':'admin', 'admin-logs':'admin', diagnostico:'diagnostico' };
-  // Abre o módulo contextual quando o usuário clica na barra horizontal.
   const openModule = (module: string, tab: string) => {
-    const target: AppTab = isValidTab(tab) ? tab : 'dashboard';
     setSelectedModule(module);
-    setActiveTab(target);
-    setInitialAction(null);
-    setShowModulePage(false);
+    setActiveTab(isValidTab(tab) ? tab : 'dashboard');
+    setInitialAction(module === 'servidores' ? 'pesquisar' : null);
+    setShowModulePage(module === 'servidores');
+    if (module === 'servidores') setServidoresNavigationId(v => v + 1);
     setSidebarCollapsed(false);
   };
-
   const openFromSide = (tab:string, action?:string) => {
-    navigateWithAction(tab, action || 'open');
+    navigateWithAction(tab, action);
   };
   const moduleHeading: Record<string,string> = { servidores:'Consulta de servidores', frequencia:'Frequência mensal', ferias:'Consulta e plano de férias', mapas:'Mapas institucionais', atestados:'Consulta de atestados', requerimentos:'Consulta de requerimentos', admin:'Administração', diagnostico:'Diagnóstico' };
   const displayedModule = selectedModule === 'dashboard' ? moduleByTab[activeTab] : selectedModule;
   const guardedModule = displayedModule !== 'dashboard';
   const renderSelectedContent = () => {
-    if (guardedModule && !showModulePage) {
+    if (guardedModule && !showModulePage && displayedModule !== 'servidores') {
       return <section className="ciapi-entry" aria-label="Abertura do módulo">
         <div className="ciapi-entry__icon" aria-hidden="true">⌕</div>
         <p className="ciapi-entry__eyebrow">CIAPI RH · {displayedModule.toUpperCase()}</p>
         <h2>{moduleHeading[displayedModule] || 'Consulta institucional'}</h2>
-        <p>Selecione uma opção no menu lateral para pesquisar, consultar ou editar registros. Os resultados são exibidos quando você abre a consulta.</p>
-        <button type="button" onClick={() => setShowModulePage(true)}>Abrir consulta →</button>
+        <p>Selecione uma opção no menu lateral ou abra a consulta para visualizar os registros. As tabelas não são carregadas nesta tela inicial.</p>
+        <button type="button" onClick={() => setShowModulePage(true)}>Abrir consulta / gerenciamento →</button>
       </section>;
     }
-    return <div className={guardedModule ? 'ciapi-existing-module' : 'ciapi-dashboard-light'}>{renderContent()}</div>;
+    return <div className={guardedModule ? 'ciapi-existing-module' : ''}>{renderContent()}</div>;
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
-      case 'servidores': return initialAction === 'painel-pessoal' ? <PainelPessoalPage /> : <ServidoresPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
+      case 'servidores': return <ServidoresPage key={servidoresNavigationId} initialAction={initialAction || 'pesquisar'} onActionHandled={() => setInitialAction(null)} />;
       case 'atestados': return <AtestadosPage />;
       case 'ferias': return <FeriasPage />;
-      case 'frequencia': return <FrequenciaPage initialAction={initialAction} onActionHandled={() => setInitialAction(null)} />;
-      case 'mapas': return <MapasPage initialAction={initialAction} />;
+      case 'frequencia': return <FrequenciaPage />;
+      case 'mapas': return <MapasPage />;
       case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;
