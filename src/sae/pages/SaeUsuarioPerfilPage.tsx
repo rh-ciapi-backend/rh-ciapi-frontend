@@ -145,7 +145,7 @@ export default function SaeUsuarioPerfilPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-6"
+      className="sae-prontuario-institucional space-y-6"
     >
       <section className="app-surface relative overflow-hidden p-5 sm:p-6">
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
@@ -202,7 +202,7 @@ export default function SaeUsuarioPerfilPage({
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard
           label="Agendamentos"
           value={perfil.agendamentos.length}
@@ -234,12 +234,6 @@ export default function SaeUsuarioPerfilPage({
           icon={ClipboardList}
         />
 
-        <KpiCard
-          label="Sinais vitais"
-          value={perfil.sinaisVitais.length}
-          helper="Registros de aferição"
-          icon={Activity}
-        />
       </div>
 
       <nav aria-label="Seções do prontuário" className="sae-perfil-nav">
