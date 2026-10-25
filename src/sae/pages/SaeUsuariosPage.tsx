@@ -1,670 +1,83 @@
-import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Search,
-  SlidersHorizontal,
-  UserPlus,
-  Users,
-  UserCheck,
-  UserX,
-  Sun,
-  Sunset,
-  MoreHorizontal,
-  Eye,
-  Pencil,
-  Phone,
-  MapPin,
-  IdCard,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-
+import { ArrowRight, AlertCircle, Loader2, Search, UserPlus, Users } from 'lucide-react';
 import { saeUsuariosService } from '../services/saeUsuariosService';
 import NovoUsuarioModal from '../components/usuarios/NovoUsuarioModal';
+import type { SaeUsuarioResumo, SituacaoUsuario } from '../types/saeUsuario';
 
-import type {
-  SaeUsuarioResumo,
-  SituacaoUsuario,
-} from '../types/saeUsuario';
-
-interface SaeUsuariosPageProps {
+interface Props {
   onAbrirUsuario: (usuarioId: string) => void;
+  situacaoInicial?: SituacaoUsuario | 'TODOS';
+  modo?: 'pesquisa' | 'inativos' | 'novo';
 }
 
-const statusStyles: Record<SituacaoUsuario, string> = {
-  ATIVO:
-    'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
-  INATIVO:
-    'border-slate-500/20 bg-slate-500/10 text-slate-400',
-};
+const normalizar = (valor: unknown) => String(valor ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-export default function SaeUsuariosPage({
-  onAbrirUsuario,
-}: SaeUsuariosPageProps) {
+export default function SaeUsuariosPage({ onAbrirUsuario, situacaoInicial = 'TODOS', modo = 'pesquisa' }: Props) {
   const [usuarios, setUsuarios] = useState<SaeUsuarioResumo[]>([]);
+  const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-
-  const [novoUsuarioAberto, setNovoUsuarioAberto] = useState(false);
-
-  const [busca, setBusca] = useState('');
-  const [situacao, setSituacao] =
-    useState<'TODOS' | SituacaoUsuario>('TODOS');
-  const [turno, setTurno] =
-    useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
+  const [novoAberto, setNovoAberto] = useState(modo === 'novo');
 
   useEffect(() => {
-    carregarUsuarios();
-  }, []);
+    let valido = true;
+    setCarregando(true);
+    setErro(null);
+    saeUsuariosService.listar(situacaoInicial === 'TODOS' ? undefined : { situacao: situacaoInicial })
+      .then((dados) => { if (valido) setUsuarios(dados); })
+      .catch((falha) => { if (valido) setErro(falha instanceof Error ? falha.message : 'Falha ao consultar usuários.'); })
+      .finally(() => { if (valido) setCarregando(false); });
+    return () => { valido = false; };
+  }, [situacaoInicial]);
 
-  const carregarUsuarios = async () => {
-    try {
-      setCarregando(true);
-      setErro(null);
+  useEffect(() => setBusca(''), [situacaoInicial]);
 
-      const dados = await saeUsuariosService.listar();
+  const encontrados = useMemo(() => {
+    const termo = normalizar(busca);
+    if (!termo) return [];
+    return usuarios.filter((item) => normalizar(item.nome).includes(termo) || normalizar(item.prontuario).includes(termo))
+      .slice(0, 100);
+  }, [usuarios, busca]);
 
-      setUsuarios(dados);
-    } catch (error) {
-      console.error('Erro ao carregar usuários do SAE:', error);
-
-      setErro(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar os usuários.',
-      );
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const usuariosFiltrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-
-    return usuarios.filter((usuario) => {
-      const atendeBusca =
-        !termo ||
-        usuario.nome.toLowerCase().includes(termo) ||
-        usuario.prontuario.toLowerCase().includes(termo);
-
-      const atendeSituacao =
-        situacao === 'TODOS' ||
-        usuario.situacao === situacao;
-
-      const atendeTurno =
-        turno === 'TODOS' ||
-        usuario.turno === turno;
-
-      return (
-        atendeBusca &&
-        atendeSituacao &&
-        atendeTurno
-      );
-    });
-  }, [usuarios, busca, situacao, turno]);
-
-  const totalAtivos = useMemo(
-    () =>
-      usuarios.filter(
-        (usuario) => usuario.situacao === 'ATIVO',
-      ).length,
-    [usuarios],
+  const titulo = modo === 'novo' ? 'Novo usuário' : situacaoInicial === 'INATIVO' ? 'Consultar usuários inativos' : 'Pesquisar usuário';
+  if (modo === 'novo') return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-6">
+      <h1 className="text-2xl font-bold text-slate-900">Novo usuário</h1>
+      <p className="mt-2 text-sm text-slate-600">Preencha o cadastro no formulário existente.</p>
+      <button type="button" onClick={() => setNovoAberto(true)} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Abrir formulário de cadastro</button>
+      <NovoUsuarioModal aberto={novoAberto} onClose={() => setNovoAberto(false)} onSalvo={(usuario) => { setNovoAberto(false); onAbrirUsuario(usuario.id); }} />
+    </section>
   );
-
-  const totalInativos = useMemo(
-    () =>
-      usuarios.filter(
-        (usuario) => usuario.situacao === 'INATIVO',
-      ).length,
-    [usuarios],
-  );
-
-  const totalManha = useMemo(
-    () =>
-      usuarios.filter(
-        (usuario) =>
-          usuario.situacao === 'ATIVO' &&
-          usuario.turno === 'MANHÃ',
-      ).length,
-    [usuarios],
-  );
-
-  const totalTarde = useMemo(
-    () =>
-      usuarios.filter(
-        (usuario) =>
-          usuario.situacao === 'ATIVO' &&
-          usuario.turno === 'TARDE',
-      ).length,
-    [usuarios],
-  );
-
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18 }}
-      className="space-y-6 sae-refresh"
-    >
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-            Gestão de Usuários
-          </p>
-
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
-            Usuários
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Consulte e acompanhe os usuários atendidos pelo CIAPI.
-          </p>
+    <section className="mx-auto w-full max-w-5xl space-y-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-600">CIAPI • Serviço de Atenção Especializada</p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-900">{titulo}</h1>
+        <p className="mt-2 text-sm text-slate-600">Pesquise pelo nome ou número do prontuário. Selecione um resultado para abrir a ficha completa na área de trabalho.</p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="block flex-1 text-sm font-semibold text-slate-700">
+            Consultar usuário
+            <span className="relative mt-2 block">
+              <Search size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input autoFocus value={busca} onChange={(event) => setBusca(event.target.value)}
+                placeholder="Digite o nome ou o prontuário..." aria-label="Pesquisar usuários"
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white pl-12 pr-4 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+            </span>
+          </label>
+          {modo === 'pesquisa' && <button type="button" onClick={() => setNovoAberto(true)} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700"><UserPlus size={18}/> Novo usuário</button>}
         </div>
-
-        <button
-          type="button"
-          onClick={() => setNovoUsuarioAberto(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/10 transition hover:bg-blue-600"
-        >
-          <UserPlus size={18} />
-          Novo Usuário
-        </button>
+        <p className="mt-3 text-xs text-slate-500">{carregando ? 'Carregando cadastros...' : `${usuarios.length} cadastros ${situacaoInicial === 'ATIVO' ? 'ativos' : 'inativos'} disponíveis para consulta`}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard
-          label="Total de Usuários"
-          value={usuarios.length}
-          helper="Cadastros disponíveis"
-          icon={Users}
-          iconClass="border-blue-500/20 bg-blue-500/10 text-blue-400"
-        />
-
-        <KpiCard
-          label="Usuários Ativos"
-          value={totalAtivos}
-          helper="Em acompanhamento"
-          icon={UserCheck}
-          iconClass="border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-        />
-
-        <KpiCard
-          label="Turno da Manhã"
-          value={totalManha}
-          helper="Usuários ativos"
-          icon={Sun}
-          iconClass="border-amber-500/20 bg-amber-500/10 text-amber-400"
-        />
-
-        <KpiCard
-          label="Turno da Tarde"
-          value={totalTarde}
-          helper="Usuários ativos"
-          icon={Sunset}
-          iconClass="border-orange-500/20 bg-orange-500/10 text-orange-400"
-        />
-
-        <KpiCard
-          label="Usuários Inativos"
-          value={totalInativos}
-          helper="Cadastros inativos"
-          icon={UserX}
-          iconClass="border-rose-500/20 bg-rose-500/10 text-rose-400"
-        />
-      </div>
-
-      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
-        <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto]">
-          <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              Busca
-            </label>
-
-            <div className="relative">
-              <Search
-                size={17}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
-              />
-
-              <input
-                type="text"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome, prontuário ou contato..."
-                className="h-11 w-full rounded-xl border border-border-dark bg-slate-800/60 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={() => {
-                setBusca('');
-                setSituacao('TODOS');
-                setTurno('TODOS');
-              }}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-4 text-sm font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white sm:w-auto"
-            >
-              Limpar
-            </button>
-          </div>
-        </div>
-
-        <div className="border-t border-border-dark px-4 py-4 sm:px-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                  Situação
-                </span>
-
-                <div className="inline-flex rounded-2xl border border-border-dark bg-slate-900/40 p-1">
-                  {[
-                    { value: 'TODOS', label: 'Todos' },
-                    { value: 'ATIVO', label: 'Ativos' },
-                    { value: 'INATIVO', label: 'Inativos' },
-                  ].map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() =>
-                        setSituacao(item.value as 'TODOS' | SituacaoUsuario)
-                      }
-                      className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
-                        situacao === item.value
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-slate-300 hover:text-white'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="hidden h-8 w-px bg-border-dark xl:block" />
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                  Turno
-                </span>
-
-                <div className="inline-flex rounded-2xl border border-border-dark bg-slate-900/40 p-1">
-                  {[
-                    { value: 'TODOS', label: 'Todos' },
-                    { value: 'MANHÃ', label: 'Manhã' },
-                    { value: 'TARDE', label: 'Tarde' },
-                  ].map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() =>
-                        setTurno(item.value as 'TODOS' | 'MANHÃ' | 'TARDE')
-                      }
-                      className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
-                        turno === item.value
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-slate-300 hover:text-white'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <SlidersHorizontal size={14} />
-              filtros rápidos no estilo relatório
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-[20px] border border-border-dark bg-card-dark">
-        <div className="flex items-center justify-between gap-3 border-b border-border-dark px-5 py-4">
-          <div>
-            <h2 className="text-sm font-bold text-white">
-              Lista de usuários
-            </h2>
-
-            <p className="mt-1 text-xs text-slate-500">
-              {usuariosFiltrados.length} registro(s) encontrado(s)
-            </p>
-          </div>
-        </div>
-
-        {carregando ? (
-          <LoadingState />
-        ) : erro ? (
-          <ErrorState
-            mensagem={erro}
-            onRetry={carregarUsuarios}
-          />
-        ) : usuariosFiltrados.length > 0 ? (
-          <>
-            <div className="hidden lg:block">
-              <div className="grid grid-cols-[110px_1.4fr_110px_110px_140px_140px_56px] gap-3 border-b border-border-dark bg-slate-800/30 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                <span>Prontuário</span>
-                <span>Usuário</span>
-                <span>Sexo</span>
-                <span>Turno</span>
-                <span>Situação</span>
-                <span>Contato</span>
-                <span />
-              </div>
-
-              {usuariosFiltrados.map((usuario) => (
-                <UsuarioRow
-                  key={usuario.id}
-                  usuario={usuario}
-                  onAbrir={onAbrirUsuario}
-                />
-              ))}
-            </div>
-
-            <div className="divide-y divide-border-dark lg:hidden">
-              {usuariosFiltrados.map((usuario) => (
-                <UsuarioCard
-                  key={usuario.id}
-                  usuario={usuario}
-                  onAbrir={onAbrirUsuario}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <EmptyState />
-        )}
-      </section>
-
-      <NovoUsuarioModal
-        aberto={novoUsuarioAberto}
-        onClose={() => setNovoUsuarioAberto(false)}
-        onSalvo={(usuario) => {
-          setNovoUsuarioAberto(false);
-
-          setUsuarios((atuais) =>
-            [...atuais, usuario].sort((a, b) =>
-              a.nome.localeCompare(b.nome, 'pt-BR'),
-            ),
-          );
-        }}
-      />
-    </motion.section>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  helper,
-  icon: Icon,
-  iconClass,
-}: {
-  label: string;
-  value: number;
-  helper: string;
-  icon: React.ElementType;
-  iconClass: string;
-}) {
-  return (
-    <article className="rounded-[20px] border border-border-dark bg-card-dark p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-            {label}
-          </p>
-
-          <p className="mt-3 text-3xl font-bold text-white">
-            {value}
-          </p>
-
-          <p className="mt-2 text-xs text-slate-500">
-            {helper}
-          </p>
-        </div>
-
-        <div
-          className={`flex h-10 w-10 items-center justify-center rounded-xl border ${iconClass}`}
-        >
-          <Icon size={18} />
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function UsuarioRow({
-  usuario,
-  onAbrir,
-}: {
-  usuario: SaeUsuarioResumo;
-  onAbrir: (usuarioId: string) => void;
-}) {
-  return (
-    <div className="grid grid-cols-[110px_1.4fr_110px_110px_140px_140px_56px] items-center gap-3 border-b border-border-dark px-5 py-4 text-sm last:border-b-0 hover:bg-slate-800/20">
-      <button
-        type="button"
-        onClick={() => onAbrir(usuario.id)}
-        className="text-left font-semibold text-slate-300 transition hover:text-primary"
-        title="Abrir perfil do usuário"
-      >
-        {usuario.prontuario || '—'}
-      </button>
-
-      <div className="min-w-0">
-        <button
-          type="button"
-          onClick={() => onAbrir(usuario.id)}
-          className="block max-w-full truncate text-left font-semibold text-white transition hover:text-primary"
-          title={`Abrir perfil de ${usuario.nome}`}
-        >
-          {usuario.nome}
-        </button>
-
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-          {usuario.idade != null && (
-            <span>{usuario.idade} anos</span>
-          )}
-
-          {usuario.bairro && (
-            <>
-              <span>•</span>
-              <span>{usuario.bairro}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <span className="text-slate-400">
-        {usuario.sexo || '—'}
-      </span>
-
-      <span className="text-slate-400">
-        {usuario.turno || '—'}
-      </span>
-
-      <div>
-        <span
-          className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusStyles[usuario.situacao]}`}
-        >
-          {usuario.situacao}
-        </span>
-      </div>
-
-      <span className="text-slate-400">
-        {usuario.telefonePrincipal || '—'}
-      </span>
-
-      <button
-        type="button"
-        onClick={() => onAbrir(usuario.id)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
-        aria-label={`Abrir perfil de ${usuario.nome}`}
-        title="Abrir perfil"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-    </div>
-  );
-}
-
-function UsuarioCard({
-  usuario,
-  onAbrir,
-}: {
-  usuario: SaeUsuarioResumo;
-  onAbrir: (usuarioId: string) => void;
-}) {
-  return (
-    <article className="p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <button
-            type="button"
-            onClick={() => onAbrir(usuario.id)}
-            className="block max-w-full truncate text-left font-semibold text-white transition hover:text-primary"
-          >
-            {usuario.nome}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onAbrir(usuario.id)}
-            className="mt-1 text-left text-xs text-slate-500 transition hover:text-primary"
-          >
-            Prontuário {usuario.prontuario || '—'}
-          </button>
-        </div>
-
-        <span
-          className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusStyles[usuario.situacao]}`}
-        >
-          {usuario.situacao}
-        </span>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <IdCard
-            size={14}
-            className="text-slate-600"
-          />
-          {usuario.turno || 'Turno não informado'}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Phone
-            size={14}
-            className="text-slate-600"
-          />
-          {usuario.telefonePrincipal || 'Sem telefone'}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <MapPin
-            size={14}
-            className="text-slate-600"
-          />
-          {usuario.bairro || 'Bairro não informado'}
-        </div>
-      </div>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => onAbrir(usuario.id)}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
-        >
-          <Eye size={15} />
-          Abrir
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onAbrir(usuario.id)}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-dark bg-slate-800/50 px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-primary/30 hover:text-white"
-        >
-          <Pencil size={15} />
-          Perfil
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div className="flex min-h-[320px] items-center justify-center">
-      <div className="text-center">
-        <Loader2
-          size={28}
-          className="mx-auto animate-spin text-primary"
-        />
-
-        <p className="mt-3 text-sm text-slate-400">
-          Carregando usuários...
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ErrorState({
-  mensagem,
-  onRetry,
-}: {
-  mensagem: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="flex min-h-[320px] items-center justify-center px-6 py-12 text-center">
-      <div className="max-w-md">
-        <AlertCircle
-          size={28}
-          className="mx-auto text-rose-400"
-        />
-
-        <h3 className="mt-4 font-bold text-white">
-          Não foi possível carregar os usuários
-        </h3>
-
-        <p className="mt-2 text-sm text-slate-500">
-          {mensagem}
-        </p>
-
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex min-h-[320px] items-center justify-center px-6 py-12 text-center">
-      <div className="max-w-md">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
-          <Users size={22} />
-        </div>
-
-        <h3 className="mt-4 text-base font-bold text-white">
-          Nenhum usuário encontrado
-        </h3>
-
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          Não existem registros correspondentes aos filtros selecionados.
-        </p>
-      </div>
-    </div>
+      {erro && <div role="alert" className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><AlertCircle size={18}/>{erro}</div>}
+      {carregando ? <div className="flex items-center justify-center gap-2 p-12 text-slate-500"><Loader2 className="animate-spin"/> Carregando...</div>
+        : !busca.trim() ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 px-5 py-14 text-center text-slate-500"><Users size={32} className="mx-auto mb-3 text-blue-400"/>Digite um nome para localizar o prontuário.</div>
+        : <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-5 py-4"><h2 className="font-semibold text-slate-900">Resultados da consulta</h2><p className="mt-1 text-xs text-slate-500">{encontrados.length} resultado(s){encontrados.length === 100 ? ' (exibindo os primeiros 100)' : ''}</p></div>
+          {encontrados.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">Nenhum usuário localizado com esse nome ou prontuário.</p>
+          : <div className="divide-y divide-slate-100">{encontrados.map((usuario) => <button type="button" key={usuario.id} onClick={() => onAbrirUsuario(usuario.id)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-blue-50 focus:bg-blue-50"><span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{usuario.nome}</span><span className="mt-1 block text-xs text-slate-500">Prontuário {usuario.prontuario || '—'}{usuario.idade != null ? ` • ${usuario.idade} anos` : ''}{usuario.turno ? ` • ${usuario.turno}` : ''}</span></span><ArrowRight size={18} className="shrink-0 text-blue-600"/></button>)}</div>}
+        </section>}
+      <NovoUsuarioModal aberto={novoAberto} onClose={() => setNovoAberto(false)} onSalvo={(usuario) => { setNovoAberto(false); onAbrirUsuario(usuario.id); }} />
+    </section>
   );
 }

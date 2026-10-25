@@ -1,0 +1,16 @@
+/* Somente ambiente SAE; não altera RH CIAPI. */
+.sae-usuarios-workspace{display:flex;min-width:0;flex:1;align-items:stretch;background:#f1f5fb}
+.sae-outros-workspace{display:block;min-width:0;flex:1}
+.sae-usuarios-workspace .sae-horizontal-workspace{min-width:0;flex:1}
+.sae-usuarios-sidebar{width:232px;flex:none;background:#fff;border-right:1px solid #dce6f2;padding:18px 12px;min-height:calc(100vh - 230px)}
+.sae-usuarios-sidebar-title{font-weight:800;color:#12385d;padding:10px 12px 17px;border-bottom:1px solid #e0e7ef;margin-bottom:11px}
+.sae-usuarios-sidebar button{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:#1d507d;text-align:left;padding:14px 12px;border-radius:9px;font-size:13px;cursor:pointer}
+.sae-usuarios-sidebar button:hover,.sae-usuarios-sidebar button.selected{background:#e8f2ff;color:#0864b9;font-weight:700}
+.sae-painel-usuarios{color:#173a5c;width:100%;}
+.sae-painel-head,.sae-painel-list{background:#fff;border:1px solid #d6e3f2;border-radius:17px;padding:20px;margin-bottom:18px}
+.sae-painel-head{display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}.sae-painel-head small{color:#2870c2;font-weight:800;letter-spacing:.1em}.sae-painel-head h1{font-size:25px;font-weight:800;margin:7px 0}.sae-painel-head p{font-size:13px;color:#59708b}.sae-painel-head button{display:flex;align-items:center;gap:8px;background:#176bc0;color:white;border-radius:10px;padding:10px 14px;font-weight:700}
+.sae-painel-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}.sae-painel-card{display:flex;flex-direction:column;gap:10px;background:white;border:1px solid #d9e5f2;border-radius:14px;padding:19px}.sae-painel-card svg{color:#1c72c1}.sae-painel-card span{font-size:12px;color:#617d99}.sae-painel-card strong{font-size:28px;color:#0d365e}
+.sae-painel-error{padding:12px;border:1px solid #f4b5b5;color:#9d2c2c;background:#fff3f3;margin:10px 0}
+.sae-painel-list header{display:flex;justify-content:space-between;align-items:center}.sae-painel-list h2{font-size:17px;font-weight:800}.sae-painel-list header span{color:#7187a1;font-size:12px}.sae-painel-filters{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.sae-painel-filters label{display:flex;align-items:center;gap:9px;flex:1;min-width:220px}.sae-painel-filters input,.sae-painel-filters select{width:100%;height:43px;border:1px solid #cfdeef;border-radius:9px;background:#fff;color:#244563;padding:0 12px}.sae-painel-filters select{width:auto}.sae-painel-results{max-height:460px;overflow:auto}.sae-painel-results button{display:flex;flex-direction:column;text-align:left;width:100%;padding:13px;border-bottom:1px solid #e3ebf4}.sae-painel-results button:hover{background:#f0f7ff}.sae-painel-results button span{font-size:11px;color:#637b92;margin-top:4px}.sae-painel-empty{padding:25px;color:#70839a;text-align:center}
+@media(max-width:1100px){.sae-painel-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:730px){.sae-usuarios-workspace{flex-direction:column}.sae-usuarios-sidebar{width:100%;min-height:auto;padding:10px;display:flex;flex-wrap:wrap;gap:4px}.sae-usuarios-sidebar-title{width:100%;padding:6px}.sae-usuarios-sidebar button{width:auto;padding:10px}.sae-painel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
