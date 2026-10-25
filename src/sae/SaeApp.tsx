@@ -48,7 +48,7 @@ export default function SaeApp() {
           setUsuarioSelecionadoId(null);
           setAgendamentoFoco(null);
         } else {
-          setActiveTab('usuarios');
+          setActiveTab('dashboard');
         }
       })
       .catch(() => {

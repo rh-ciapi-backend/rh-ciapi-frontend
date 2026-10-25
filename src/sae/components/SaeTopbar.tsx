@@ -25,7 +25,7 @@ interface SaeTopbarProps {
 }
 
 const TITLES: Record<SaeTab, string> = {
-  dashboard: 'Dashboard',
+  dashboard: 'Início',
   usuarios: 'Usuários',
   triagem: 'Triagem',
   agendamentos: 'Agendamentos',
