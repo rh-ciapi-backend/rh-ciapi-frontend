@@ -21,6 +21,7 @@ export default function SaeApp() {
   const { signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState<SaeTab>('dashboard');
+  const [visaoTriagem, setVisaoTriagem] = useState<'NOVA' | 'PENDENTES' | 'CONCLUIDAS' | 'HISTORICO'>('PENDENTES');
   const [restrictedProfessional, setRestrictedProfessional] = useState(false);
   const [accessResolved, setAccessResolved] = useState(false);
   const [usuarioSelecionadoId, setUsuarioSelecionadoId] =
@@ -78,6 +79,7 @@ export default function SaeApp() {
     }
 
     setActiveTab(tab);
+    if (tab === 'triagem') setVisaoTriagem('PENDENTES');
 
     if (tab !== 'usuarios') {
       setUsuarioSelecionadoId(null);
@@ -131,6 +133,7 @@ export default function SaeApp() {
           <SaeTriagemPage
             onIrAgendamentos={abrirAgendamentos}
             onAbrirUsuario={abrirUsuario}
+            visao={visaoTriagem}
           />
         );
 
@@ -183,6 +186,12 @@ export default function SaeApp() {
         onChange={handleChangeTab}
         onLogout={handleLogout}
         restrictedProfessional={restrictedProfessional}
+        visaoTriagem={visaoTriagem}
+        onSelecionarTriagem={(visao) => {
+          setActiveTab('triagem');
+          setUsuarioSelecionadoId(null);
+          setVisaoTriagem(visao);
+        }}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
