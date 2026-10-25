@@ -197,7 +197,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
         const parametros: MapaFilters = {
           ...filtros, ...competencia, categoria: chave,
           layout: 'automatico',
-          modoExportacao: formatoExportacao === 'zip' ? 'arquivos_separados' : 'arquivo_unico',
+          modoExportacao: formatoExportacao === 'zip' ? 'zip_consolidado' : 'arquivo_unico',
         };
         try {
           if (formatoExportacao === 'pdf') await mapasService.exportarPdf(parametros);
@@ -240,7 +240,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
           <label><span>Mês</span><select value={filtros.mes} onChange={e => setFiltros(f => ({...f, mes: Number(e.target.value)}))}>{MESES.map((m,i) => <option key={m} value={i+1}>{m}</option>)}</select></label>
           <label><span>Ano</span><input type="number" min={2020} max={2100} value={filtros.ano} onChange={e => setFiltros(f => ({...f,ano:Number(e.target.value)||new Date().getFullYear()}))}/></label>
           <label><span>Setor / lotação (opcional)</span><input placeholder="Todos os setores" value={filtros.setor||''} onChange={e => setFiltros(f => ({...f,setor:e.target.value}))}/></label>
-          <label><span>Situação</span><select value={filtros.status||''} onChange={e => setFiltros(f => ({...f,status:e.target.value}))}><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="">Todos</option></select></label>
+          <label><span>Situação</span><select value={filtros.status||''} onChange={e => setFiltros(f => ({...f,status:e.target.value as NonNullable<MapaFilters['status']>}))}><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="TODOS">Todos</option></select></label>
         </div>
       </div>
       <div className="ciapi-mapas-export-section"><strong>Formato do arquivo</strong>

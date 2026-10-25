@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../../config/api';
 export type SaeCampoModeloDocumento = {
   name: string;
   label: string;
-  type: 'text' | 'date' | 'textarea' | 'select';
+  type: 'text' | 'date' | 'textarea' | 'select' | 'multiselect';
   section?: string;
   options?: string[];
   placeholder?: string;
@@ -112,7 +112,7 @@ async function download(path: string, fallbackName: string) {
   const blob = await response.blob();
   const header = response.headers.get('content-disposition') || '';
   const matched = header.match(/filename="?([^"]+)"?/i);
-  const filename = (matched?.[1] || fallbackName).replace(/[\\/\x00-\x1f]/g, '_');
+  const filename = matched?.[1] || fallbackName;
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
