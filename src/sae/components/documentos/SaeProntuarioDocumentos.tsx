@@ -6,6 +6,8 @@ import {
   FileCheck2,
   FilePlus2,
   FileText,
+  FolderClosed,
+  FolderOpen,
   Loader2,
   Paperclip,
   Save,
@@ -16,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import '../../pages/sae-perfil-abas.css';
 
 import {
   saeDocumentosService,
@@ -41,6 +44,7 @@ const statusStyle: Record<string, string> = {
 
 export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: Props) {
   const [documentos, setDocumentos] = useState<SaeDocumentoProntuario[]>([]);
+  const [pastaAtiva, setPastaAtiva] = useState<'TODOS' | 'RASCUNHO' | 'FINALIZADO' | 'ASSINADO'>('TODOS');
   const [modelos, setModelos] = useState<SaeModeloDocumento[]>([]);
   const [podeCriar, setPodeCriar] = useState(false);
   const [profissionalNome, setProfissionalNome] = useState('');
@@ -74,9 +78,6 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
   };
 
   useEffect(() => {
-    setEditor(null);
-    setUploadTarget(null);
-    setDocumentos([]);
     carregar();
   }, [usuarioId]);
 
@@ -85,6 +86,19 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
     const timer = window.setTimeout(() => setSucesso(''), 3500);
     return () => window.clearTimeout(timer);
   }, [sucesso]);
+
+  // Pastas virtuais: apenas organizam documentos já autorizados pelo serviço.
+  // Nenhum registro ou arquivo é movido no banco de dados.
+  const pastas = useMemo(() => ([
+    { id: 'TODOS' as const, titulo: 'Todos os documentos', quantidade: documentos.length },
+    { id: 'RASCUNHO' as const, titulo: 'Rascunhos', quantidade: documentos.filter(d => d.status === 'RASCUNHO').length },
+    { id: 'FINALIZADO' as const, titulo: 'Finalizados', quantidade: documentos.filter(d => d.status === 'FINALIZADO').length },
+    { id: 'ASSINADO' as const, titulo: 'Assinados', quantidade: documentos.filter(d => d.status === 'ASSINADO').length },
+  ]), [documentos]);
+  const documentosVisiveis = useMemo(() =>
+    pastaAtiva === 'TODOS' ? documentos : documentos.filter(d => d.status === pastaAtiva),
+    [documentos, pastaAtiva]
+  );
 
   const modeloById = useMemo(
     () => new Map(modelos.map((item) => [item.id, item])),
@@ -248,21 +262,34 @@ export default function SaeProntuarioDocumentos({ usuarioId, compact = false }: 
         </div>
       )}
 
+      {!carregando && !erro && (
+        <div className="sae-doc-folders" role="group" aria-label="Pastas de documentos do prontuário">
+          {pastas.map(pasta => {
+            const aberta = pastaAtiva === pasta.id;
+            const FolderIcon = aberta ? FolderOpen : FolderClosed;
+            return <button key={pasta.id} type="button" aria-pressed={aberta} onClick={() => setPastaAtiva(pasta.id)} className={'sae-doc-folder' + (aberta ? ' is-active' : '')}>
+              <FolderIcon size={23} aria-hidden="true" />
+              <span><strong>{pasta.titulo}</strong><small>{pasta.quantidade} arquivo(s)</small></span>
+            </button>;
+          })}
+        </div>
+      )}
+
       {carregando ? (
         <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border-dark bg-card-dark">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
-      ) : documentos.length === 0 ? (
+      ) : documentosVisiveis.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border-dark bg-card-dark px-6 py-12 text-center">
           <FileText className="mx-auto h-8 w-8 text-slate-600" />
-          <p className="mt-3 font-semibold text-slate-300">Nenhum documento no prontuário.</p>
+          <p className="mt-3 font-semibold text-slate-300">Nenhum documento nesta pasta.</p>
           <p className="mt-1 text-sm text-slate-500">
-            O primeiro relatório criado pelo profissional aparecerá aqui.
+            Os documentos correspondentes aparecerão aqui quando estiverem disponíveis.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {documentos.map((item) => (
+          {documentosVisiveis.map((item) => (
             <article
               key={item.id}
               className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:p-5"
