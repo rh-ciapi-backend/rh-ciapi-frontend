@@ -1,3 +1,4 @@
+import './rh-servidores-restaurado.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search,
@@ -210,6 +211,7 @@ export const ServidoresPage = ({
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterSetor, setFilterSetor] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('ATIVO');
+  const [visaoServidores, setVisaoServidores] = useState<'pesquisa' | 'painel'>('pesquisa');
   const [filterSexo, setFilterSexo] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<ServidorComVinculo | null>(null);
@@ -224,10 +226,21 @@ export const ServidoresPage = ({
   const [loadTimeout, setLoadTimeout] = useState(false);
 
   useEffect(() => {
+    if (!initialAction) return;
     if (initialAction === 'add') {
+      setVisaoServidores('pesquisa');
       handleAddEmployee();
-      if (onActionHandled) onActionHandled();
+    } else if (initialAction === 'painel-pessoal') {
+      setVisaoServidores('painel');
+    } else if (initialAction === 'ativos' || initialAction === 'inativos' || initialAction === 'pesquisar' || initialAction === 'open') {
+      setVisaoServidores('pesquisa');
+      setFilterStatus(initialAction === 'inativos' ? 'INATIVO' : 'ATIVO');
+      setSearchTerm('');
+      setDebouncedSearchTerm('');
+      setIsDetailsModalOpen(false);
+      setSelectedEmployee(null);
     }
+    onActionHandled?.();
   }, [initialAction, onActionHandled]);
 
   useEffect(() => {
@@ -602,7 +615,18 @@ export const ServidoresPage = ({
     : null;
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="rh-servidores-restaurado space-y-5 sm:space-y-6">
+      <div className="rh-servidores-intro">
+        <div>
+          <p className="rh-servidores-eyebrow">CIAPI RH / Gestão de pessoas</p>
+          <h2>{visaoServidores === 'painel' ? 'Painel de Pessoal' : filterStatus === 'INATIVO' ? 'Consultar servidores inativos' : 'Consultar servidores ativos'}</h2>
+          <p>{visaoServidores === 'painel' ? 'Indicadores e gerenciamento dos servidores.' : 'Digite um nome ou matrícula e selecione o resultado para abrir a ficha completa.'}</p>
+        </div>
+        <button type="button" className="rh-servidores-switch" onClick={() => setVisaoServidores(v => v === 'painel' ? 'pesquisa' : 'painel')}>
+          {visaoServidores === 'painel' ? 'Voltar à pesquisa' : 'Painel de Pessoal'}
+        </button>
+      </div>
+      {visaoServidores === 'painel' && <>
       <section className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -672,7 +696,8 @@ export const ServidoresPage = ({
         </div>
       </section>
 
-      <section className="app-surface overflow-hidden">
+      </>}
+      {!isDetailsModalOpen && <section className="app-surface overflow-hidden rh-servidores-consulta">
         <div className="border-b border-border-dark/70 p-4 sm:p-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="relative min-w-0 flex-1">
@@ -795,7 +820,9 @@ export const ServidoresPage = ({
           )}
         </AnimatePresence>
 
-        <div className="relative min-h-[220px]">
+        {visaoServidores === 'pesquisa' && debouncedSearchTerm.trim().length < 2 ? (
+          <div className="rh-servidores-empty"><Search size={26}/><strong>Pesquisa de servidores</strong><span>Digite pelo menos 2 caracteres do nome ou da matrícula para consultar.</span></div>
+        ) : (<div className="relative min-h-[220px]">
           {isLoading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-card-dark/55 backdrop-blur-[2px]">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -882,7 +909,7 @@ export const ServidoresPage = ({
               })}
             </div>
           )}
-        </div>
+        </div>)}
 
         <div className="flex flex-col gap-3 border-t border-border-dark/70 bg-slate-900/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-xs text-slate-500">
@@ -909,24 +936,17 @@ export const ServidoresPage = ({
             </button>
           </div>
         </div>
-      </section>
+      </section>}
 
       <AnimatePresence>
         {isDetailsModalOpen && detailEmployee && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeDetailsModal}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            />
-
+          <div className="rh-servidores-ficha-area">
+            <button type="button" onClick={closeDetailsModal} className="rh-servidores-switch mb-3">← Voltar aos resultados</button>
             <motion.div
               initial={{ scale: 0.96, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 20 }}
-              className="relative z-[61] max-h-[calc(100dvh-1rem)] w-full max-w-5xl overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
+              className="relative z-[1] w-full overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-xl sm:rounded-3xl"
             >
               <div className="border-b border-border-dark bg-slate-900/60 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -988,7 +1008,7 @@ export const ServidoresPage = ({
                 </div>
               </div>
 
-              <div className="max-h-[calc(100dvh-9rem)] space-y-6 overflow-y-auto px-4 py-4 sm:max-h-[calc(90vh-110px)] sm:space-y-8 sm:px-6 sm:py-6">
+              <div className="space-y-6 px-4 py-4 sm:space-y-8 sm:px-6 sm:py-6">
                 <section className="space-y-4">
                   <div className="border-b border-border-dark pb-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-primary">
