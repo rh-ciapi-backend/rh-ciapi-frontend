@@ -1,5 +1,5 @@
-import './dashboard-institucional-ciapi.css';
-import DashboardComplementos from '../components/dashboard/DashboardComplementos';
+import './dashboard-home-ciapi.css';
+import AgendaLembretesCIAPI from '../components/dashboard/AgendaLembretesCIAPI';
 import './dashboard-rh-restaurado.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -292,105 +292,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }
 
   return (
-    <div className="rh-ciapi-dashboard rh-dashboard-institucional space-y-7">
-      {error ? (
-        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
-          {error}
-        </div>
-      ) : null}
-
-      <section className="rh-home-banner" aria-label="Boas-vindas ao CIAPI">
-        <div className="rh-home-banner__content">
-          <span>VISÃO GERAL DO CIAPI</span>
-          <h2>{greeting}, {primeiroNome}! 👋</h2>
+    <div className="ciapi-home-v2">
+      {error && <div className="ciapi-home-error" role="alert">{error}</div>}
+      <section className="ciapi-home-hero" aria-label="Visão geral do CIAPI">
+        <div className="ciapi-home-hero-shade">
+          <span className="ciapi-home-eyebrow">VISÃO GERAL DO CIAPI</span>
+          <h1>{greeting}, {primeiroNome}! 👋</h1>
           <p>Que seu dia seja produtivo e cheio de realizações.</p>
-          <small>{formattedDate} · {formattedTime}</small>
+          <div className="ciapi-home-clock"><CalendarDays size={16}/>{formattedDate}<Clock3 size={16}/>{formattedTime}</div>
         </div>
-        <div className="rh-home-banner__photo">
-          <img src="/ciapi/fachada-ciapi.jpg" alt="Fachada do CIAPI" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
-          <p>Valorização, respeito e cuidado sempre com nossas pessoas.</p>
-        </div>
-      </section>
-      <section className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Visão geral
-          </p>
-
-          <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
-            {greeting}, {primeiroNome}
-          </h2>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400 sm:text-sm">
-            <div className="flex items-center gap-2">
-              <CalendarDays size={16} className="text-slate-500" />
-              <span>{formattedDate}</span>
-            </div>
-
-            <span className="text-slate-600">•</span>
-
-            <div className="flex items-center gap-2">
-              <Clock3 size={16} className="text-slate-500" />
-              <span>{formattedTime}</span>
-            </div>
-          </div>
-
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-500">
-            Acompanhe os principais indicadores do CIAPI em um único lugar.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onNavigate('servidores', 'add')}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/15 transition hover:bg-primary-hover sm:w-auto"
-        >
-          <Plus size={18} />
-          Novo Servidor
-        </button>
+        <div className="ciapi-home-motto">Valorização, respeito e cuidado sempre com nossas pessoas.</div>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        <StatCard
-          title="Total de servidores"
-          value={stats.total}
-          subtitle="Servidores cadastrados"
-          icon={Users}
-          iconClass="text-blue-400"
-          onClick={() => onNavigate('servidores', 'pesquisar')}
-        />
-
-        <StatCard
-          title="Servidores ativos"
-          value={stats.ativos}
-          subtitle="Cadastros com status ativo"
-          icon={UserCheck}
-          iconClass="text-emerald-400"
-          onClick={() => onNavigate('servidores', 'ativos')}
-        />
-
-        <StatCard
-          title="Férias no mês"
-          value="—"
-          subtitle="Consulte os registros no módulo Férias"
-          icon={Calendar}
-          iconClass="text-amber-400"
-          onClick={() => onNavigate('ferias')}
-        />
-
-        <StatCard
-          title="Faltas / atestados"
-          value="—"
-          subtitle="Consulte os registros de atestados"
-          icon={AlertCircle}
-          iconClass="text-rose-400"
-          onClick={() => onNavigate('atestados')}
-        />
+      <section className="ciapi-home-stats" aria-label="Indicadores">
+        <StatCard title="Total de servidores" value={stats.total} subtitle="Servidores cadastrados" icon={Users} iconClass="text-blue-500" onClick={() => onNavigate('servidores', 'pesquisar')}/>
+        <StatCard title="Servidores ativos" value={stats.ativos} subtitle="Cadastros com status ativo" icon={UserCheck} iconClass="text-emerald-600" onClick={() => onNavigate('servidores', 'ativos')}/>
+        <StatCard title="Férias no mês" value="—" subtitle="Consultar no módulo Férias" icon={Calendar} iconClass="text-amber-600" onClick={() => onNavigate('ferias', 'open')}/>
+        <StatCard title="Faltas / atestados" value="—" subtitle="Consultar registros oficiais" icon={AlertCircle} iconClass="text-rose-600" onClick={() => onNavigate('atestados', 'open')}/>
       </section>
 
-      <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading} />
-      <BirthdayPanel servidores={servidores} isLoading={isLoading} />
-      <DashboardComplementos servidores={servidores} onNavigate={onNavigate} />
+      <section className="ciapi-home-bottom">
+        <div className="ciapi-home-panel ciapi-home-birthdays">
+          <div className="ciapi-home-panel-head"><div><h2>🎂 Aniversariantes do Dia</h2><p>Hoje é dia de celebrar a vida dos nossos servidores!</p></div></div>
+          <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading}/>
+          <details className="ciapi-home-more-birthdays"><summary>Ver calendário e próximos aniversários</summary><BirthdayPanel servidores={servidores} isLoading={isLoading}/></details>
+        </div>
+        <AgendaLembretesCIAPI userId={user?.id || 'local'}/>
+      </section>
     </div>
   );
 };
