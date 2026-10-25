@@ -208,6 +208,8 @@ export const ServidoresPage = ({
   const [employees, setEmployees] = useState<ServidorComVinculo[]>([]);
   const [query, setQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [consultaSituacao, setConsultaSituacao] = useState<'TODOS' | 'ATIVO' | 'INATIVO'>('ATIVO');
   const [searchResults, setSearchResults] = useState<ServidorComVinculo[]>([]);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = useState('');
@@ -233,11 +235,22 @@ export const ServidoresPage = ({
   const [loadTimeout, setLoadTimeout] = useState(false);
 
   useEffect(() => {
+    if (!initialAction) return;
     if (initialAction === 'add') {
       handleAddEmployee();
-      if (onActionHandled) onActionHandled();
+      onActionHandled?.();
+      return;
     }
-  }, [initialAction, onActionHandled]);
+    if (['ativos', 'inativos', 'pesquisar'].includes(initialAction)) {
+      setConsultaSituacao(initialAction === 'inativos' ? 'INATIVO' : initialAction === 'ativos' ? 'ATIVO' : 'TODOS');
+      setSelectedEmployee(null);
+      setQuery('');
+      setSearchResults([]);
+      setHasSearched(false);
+      setShowAll(false);
+      setLocalPhotoUrl(null);
+    }
+  }, [initialAction]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -627,19 +640,38 @@ export const ServidoresPage = ({
 
   void debouncedSearchTerm; void setDebouncedSearchTerm; void filterOptions; void setFilterCategory; void setFilterSetor; void setFilterStatus; void setFilterSexo; void summary; void handleExportCsv; void handleOpenDetails; void resetAllModalStates; void handleEditFromDetails; void handleDeleteFromDetails; void detailEmployee; void isDetailsModalOpen; void setIsDetailsModalOpen; void filteredEmployees; void ChevronRight; void MoreHorizontal; void Download; void Link2;
 
+  const filtrarSituacao = useCallback((emp: ServidorComVinculo) =>
+    consultaSituacao === 'TODOS' || getEmployeeStatus(emp).toUpperCase() === consultaSituacao,
+  [consultaSituacao]);
+
+  const visibleResults = useMemo(() => {
+    const base = showAll ? employees.filter(filtrarSituacao) : searchResults.filter(filtrarSituacao);
+    return [...base].sort((a, b) => getEmployeeName(a).localeCompare(getEmployeeName(b), 'pt-BR', { sensitivity: 'base' }));
+  }, [showAll, employees, searchResults, filtrarSituacao]);
+
   const runSearch = (event?: React.FormEvent) => {
     event?.preventDefault();
     const term = normalizeText(query);
     setSelectedEmployee(null);
     setLocalPhotoUrl(null);
+    setShowAll(false);
     if (!term) { setHasSearched(false); setSearchResults([]); return; }
     const matches = employees.filter((emp) => {
-      const text = normalizeText(`${getEmployeeName(emp)} ${getEmployeeMatricula(emp)} ${emp.matriculaSegunda || ''} ${emp.cpf || ''}`);
-      return text.includes(term);
+      const value = normalizeText(`${getEmployeeName(emp)} ${getEmployeeMatricula(emp)} ${emp.matriculaSegunda || ''} ${emp.cpf || ''}`);
+      return filtrarSituacao(emp) && value.includes(term);
     });
     setSearchResults(matches);
     setHasSearched(true);
     if (matches.length === 1) handleOpenDetails(matches[0]);
+  };
+
+  const mostrarTodos = () => {
+    setSelectedEmployee(null);
+    setQuery('');
+    setHasSearched(false);
+    setSearchResults([]);
+    setShowAll(true);
+    setLocalPhotoUrl(null);
   };
 
   const profileValue = (emp: ServidorComVinculo | null, ...keys: string[]) => {
@@ -664,17 +696,18 @@ export const ServidoresPage = ({
   return (
     <div className="ciapi-servidores-page">
       {!isModalOpen && <section className="ciapi-servidores-search">
-        <header><strong>Localizar Servidor</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
+        <header><strong>{consultaSituacao === 'INATIVO' ? 'Consultar servidores inativos' : consultaSituacao === 'ATIVO' ? 'Consultar servidores ativos' : 'Consultar servidores'}</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
         <form onSubmit={runSearch}>
           <label htmlFor="ciapi-search-servidor">Buscar por nome, CPF ou matrícula</label>
           <div className="ciapi-servidores-search-row">
             <Search size={20} aria-hidden="true" />
             <input id="ciapi-search-servidor" value={query} onChange={event => setQuery(event.target.value)} placeholder="Digite nome, CPF, matrícula ou segundo vínculo" />
           </div>
-          <p className="ciapi-servidores-hint">Informe o nome, CPF ou matrícula para localizar o servidor.</p>
+          <p className="ciapi-servidores-hint">Escolha uma consulta individual ou mostre todos os servidores da situação selecionada.</p>
           <div className="ciapi-servidores-actions">
-            <button className="ciapi-btn ciapi-btn-search" type="submit"><Search size={17}/> Pesquisar</button>
-            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={() => {setQuery('');setHasSearched(false);setSearchResults([]);closeDetailsModal();}}>Limpar</button>
+            <button className="ciapi-btn ciapi-btn-search" type="submit"><Search size={17}/> Consultar servidor individual</button>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={mostrarTodos}>Mostrar todos</button>
+            <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={() => {setQuery('');setHasSearched(false);setShowAll(false);setSearchResults([]);closeDetailsModal();}}>Limpar</button>
             <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={handleAddEmployee}><Plus size={17}/> Novo servidor</button>
           </div>
         </form>
@@ -683,12 +716,12 @@ export const ServidoresPage = ({
       {(error || successMessage) && <div className="ciapi-servidores-alert" role="status">{error || successMessage}{error && <button onClick={fetchEmployees}>Tentar novamente</button>}</div>}
       {isLoading && <p className="ciapi-servidores-loading">Carregando informações...</p>}
 
-      {!isModalOpen && hasSearched && !selectedEmployee && !isLoading && (
+      {!isModalOpen && (hasSearched || showAll) && !selectedEmployee && !isLoading && (
         <section className="ciapi-servidores-results">
-          <header><strong>Resultado da pesquisa</strong><span>{searchResults.length} registro(s)</span></header>
-          {!searchResults.length ? <p className="ciapi-servidores-empty">Nenhum servidor encontrado. Confira os dados e tente novamente.</p> : (
+          <header><strong>{showAll ? 'Todos os servidores da situação selecionada' : 'Resultado da pesquisa'}</strong><span>{visibleResults.length} registro(s)</span></header>
+          {!visibleResults.length ? <p className="ciapi-servidores-empty">Nenhum servidor encontrado. Confira os dados e tente novamente.</p> : (
             <div className="ciapi-servidores-matches">
-              {searchResults.map(emp => <button key={emp.id} type="button" onClick={() => handleOpenDetails(emp)}>
+              {visibleResults.map(emp => <button key={emp.id} type="button" onClick={() => handleOpenDetails(emp)}>
                 <span className="ciapi-servidores-avatar-small">{getInitials(getEmployeeName(emp))}</span>
                 <span><strong>{getEmployeeName(emp)}</strong><small>Matrícula {getEmployeeMatricula(emp)} · {getEmployeeCategoria(emp)}</small></span>
                 <ChevronRight size={19}/>
