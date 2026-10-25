@@ -1,0 +1,14 @@
+/* Dashboard RH: correção isolada de contraste após migração do portal para fundo claro. */
+.rh-ciapi-dashboard {color:#173556;}
+.rh-ciapi-dashboard h2.text-white {color:#10375d!important;}
+.rh-ciapi-dashboard .app-surface {background:#fff!important;border:1px solid #d5e2ef!important;border-radius:16px!important;box-shadow:0 6px 20px #2447690b!important;}
+.rh-ciapi-dashboard .app-surface .text-white {color:#12375a!important;}
+.rh-ciapi-dashboard .app-surface .text-slate-500 {color:#647a96!important;}
+.rh-ciapi-dashboard .app-surface .bg-slate-800\/70 {background:#ecf4ff!important;}
+.rh-ciapi-dashboard .app-surface .text-blue-400 {color:#246cca!important;}
+.rh-ciapi-dashboard .app-surface .text-emerald-400 {color:#07966c!important;}
+.rh-ciapi-dashboard .app-surface .text-amber-400 {color:#be7900!important;}
+.rh-ciapi-dashboard .app-surface .text-rose-400 {color:#d44460!important;}
+.rh-ciapi-dashboard .text-slate-400 {color:#647b97;}
+.rh-ciapi-dashboard .text-slate-500 {color:#667c95;}
+@media(max-width:640px){.rh-ciapi-dashboard .app-surface {min-height:130px;}}

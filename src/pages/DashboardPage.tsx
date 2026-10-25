@@ -1,3 +1,4 @@
+import './dashboard-rh-restaurado.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users,
@@ -289,7 +290,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }
 
   return (
-    <div className="space-y-7">
+    <div className="rh-ciapi-dashboard space-y-7">
       {error ? (
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}

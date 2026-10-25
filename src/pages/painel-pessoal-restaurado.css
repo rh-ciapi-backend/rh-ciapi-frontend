@@ -1,0 +1,12 @@
+/* Painel de Pessoal — apenas o RH Servidores */
+.ciapi-pessoal-summary{background:#fff;color:#12395c;border:1px solid #d7e3f0;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 6px 24px #173c6110}
+.ciapi-pessoal-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.ciapi-pessoal-heading span{font-size:10px;font-weight:800;letter-spacing:.16em;color:#46719d}
+.ciapi-pessoal-heading h2{font-size:24px;font-weight:800;margin:5px 0;color:#133b64}
+.ciapi-pessoal-heading p{font-size:13px;color:#5f7894}
+.ciapi-pessoal-heading button{border:1px solid #bed6ec;border-radius:9px;background:#f3f8fe;color:#195e9f;padding:11px 16px;font-weight:700;cursor:pointer}
+.ciapi-pessoal-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.ciapi-pessoal-stats>div{border:1px solid #d8e5f3;background:#f5f9ff;border-radius:12px;padding:16px;display:grid;gap:6px}
+.ciapi-pessoal-stats small{color:#597896;font-size:11px;text-transform:uppercase;font-weight:700}
+.ciapi-pessoal-stats strong{color:#113d65;font-size:28px}
+@media(max-width:620px){.ciapi-pessoal-stats{grid-template-columns:1fr}}

@@ -1,3 +1,4 @@
+import './painel-pessoal-restaurado.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search,
@@ -209,6 +210,7 @@ export const ServidoresPage = ({
   const [query, setQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [modoPainelPessoal, setModoPainelPessoal] = useState(initialAction === 'painel-pessoal');
   const [consultaSituacao, setConsultaSituacao] = useState<'TODOS' | 'ATIVO' | 'INATIVO'>(initialAction === 'inativos' ? 'INATIVO' : initialAction === 'ativos' ? 'ATIVO' : 'TODOS');
   const [searchResults, setSearchResults] = useState<ServidorComVinculo[]>([]);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
@@ -241,7 +243,17 @@ export const ServidoresPage = ({
       onActionHandled?.();
       return;
     }
+    if (initialAction === 'painel-pessoal') {
+      setModoPainelPessoal(true);
+      setConsultaSituacao('TODOS');
+      setSelectedEmployee(null);
+      setHasSearched(false);
+      setShowAll(true);
+      setQuery('');
+      return;
+    }
     if (['ativos', 'inativos', 'pesquisar'].includes(initialAction)) {
+      setModoPainelPessoal(false);
       setConsultaSituacao(initialAction === 'inativos' ? 'INATIVO' : initialAction === 'ativos' ? 'ATIVO' : 'TODOS');
       setSelectedEmployee(null);
       setQuery('');
@@ -695,7 +707,15 @@ export const ServidoresPage = ({
 
   return (
     <div className="ciapi-servidores-page">
-      {!isModalOpen && <section className="ciapi-servidores-search">
+      {!isModalOpen && modoPainelPessoal && <section className="ciapi-pessoal-summary" aria-label="Painel de Pessoal">
+        <div className="ciapi-pessoal-heading"><div><span>CIAPI RH / GESTÃO DE PESSOAS</span><h2>Painel de Pessoal</h2><p>Visão consolidada dos servidores cadastrados.</p></div><button type="button" onClick={() => { setModoPainelPessoal(false); setShowAll(false); setHasSearched(false); }}>Voltar à consulta</button></div>
+        <div className="ciapi-pessoal-stats">
+          <div><small>Total de servidores</small><strong>{summary.total}</strong></div>
+          <div><small>Servidores ativos</small><strong>{summary.ativos}</strong></div>
+          <div><small>Servidores inativos</small><strong>{summary.inativos}</strong></div>
+        </div>
+      </section>}
+      {!isModalOpen && !modoPainelPessoal && <section className="ciapi-servidores-search">
         <header><strong>{consultaSituacao === 'INATIVO' ? 'Consultar servidores inativos' : consultaSituacao === 'ATIVO' ? 'Consultar servidores ativos' : 'Consultar servidores'}</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
         <form onSubmit={runSearch}>
           <label htmlFor="ciapi-search-servidor">Buscar por nome, CPF ou matrícula</label>
