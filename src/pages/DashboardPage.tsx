@@ -1,3 +1,5 @@
+import './dashboard-institucional-ciapi.css';
+import DashboardComplementos from '../components/dashboard/DashboardComplementos';
 import './dashboard-rh-restaurado.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -166,8 +168,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     ativos: 0,
-    ferias: 12,
-    faltas: 8,
+    ferias: 0,
+    faltas: 0,
   });
 
   const [servidores, setServidores] = useState<Servidor[]>([]);
@@ -290,13 +292,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }
 
   return (
-    <div className="rh-ciapi-dashboard space-y-7">
+    <div className="rh-ciapi-dashboard rh-dashboard-institucional space-y-7">
       {error ? (
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}
         </div>
       ) : null}
 
+      <section className="rh-home-banner" aria-label="Boas-vindas ao CIAPI">
+        <div className="rh-home-banner__content">
+          <span>VISÃO GERAL DO CIAPI</span>
+          <h2>{greeting}, {primeiroNome}! 👋</h2>
+          <p>Que seu dia seja produtivo e cheio de realizações.</p>
+          <small>{formattedDate} · {formattedTime}</small>
+        </div>
+        <div className="rh-home-banner__photo">
+          <img src="/ciapi/fachada-ciapi.jpg" alt="Fachada do CIAPI" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+          <p>Valorização, respeito e cuidado sempre com nossas pessoas.</p>
+        </div>
+      </section>
       <section className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -343,7 +357,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           subtitle="Servidores cadastrados"
           icon={Users}
           iconClass="text-blue-400"
-          onClick={() => onNavigate('servidores')}
+          onClick={() => onNavigate('servidores', 'pesquisar')}
         />
 
         <StatCard
@@ -352,13 +366,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           subtitle="Cadastros com status ativo"
           icon={UserCheck}
           iconClass="text-emerald-400"
-          onClick={() => onNavigate('servidores')}
+          onClick={() => onNavigate('servidores', 'ativos')}
         />
 
         <StatCard
           title="Férias no mês"
-          value={stats.ferias}
-          subtitle="Indicador mensal de férias"
+          value="—"
+          subtitle="Consulte os registros no módulo Férias"
           icon={Calendar}
           iconClass="text-amber-400"
           onClick={() => onNavigate('ferias')}
@@ -366,8 +380,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         <StatCard
           title="Faltas / atestados"
-          value={stats.faltas}
-          subtitle="Indicador de ocorrências"
+          value="—"
+          subtitle="Consulte os registros de atestados"
           icon={AlertCircle}
           iconClass="text-rose-400"
           onClick={() => onNavigate('atestados')}
@@ -376,6 +390,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading} />
       <BirthdayPanel servidores={servidores} isLoading={isLoading} />
+      <DashboardComplementos servidores={servidores} onNavigate={onNavigate} />
     </div>
   );
 };

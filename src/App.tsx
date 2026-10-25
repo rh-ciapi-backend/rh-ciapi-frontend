@@ -82,8 +82,8 @@ export default function App() {
   const openModule = (module: string, tab: string) => {
     setSelectedModule(module);
     setActiveTab(isValidTab(tab) ? tab : 'dashboard');
-    setInitialAction(module === 'servidores' ? 'pesquisar' : null);
-    setShowModulePage(module === 'servidores');
+    setInitialAction(module === 'servidores' ? 'pesquisar' : module === 'mapas' ? 'mapa-comissionados-setrabes' : null);
+    setShowModulePage(module === 'servidores' || module === 'mapas');
     if (module === 'servidores') setServidoresNavigationId(v => v + 1);
     setSidebarCollapsed(false);
   };
@@ -113,7 +113,7 @@ export default function App() {
       case 'atestados': return <AtestadosPage />;
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage />;
-      case 'mapas': return <MapasPage />;
+      case 'mapas': return <MapasPage initialAction={initialAction} />;
       case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;
@@ -194,7 +194,7 @@ export default function App() {
               <main className="app-main ciapi-contextual-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
                 <div className="app-page app-main-inner">
                   <AnimatePresence mode="wait">
-                    <motion.div key={`${activeTab}-${showModulePage}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                    <motion.div key={`${activeTab}-${showModulePage}-${activeTab === 'mapas' ? (initialAction || '') : ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
                       {renderSelectedContent()}
                     </motion.div>
                   </AnimatePresence>
