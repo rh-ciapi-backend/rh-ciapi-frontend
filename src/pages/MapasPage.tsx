@@ -5,6 +5,7 @@ import { historicoServidorService, type OcorrenciaServidor } from '../services/h
 import type { MapaFilters, MapaPreviewResponse } from '../types/mapas';
 import './mapas-setores-claro.css';
 import './mapas-historico.css';
+import './mapas-ajustes.css';
 
 /**
  * Cada guia representa uma categoria de mapa institucional. Nenhuma linha é
@@ -78,6 +79,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
   const [turnoRegistro, setTurnoRegistro] = useState<'T1'|'T2'|'AMBOS'>('AMBOS');
   const [textoRegistro, setTextoRegistro] = useState('');
   const [salvandoRegistro, setSalvandoRegistro] = useState(false);
+  const [erroEdicao, setErroEdicao] = useState('');
   const [periodoExportacao, setPeriodoExportacao] = useState(false);
   const [periodoInicio, setPeriodoInicio] = useState('2026-10');
   const [periodoFim, setPeriodoFim] = useState('2026-10');
@@ -131,20 +133,21 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
     return mapa;
   }, [historico]);
   const abrirEdicao = (matricula: string, nome: string) => {
-    setEditando({matricula,nome}); setTextoRegistro(''); setTipoRegistro('OBSERVACAO');
+    setEditando({matricula,nome}); setTextoRegistro(''); setTipoRegistro('OBSERVACAO'); setErroEdicao('');
     setDataRegistro(`${filtros.ano}-${String(filtros.mes).padStart(2,'0')}-01`);
   };
   const salvarRegistro = async () => {
-    if (!editando || !textoRegistro.trim() || !dataRegistro) return;
+    if (!editando) return;
+    if (!textoRegistro.trim() || !dataRegistro) { setErroEdicao('Informe a data e a descrição do registro.'); return; }
     const [ano, mes] = dataRegistro.split('-').map(Number);
-    if (ano !== filtros.ano || mes !== filtros.mes) { setErro('A data do registro deve pertencer à competência selecionada.'); return; }
-    setSalvandoRegistro(true); setErro('');
+    if (ano !== filtros.ano || mes !== filtros.mes) { setErroEdicao('A data do registro deve pertencer à competência selecionada.'); return; }
+    setSalvandoRegistro(true); setErroEdicao('');
     try {
       await historicoServidorService.criar({matricula:editando.matricula,nome_servidor:editando.nome,
         competencia_ano:filtros.ano,competencia_mes:filtros.mes,data_evento:dataRegistro,
         tipo:tipoRegistro,turno:tipoRegistro==='FALTA'?turnoRegistro:null,descricao:textoRegistro.trim()});
       setEditando(null); setRecarregar(v=>v+1);
-    } catch(e) { setErro(e instanceof Error ? e.message : 'Não foi possível salvar a observação.'); }
+    } catch(e) { setErroEdicao(e instanceof Error ? e.message : 'Não foi possível salvar a observação.'); }
     finally { setSalvandoRegistro(false); }
   };
   const linhas = useMemo(() => (preview?.linhas || []) as unknown as Linha[], [preview]);
@@ -266,7 +269,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
         </div>
         {carregando ? <div className="ciapi-mapas-empty">Carregando os registros do RH CIAPI...</div>
         : <div className="ciapi-mapas-table-scroll"><table className="ciapi-mapas-table">
-          <thead><tr>{(isSesau ? ['Nº','Matrícula','Matrícula SIGRH / Início','Servidor','CPF','Cargo','Frequência','Faltas','Lotação / Setor','CH / Observação'] : ['Nº','Matrícula','Servidor','CPF','Cargo','Frequência','Faltas','Observação']).map(h => <th key={h}>{h}</th>)}</tr></thead>
+          <thead><tr>{(isSesau ? ['Nº','Matrícula','Matrícula SIGRH / Início','Servidor','CPF','Cargo','Frequência','Faltas','Lotação / Setor','CH / Observação'] : ['Nº','Matrícula','Servidor','CPF','Cargo','Frequência','Faltas','Observação']).map((h, i) => <th key={h} className={i === 0 ? 'ciapi-mapas-numero' : undefined}>{h}</th>)}</tr></thead>
           <tbody>{!exibidas.length ? <tr><td colSpan={isSesau ? 10 : 8} className="ciapi-mapas-empty">Nenhum registro retornado para os filtros selecionados.</td></tr>
           : exibidas.map((r, index) => {
             const nome = obter(r, 'nome', 'nome_servidor', 'nomeServidor', 'servidor', 'nome_completo', 'nomeCompleto');
@@ -285,7 +288,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
             const inicio = obter(r, 'inicioAtividades', 'inicio_atividades', 'dataInicio', 'data_inicio');
             const sig = obter(r, 'matriculaSigrh', 'matricula_sigrh', 'matriculaSIGRH');
             return <tr key={`${matricula}-${index}`}>
-              <td>{String((pagina-1)*100+index+1).padStart(2,'0')}</td><td>{cell(matricula)}</td>
+              <td className="ciapi-mapas-numero">{String((pagina-1)*100+index+1).padStart(2,'0')}</td><td>{cell(matricula)}</td>
               {isSesau && <td>{cell(sig !== '—' ? sig : inicio)}</td>}
               <td className="nome">{cell(nome)}</td><td>{cell(cpf)}</td><td>{cell(cargo)}</td>
               <td>{cell(freq)}</td><td>{cell(faltas)}{faltasRegistradas ? ` · ${faltasRegistradas} lançamento(s) adicional(is)` : ''}</td>
@@ -301,5 +304,39 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
       </div>
       {mostrarDiagnostico && preview && <aside className="ciapi-mapas-diagnostic"><strong>Validação do mapa</strong><p>Registros inválidos: {preview.diagnostics?.registrosInvalidos?.length ?? 0} · Páginas previstas: {preview.diagnostics?.paginasPrevistas ?? '—'}</p>{(preview.diagnostics?.alertas || []).map((a, i) => <p key={i}>{String(a)}</p>)}</aside>}
     </section>}
+    {editando && <div className="ciapi-mapas-dialog-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !salvandoRegistro) setEditando(null); }}>
+      <section className="ciapi-mapas-dialog" role="dialog" aria-modal="true" aria-labelledby="ciapi-dialog-titulo">
+        <h3 id="ciapi-dialog-titulo">Registrar ocorrência do servidor</h3>
+        <p><strong>{editando.nome}</strong> · Matrícula {editando.matricula}</p>
+        <p>Competência: {MESES[filtros.mes-1]}/{filtros.ano}</p>
+        <label>Tipo de registro
+          <select value={tipoRegistro} onChange={e => setTipoRegistro(e.target.value as 'OBSERVACAO'|'ATESTADO'|'FALTA')}>
+            <option value="OBSERVACAO">Observação</option><option value="ATESTADO">Atestado (registro informativo)</option><option value="FALTA">Falta (registro informativo)</option>
+          </select>
+        </label>
+        <label>Data
+          <input type="date" value={dataRegistro} min={`${filtros.ano}-${String(filtros.mes).padStart(2,'0')}-01`}
+            max={`${filtros.ano}-${String(filtros.mes).padStart(2,'0')}-${new Date(filtros.ano, filtros.mes, 0).getDate()}`}
+            onChange={e => setDataRegistro(e.target.value)}/>
+        </label>
+        {tipoRegistro === 'FALTA' && <label>Turno
+          <select value={turnoRegistro} onChange={e => setTurnoRegistro(e.target.value as 'T1'|'T2'|'AMBOS')}>
+            <option value="T1">1º turno</option><option value="T2">2º turno</option><option value="AMBOS">Ambos</option>
+          </select>
+        </label>}
+        <label>Descrição
+          <textarea rows={4} maxLength={4000} value={textoRegistro} onChange={e => setTextoRegistro(e.target.value)} placeholder="Descreva a ocorrência..." />
+        </label>
+        {tipoRegistro !== 'OBSERVACAO' && <p className="ciapi-mapas-alerta">Este lançamento registra apenas o histórico complementar. Para atualizar a frequência oficial, utilize o módulo Frequência ou Atestados.</p>}
+        {erroEdicao && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={16}/>{erroEdicao}</div>}
+        <div className="ciapi-mapas-dialog-actions">
+          <button type="button" disabled={salvandoRegistro} onClick={() => setEditando(null)}>Cancelar</button>
+          <button type="button" disabled={salvandoRegistro || !textoRegistro.trim() || !dataRegistro} onClick={salvarRegistro}>
+            {salvandoRegistro ? 'Salvando...' : 'Salvar ocorrência'}
+          </button>
+        </div>
+        <p className="ciapi-mapas-dialog-hint">Os registros salvos aparecem no histórico do servidor. Esta versão permite novos lançamentos; correções de registros anteriores dependem de procedimento auditável.</p>
+      </section>
+    </div>}
   </main>;
 }

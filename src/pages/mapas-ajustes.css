@@ -1,0 +1,17 @@
+/* Complemento visual: numeração estável e modal de ocorrências. */
+.ciapi-mapas-table th.ciapi-mapas-numero,
+.ciapi-mapas-table td.ciapi-mapas-numero {
+  box-sizing: border-box;
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  text-align: center !important;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.ciapi-mapas-dialog {max-height: calc(100vh - 30px);overflow-y:auto;}
+.ciapi-mapas-dialog-hint {font-size: 12px;color:#58708c;line-height:1.4;}
+.ciapi-mapas-editar:hover {background:#d4e8ff;border-color:#7ab2f4;}
