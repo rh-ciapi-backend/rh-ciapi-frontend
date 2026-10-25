@@ -1,3 +1,4 @@
+import PainelPessoalCIAPI from './PainelPessoalCIAPI';
 import './painel-pessoal-restaurado.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -222,7 +223,7 @@ export const ServidoresPage = ({
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterSetor, setFilterSetor] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('ATIVO');
+  const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterSexo, setFilterSexo] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<ServidorComVinculo | null>(null);
@@ -238,23 +239,23 @@ export const ServidoresPage = ({
 
   useEffect(() => {
     if (!initialAction) return;
+    if (initialAction === 'painel-pessoal') {
+      setModoPainelPessoal(true);
+      setSelectedEmployee(null);
+      setHasSearched(false);
+      setShowAll(false);
+      return;
+    }
+    setModoPainelPessoal(false);
     if (initialAction === 'add') {
       handleAddEmployee();
       onActionHandled?.();
       return;
     }
-    if (initialAction === 'painel-pessoal') {
-      setModoPainelPessoal(true);
-      setConsultaSituacao('TODOS');
-      setSelectedEmployee(null);
-      setHasSearched(false);
-      setShowAll(true);
-      setQuery('');
-      return;
-    }
-    if (['ativos', 'inativos', 'pesquisar'].includes(initialAction)) {
-      setModoPainelPessoal(false);
+    if (['ativos', 'inativos', 'pesquisar', 'open'].includes(initialAction)) {
+      // "Pesquisar servidor" não pode herdar o filtro de ativos.
       setConsultaSituacao(initialAction === 'inativos' ? 'INATIVO' : initialAction === 'ativos' ? 'ATIVO' : 'TODOS');
+      setFilterStatus(initialAction === 'inativos' ? 'INATIVO' : '');
       setSelectedEmployee(null);
       setQuery('');
       setSearchResults([]);
@@ -715,6 +716,21 @@ export const ServidoresPage = ({
           <div><small>Servidores inativos</small><strong>{summary.inativos}</strong></div>
         </div>
       </section>}
+      {!isModalOpen && modoPainelPessoal && <PainelPessoalCIAPI
+        servidores={employees}
+        carregando={isLoading}
+        onAtualizar={fetchEmployees}
+        onConsultar={(situacao) => {
+          setModoPainelPessoal(false);
+          setConsultaSituacao(situacao);
+          setFilterStatus(situacao === 'TODOS' ? '' : situacao);
+          setSelectedEmployee(null);
+          setQuery('');
+          setHasSearched(false);
+          setShowAll(false);
+          setSearchResults([]);
+        }}
+      />}
       {!isModalOpen && !modoPainelPessoal && <section className="ciapi-servidores-search">
         <header><strong>{consultaSituacao === 'INATIVO' ? 'Consultar servidores inativos' : consultaSituacao === 'ATIVO' ? 'Consultar servidores ativos' : 'Consultar servidores'}</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
         <form onSubmit={runSearch}>
@@ -736,7 +752,7 @@ export const ServidoresPage = ({
       {(error || successMessage) && <div className="ciapi-servidores-alert" role="status">{error || successMessage}{error && <button onClick={fetchEmployees}>Tentar novamente</button>}</div>}
       {isLoading && <p className="ciapi-servidores-loading">Carregando informações...</p>}
 
-      {!isModalOpen && (hasSearched || showAll) && !selectedEmployee && !isLoading && (
+      {!isModalOpen && !modoPainelPessoal && (hasSearched || showAll) && !selectedEmployee && !isLoading && (
         <section className="ciapi-servidores-results">
           <header><strong>{showAll ? 'Todos os servidores da situação selecionada' : 'Resultado da pesquisa'}</strong><span>{visibleResults.length} registro(s)</span></header>
           {!visibleResults.length ? <p className="ciapi-servidores-empty">Nenhum servidor encontrado. Confira os dados e tente novamente.</p> : (
