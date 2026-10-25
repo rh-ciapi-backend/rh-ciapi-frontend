@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarDays, CheckCircle2, Download, FileArchive, FileText, RefreshCw, Search, Users } from 'lucide-react';
 import { mapasService } from '../services/mapasService';
+import { historicoServidorService, type OcorrenciaServidor } from '../services/historicoServidorService';
 import type { MapaFilters, MapaPreviewResponse } from '../types/mapas';
 import './mapas-setores-claro.css';
+import './mapas-historico.css';
 
 /**
  * Cada guia representa uma categoria de mapa institucional. Nenhuma linha é
@@ -69,6 +71,16 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
   const [pagina, setPagina] = useState(1);
   const [mostrarDiagnostico, setMostrarDiagnostico] = useState(false);
   const [validando, setValidando] = useState(false);
+  const [historico, setHistorico] = useState<OcorrenciaServidor[]>([]);
+  const [editando, setEditando] = useState<{ matricula: string; nome: string } | null>(null);
+  const [tipoRegistro, setTipoRegistro] = useState<'OBSERVACAO'|'ATESTADO'|'FALTA'>('OBSERVACAO');
+  const [dataRegistro, setDataRegistro] = useState('');
+  const [turnoRegistro, setTurnoRegistro] = useState<'T1'|'T2'|'AMBOS'>('AMBOS');
+  const [textoRegistro, setTextoRegistro] = useState('');
+  const [salvandoRegistro, setSalvandoRegistro] = useState(false);
+  const [periodoExportacao, setPeriodoExportacao] = useState(false);
+  const [periodoInicio, setPeriodoInicio] = useState('2026-10');
+  const [periodoFim, setPeriodoFim] = useState('2026-10');
 
   const selecionarGrupo = (novo: Grupo) => {
     setGrupo(novo);
@@ -103,6 +115,38 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
     return () => { ativo = false; };
   }, [filtros, recarregar]);
 
+  useEffect(() => {
+    let ativo = true;
+    historicoServidorService.listarPorCompetencia(filtros.ano, filtros.mes)
+      .then(registros => { if (ativo) setHistorico(registros); })
+      .catch(e => { if (ativo) setErro(e instanceof Error ? e.message : 'Erro ao carregar histórico.'); });
+    return () => { ativo = false; };
+  }, [filtros.ano, filtros.mes, recarregar]);
+  const eventosPorMatricula = useMemo(() => {
+    const mapa = new Map<string, OcorrenciaServidor[]>();
+    for (const evento of historico) {
+      const chave = evento.matricula.replace(/\D/g, '');
+      mapa.set(chave, [...(mapa.get(chave) || []), evento]);
+    }
+    return mapa;
+  }, [historico]);
+  const abrirEdicao = (matricula: string, nome: string) => {
+    setEditando({matricula,nome}); setTextoRegistro(''); setTipoRegistro('OBSERVACAO');
+    setDataRegistro(`${filtros.ano}-${String(filtros.mes).padStart(2,'0')}-01`);
+  };
+  const salvarRegistro = async () => {
+    if (!editando || !textoRegistro.trim() || !dataRegistro) return;
+    const [ano, mes] = dataRegistro.split('-').map(Number);
+    if (ano !== filtros.ano || mes !== filtros.mes) { setErro('A data do registro deve pertencer à competência selecionada.'); return; }
+    setSalvandoRegistro(true); setErro('');
+    try {
+      await historicoServidorService.criar({matricula:editando.matricula,nome_servidor:editando.nome,
+        competencia_ano:filtros.ano,competencia_mes:filtros.mes,data_evento:dataRegistro,
+        tipo:tipoRegistro,turno:tipoRegistro==='FALTA'?turnoRegistro:null,descricao:textoRegistro.trim()});
+      setEditando(null); setRecarregar(v=>v+1);
+    } catch(e) { setErro(e instanceof Error ? e.message : 'Não foi possível salvar a observação.'); }
+    finally { setSalvandoRegistro(false); }
+  };
   const linhas = useMemo(() => (preview?.linhas || []) as unknown as Linha[], [preview]);
   const filtradas = useMemo(() => {
     const termo = normalizar(busca);
@@ -137,11 +181,18 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
     setErro(''); setExportando('selecionados');
     const falhas: string[] = [];
     try {
-      for (const chave of mapasParaExportar) {
+      const competencias: Array<{mes:number;ano:number}> = [];
+      if (periodoExportacao) {
+        const [a1,m1]=periodoInicio.split('-').map(Number); const [a2,m2]=periodoFim.split('-').map(Number);
+        const inicio=a1*12+m1, fim=a2*12+m2;
+        if (!a1||!a2||fim<inicio||fim-inicio>=12) { setErro('Selecione um intervalo válido de no máximo 12 meses.'); setExportando(''); return; }
+        for(let n=inicio;n<=fim;n++) competencias.push({ano:Math.floor((n-1)/12),mes:((n-1)%12)+1});
+      } else competencias.push({mes:filtros.mes,ano:filtros.ano});
+      for (const competencia of competencias) for (const chave of mapasParaExportar) {
         const grupoAtual = GRUPOS.find(g => g.chave === chave);
         if (!grupoAtual) continue;
         const parametros: MapaFilters = {
-          ...filtros, categoria: chave,
+          ...filtros, ...competencia, categoria: chave,
           layout: 'automatico',
           modoExportacao: formatoExportacao === 'zip' ? 'arquivos_separados' : 'arquivo_unico',
         };
@@ -194,13 +245,19 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
           <input type="radio" checked={formatoExportacao === tipo} onChange={() => setFormatoExportacao(tipo)}/>
           {tipo==='docx'?'Word (DOCX)':tipo.toUpperCase()}</label>)}</div>
       </div>
-      <p className="ciapi-mapas-export-note">{mapasParaExportar.length} mapa(s) selecionado(s). Ao selecionar todos, o sistema solicita até seis downloads individuais. Seu navegador pode pedir autorização para downloads múltiplos. O ZIP usa o gerador existente e não necessariamente consolida todas as categorias num único arquivo.</p>
+      <p className="ciapi-mapas-export-note">{mapasParaExportar.length} mapa(s) selecionado(s). Cada competência e categoria solicita um download individual. Seu navegador pode pedir autorização para downloads múltiplos. O ZIP usa o gerador existente e não necessariamente consolida todas as categorias num único arquivo.</p>
       {erro && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={17}/>{erro}</div>}
       <button type="button" className="ciapi-mapas-button primary" onClick={baixarSelecionados} disabled={!!exportando||!mapasParaExportar.length}>
         <Download size={16}/> {exportando ? 'Gerando arquivos...' : `Baixar ${mapasParaExportar.length} mapa(s)`}</button>
     </section> : <section className="ciapi-mapas-workspace ciapi-mapas-map-only" role="tabpanel">
 
       {erro && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={17}/>{erro}</div>}
+      <div className="ciapi-mapas-competencia-bar">
+        <strong>Competência do mapa</strong>
+        <select aria-label="Mês" value={filtros.mes} onChange={e=>setFiltros(f=>({...f,mes:Number(e.target.value)}))}>{MESES.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select>
+        <input aria-label="Ano" type="number" min={2020} max={2100} value={filtros.ano} onChange={e=>setFiltros(f=>({...f,ano:Number(e.target.value)}))}/>
+        <button type="button" className="ciapi-mapas-button subtle" onClick={()=>setRecarregar(v=>v+1)}>Atualizar</button>
+      </div>
       <div className="ciapi-mapas-paper">
         <div className="ciapi-mapas-paper-heading">
           <p>GOVERNO DO ESTADO DE RORAIMA</p><p>SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</p>
@@ -218,7 +275,11 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
             const cargo = obter(r, 'cargo', 'funcao');
             const freq = obter(r, 'frequencia', 'frequencias', 'freq');
             const faltas = obter(r, 'faltas', 'totalFaltas', 'total_faltas');
-            const obs = obter(r, 'observacao', 'observacoes');
+            const obsOriginal = obter(r, 'observacao', 'observacoes');
+            const ocorrencias = eventosPorMatricula.get(matricula.replace(/\D/g,'')) || [];
+            const complemento = ocorrencias.map(o => `${o.tipo}: ${o.descricao}`).join(' | ');
+            const obs = [obsOriginal === '—' ? '' : obsOriginal, complemento].filter(Boolean).join(' | ') || '—';
+            const faltasRegistradas = ocorrencias.filter(o=>o.tipo==='FALTA').length;
             const setor = obter(r, 'lotacao', 'setor', 'setorInterno', 'setor_interno');
             const carga = obter(r, 'cargaHoraria', 'carga_horaria', 'chSemanal', 'ch_semanal');
             const inicio = obter(r, 'inicioAtividades', 'inicio_atividades', 'dataInicio', 'data_inicio');
@@ -227,9 +288,9 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
               <td>{String((pagina-1)*100+index+1).padStart(2,'0')}</td><td>{cell(matricula)}</td>
               {isSesau && <td>{cell(sig !== '—' ? sig : inicio)}</td>}
               <td className="nome">{cell(nome)}</td><td>{cell(cpf)}</td><td>{cell(cargo)}</td>
-              <td>{cell(freq)}</td><td>{cell(faltas)}</td>
+              <td>{cell(freq)}</td><td>{cell(faltas)}{faltasRegistradas ? ` · ${faltasRegistradas} lançamento(s) adicional(is)` : ''}</td>
               {isSesau && <td>{cell(setor)}</td>}
-              <td className="observacao" title={obs}>{cell(isSesau && carga !== '—' ? `${carga}${obs !== '—' ? ' · ' + obs : ''}` : obs)}</td>
+              <td className="observacao" title={obs}>{cell(isSesau && carga !== '—' ? `${carga}${obs !== '—' ? ' · ' + obs : ''}` : obs)}<button type="button" className="ciapi-mapas-editar" onClick={()=>abrirEdicao(matricula,nome)}>Editar / lançar</button></td>
             </tr>;
           })}</tbody></table></div>}
         <div className="ciapi-mapas-footnote">A tabela utiliza os registros retornados pelo sistema. O documento oficial é gerado pelos botões de exportação.</div>
