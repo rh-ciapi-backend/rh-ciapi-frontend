@@ -383,7 +383,7 @@ export const saeUsuariosService = {
         const pagina =
           (Array.isArray(data)
             ? data
-            : []) as SaeUsuarioDbRow[];
+            : []) as unknown as SaeUsuarioDbRow[];
 
         registros.push(...pagina);
 
@@ -456,7 +456,7 @@ export const saeUsuariosService = {
       }
 
       return data
-        ? mapFromDB(data as SaeUsuarioDbRow)
+        ? mapFromDB(data as unknown as SaeUsuarioDbRow)
         : null;
     } catch (error) {
       throw new Error(

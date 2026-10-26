@@ -671,8 +671,9 @@ export default function GerenciarProfissionaisModal({
 
                   {abaAtiva === 'agenda' ? (
                     <AgendaProfissionalPanel
-                      profissionalId={selecionado.id}
-                      profissionalNome={selecionado.nome}
+                      profissional={selecionado}
+                      servicos={servicos}
+                      podeEditar={podeEditar}
                     />
                   ) : (
                     <>
