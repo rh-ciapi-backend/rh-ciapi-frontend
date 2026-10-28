@@ -112,7 +112,7 @@ export default function App() {
       case 'servidores': return <ServidoresPage key={servidoresNavigationId} initialAction={initialAction || 'pesquisar'} onActionHandled={() => setInitialAction(null)} />;
       case 'atestados': return <AtestadosPage />;
       case 'ferias': return <FeriasPage />;
-      case 'frequencia': return <FrequenciaPage />;
+      case 'frequencia': return <FrequenciaPage initialAction={initialAction} />;
       case 'mapas': return <MapasPage initialAction={initialAction} />;
       case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
