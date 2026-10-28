@@ -68,6 +68,23 @@ function parseError(payload: any, fallback: string): string {
   return safeString(payload?.error ?? payload?.message ?? payload?.details, fallback);
 }
 
+function httpError(response: Response, payload: any, fallback: string): Error {
+  const detail = parseError(payload, fallback);
+  return new Error(`${detail} (HTTP ${response.status} em /api/eventos).`);
+}
+
+async function consultarEventos(path: string, init: RequestInit, fallback: string): Promise<any> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBaseUrl()}${path}`, init);
+  } catch {
+    throw new Error(`Não foi possível conectar ao servidor de eventos (${getBaseUrl()}). Verifique a API, a rede e o CORS. Nenhum registro foi confirmado.`);
+  }
+  const payload = await safeJson(response);
+  if (!response.ok) throw httpError(response, payload, fallback);
+  return payload;
+}
+
 function extractArrayPayload(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -128,99 +145,63 @@ function sortEventos(rows: EventoCalendario[]): EventoCalendario[] {
 }
 
 export async function listarEventos(filters: EventosFiltros = {}): Promise<EventoCalendario[]> {
-  const response = await fetch(`${getBaseUrl()}/api/eventos${buildQuery(filters)}`, {
+  const payload = await consultarEventos(`/api/eventos${buildQuery(filters)}`, {
     method: 'GET',
     headers: { Accept: 'application/json' },
-  });
-
-  const payload = await safeJson(response);
-
-  if (!response.ok) {
-    throw new Error(parseError(payload, 'Não foi possível listar os eventos.'));
-  }
+  }, 'Não foi possível listar os eventos.');
 
   return sortEventos(extractArrayPayload(payload).map(normalizeEvento));
 }
 
 export async function obterEventoPorId(id: string): Promise<EventoCalendario> {
-  const response = await fetch(`${getBaseUrl()}/api/eventos/${encodeURIComponent(id)}`, {
+  const payload = await consultarEventos(`/api/eventos/${encodeURIComponent(id)}`, {
     method: 'GET',
     headers: { Accept: 'application/json' },
-  });
-
-  const payload = await safeJson(response);
-
-  if (!response.ok) {
-    throw new Error(parseError(payload, 'Não foi possível carregar o evento.'));
-  }
+  }, 'Não foi possível carregar o evento.');
 
   return normalizeEvento(payload?.data ?? payload);
 }
 
 export async function criarEvento(input: EventoInput): Promise<EventoCalendario> {
-  const response = await fetch(`${getBaseUrl()}/api/eventos`, {
+  const payload = await consultarEventos(`/api/eventos`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
     body: JSON.stringify(input),
-  });
-
-  const payload = await safeJson(response);
-
-  if (!response.ok) {
-    throw new Error(parseError(payload, 'Não foi possível criar o evento.'));
-  }
+  }, 'Não foi possível criar o evento.');
 
   return normalizeEvento(payload?.data ?? payload);
 }
 
 export async function atualizarEvento(id: string, input: Partial<EventoInput>): Promise<EventoCalendario> {
-  const response = await fetch(`${getBaseUrl()}/api/eventos/${encodeURIComponent(id)}`, {
+  const payload = await consultarEventos(`/api/eventos/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
     body: JSON.stringify(input),
-  });
-
-  const payload = await safeJson(response);
-
-  if (!response.ok) {
-    throw new Error(parseError(payload, 'Não foi possível atualizar o evento.'));
-  }
+  }, 'Não foi possível atualizar o evento.');
 
   return normalizeEvento(payload?.data ?? payload);
 }
 
 export async function excluirEvento(id: string): Promise<EventoCalendario> {
-  const response = await fetch(`${getBaseUrl()}/api/eventos/${encodeURIComponent(id)}`, {
+  const payload = await consultarEventos(`/api/eventos/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Accept: 'application/json' },
-  });
-
-  const payload = await safeJson(response);
-
-  if (!response.ok) {
-    throw new Error(parseError(payload, 'Não foi possível excluir o evento.'));
-  }
+  }, 'Não foi possível excluir o evento.');
 
   return normalizeEvento(payload?.data ?? payload);
 }
 
 export async function listarTiposEvento(): Promise<TipoEventoOption[]> {
-  const response = await fetch(`${getBaseUrl()}/api/eventos/tipos`, {
+  const payload = await consultarEventos(`/api/eventos/tipos`, {
     method: 'GET',
     headers: { Accept: 'application/json' },
-  });
-
-  const payload = await safeJson(response);
-
-  if (!response.ok) {
-    throw new Error(parseError(payload, 'Não foi possível listar os tipos de evento.'));
-  }
+  }, 'Não foi possível listar os tipos de evento.');
 
   const rows = extractArrayPayload(payload);
   return rows.map((item) => ({

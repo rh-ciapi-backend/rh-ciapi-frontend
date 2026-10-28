@@ -1,0 +1,5 @@
+/* Cartão de ambiente ainda sem endereço configurado. */
+.institutional-login__systems--portal { flex-wrap: wrap; }
+.institutional-system-card--coming-soon { cursor: default; opacity: .86; }
+.institutional-system-card--coming-soon:hover { transform: none; }
+.institutional-system-card--coming-soon .institutional-system-card__action { color: #64748b; }
