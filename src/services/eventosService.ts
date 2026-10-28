@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config/api';
+import { supabase } from '../lib/supabaseClient';
 
 export type TipoEvento = 'FERIADO' | 'PONTO_FACULTATIVO' | 'EVENTO';
 
@@ -74,9 +75,17 @@ function httpError(response: Response, payload: any, fallback: string): Error {
 }
 
 async function consultarEventos(path: string, init: RequestInit, fallback: string): Promise<any> {
+  const { data, error } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (error || !token) {
+    throw new Error('Sessão Supabase ausente ou expirada. Entre novamente no Portal CIAPI para consultar ou alterar feriados.');
+  }
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+
   let response: Response;
   try {
-    response = await fetch(`${getBaseUrl()}${path}`, init);
+    response = await fetch(`${getBaseUrl()}${path}`, { ...init, headers });
   } catch {
     throw new Error(`Não foi possível conectar ao servidor de eventos (${getBaseUrl()}). Verifique a API, a rede e o CORS. Nenhum registro foi confirmado.`);
   }
