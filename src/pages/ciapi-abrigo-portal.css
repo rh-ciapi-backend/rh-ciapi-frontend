@@ -3,3 +3,20 @@
 .institutional-system-card--coming-soon { cursor: default; opacity: .86; }
 .institutional-system-card--coming-soon:hover { transform: none; }
 .institutional-system-card--coming-soon .institutional-system-card__action { color: #64748b; }
+/* Três sistemas lado a lado */
+.ciapi-sistemas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+  max-width: 960px;
+  margin: 30px auto;
+}
+
+/* Celulares: cartões empilhados */
+@media (max-width: 700px) {
+  .ciapi-sistemas-grid {
+    grid-template-columns: 1fr;
+    max-width: 340px;
+  }
+}
