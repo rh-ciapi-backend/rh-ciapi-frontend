@@ -1,249 +1,118 @@
-import React from 'react';
-import {
-  Activity,
-  CalendarDays,
-  Clock3,
-  Stethoscope,
-  Users,
-  ArrowRight,
-  HeartPulse,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Activity, CalendarDays, Clock3, HeartPulse, RefreshCw, Stethoscope, Users, Plus, Trash2, Check, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { saeUsuariosService } from '../services/saeUsuariosService';
+import { saeAgendamentosService } from '../services/saeAgendamentosService';
+import { saeAdministrativoService } from '../services/saeAdministrativoService';
+import './sae-institucional-claro.css';
+import './sae-dashboard-home.css';
 
-function getFirstName(user: ReturnType<typeof useAuth>['user']) {
-  const metadataName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.user_metadata?.display_name;
-
-  if (typeof metadataName === 'string' && metadataName.trim()) {
-    return metadataName.trim().split(/\s+/)[0];
-  }
-
-  if (user?.email) {
-    return user.email.split('@')[0];
-  }
-
-  return 'Servidor';
-}
-
-const CARDS = [
-  {
-    label: 'Usuários Ativos',
-    value: '—',
-    helper: 'Cadastros ativos no SAE',
-    icon: Users,
-  },
-  {
-    label: 'Agendamentos Hoje',
-    value: '—',
-    helper: 'Agenda do dia',
-    icon: CalendarDays,
-  },
-  {
-    label: 'Atendimentos no Mês',
-    value: '—',
-    helper: 'Registros realizados',
-    icon: Stethoscope,
-  },
-  {
-    label: 'Sinais Vitais',
-    value: '—',
-    helper: 'Lançamentos no período',
-    icon: HeartPulse,
-  },
-];
-
+type Indicadores = { usuariosAtivos: number | null; agendamentosHoje: number | null; atendimentosMes: number | null; sinaisVitais: number | null; agenda: Array<{id:string; horario:string; usuario:string; servico:string; status:string}> };
+const vazio: Indicadores = {usuariosAtivos:null,agendamentosHoje:null,atendimentosMes:null,sinaisVitais:null,agenda:[]};
+const hojeLocal = () => new Intl.DateTimeFormat('en-CA', {timeZone:'America/Boa_Vista', year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const saudacao = () => { const hora = Number(new Intl.DateTimeFormat('en-GB',{timeZone:'America/Boa_Vista',hour:'2-digit',hour12:false}).format(new Date())); return hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'; };
+function nomePrimeiro(user: ReturnType<typeof useAuth>['user']) { const meta = user?.user_metadata; const nome = meta?.full_name || meta?.name || meta?.display_name; return String(nome || user?.email?.split('@')[0] || 'Servidor').trim().split(/\s+/)[0]; }
 export default function SaeDashboardPage() {
-  const { user } = useAuth();
-  const firstName = getFirstName(user);
-
-  const agora = new Date();
-
-  const dataFormatada = agora.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const horaFormatada = agora.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  const hour = agora.getHours();
-  const greeting =
-    hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-
+ const {user} = useAuth();
+ const [dados,setDados] = useState<Indicadores>(vazio);
+ const [carregando,setCarregando] = useState(true);
+ const [avisos,setAvisos] = useState<string[]>([]);
+ const [versao,setVersao] = useState(0);
+ const lembreteKey = `ciapi-sae-lembretes:${user?.id || 'anonimo'}`;
+ const [lembretes, setLembretes] = useState<Array<{id:string;titulo:string;data:string;feito:boolean}>>([]);
+ const [novoTitulo, setNovoTitulo] = useState('');
+ const [novaData, setNovaData] = useState('');
+ const [formAberto, setFormAberto] = useState(false);
+ useEffect(() => {
+  try {
+   const raw = window.localStorage.getItem(lembreteKey);
+   const value: unknown = raw ? JSON.parse(raw) : [];
+   setLembretes(Array.isArray(value) ? value.filter((v): v is {id:string;titulo:string;data:string;feito:boolean} =>
+    typeof v === 'object' && v !== null && typeof v.id === 'string' && typeof v.titulo === 'string' && typeof v.data === 'string' && typeof v.feito === 'boolean') : []);
+  } catch { setLembretes([]); }
+ }, [lembreteKey]);
+ const guardarLembretes = (value: typeof lembretes) => {
+  setLembretes(value);
+  try { window.localStorage.setItem(lembreteKey, JSON.stringify(value)); } catch { /* indisponível */ }
+ };
+ const criarLembrete = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  if (!novoTitulo.trim() || !novaData) return;
+  guardarLembretes([...lembretes, {id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,titulo: novoTitulo.trim(),data: novaData,feito:false}]);
+  setNovoTitulo('');setNovaData('');setFormAberto(false);
+ };
+ useEffect(()=>{
+  let ativo=true;
+  const executar=async()=>{
+   setCarregando(true);
+   const resultados = await Promise.allSettled([
+    saeUsuariosService.listar(), saeAgendamentosService.listar(),
+    saeAdministrativoService.listarAtendimentos(),saeAdministrativoService.listarSinaisVitais(),
+   ]);
+   if(!ativo)return;
+   const mensagens:string[]=[];
+   resultados.forEach((r,i)=>{ if(r.status==='rejected') mensagens.push(['Usuários','Agendamentos','Atendimentos','Sinais vitais'][i] + ': ' + (r.reason instanceof Error?r.reason.message:'não foi possível consultar')); });
+   const usuarios=resultados[0].status==='fulfilled'?resultados[0].value:null;
+   const agenda=resultados[1].status==='fulfilled'?resultados[1].value:null;
+   const atendimentos=resultados[2].status==='fulfilled'?resultados[2].value:null;
+   const sinais=resultados[3].status==='fulfilled'?resultados[3].value:null;
+   const hoje=hojeLocal(), competencia=hoje.slice(0,7);
+   setDados({
+    usuariosAtivos:usuarios?usuarios.filter(u=>u.situacao==='ATIVO').length:null,
+    agendamentosHoje:agenda?agenda.filter(a=>String(a.data||'').slice(0,10)===hoje).length:null,
+    atendimentosMes:atendimentos?atendimentos.filter(a=>String(a.data||'').slice(0,7)===competencia).length:null,
+    sinaisVitais:sinais?sinais.filter(s=>String(s.data||'').slice(0,7)===competencia).length:null,
+    agenda:agenda?agenda.filter(a=>String(a.data||'').slice(0,10)===hoje).sort((a,b)=>String(a.servicos[0]?.horaInicio||'').localeCompare(String(b.servicos[0]?.horaInicio||''))).slice(0,12).map(a=>({id:a.id,horario:String(a.servicos[0]?.horaInicio||'—').slice(0,5),usuario:a.nomeUsuario,servico:a.servicos.map(s=>s.servicoNome).filter(Boolean).join(', ')||'—',status:a.status})):[],
+   });
+   setAvisos(mensagens);setCarregando(false);
+  }; void executar();return()=>{ativo=false};
+ },[versao]);
+ const data=useMemo(()=>new Date().toLocaleDateString('pt-BR',{timeZone:'America/Boa_Vista',weekday:'long',day:'2-digit',month:'long',year:'numeric'}),[]);
+ const metricas=[{nome:'Usuários ativos',valor:dados.usuariosAtivos,descricao:'Cadastros ativos',Icon:Users},{nome:'Agendamentos hoje',valor:dados.agendamentosHoje,descricao:'Agenda do dia',Icon:CalendarDays},{nome:'Atendimentos no mês',valor:dados.atendimentosMes,descricao:'Produção mensal',Icon:Stethoscope},{nome:'Sinais vitais no mês',valor:dados.sinaisVitais,descricao:'Registros mensais',Icon:HeartPulse}];
+   const listaLembretes = [...lembretes].sort((a,b) => Number(a.feito)-Number(b.feito) || a.data.localeCompare(b.data));
   return (
-    <section className="space-y-5 sm:space-y-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-            Visão Geral
-          </p>
-
-          <h1 className="mt-1 text-[1.65rem] font-bold tracking-tight text-white sm:text-3xl">
-            {greeting}, {firstName}
-          </h1>
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-slate-500">
-            <CalendarDays size={14} />
-            <span className="capitalize">{dataFormatada}</span>
-            <span>•</span>
-            <Clock3 size={14} />
-            <span>{horaFormatada}</span>
-          </div>
-
-          <p className="mt-3 text-sm text-slate-400">
-            Acompanhe os principais indicadores do SAE em um único lugar.
-          </p>
+    <section className="sae-home" aria-label="Início do SAE CIAPI">
+      <div className="sae-home-banner">
+        <div className="sae-home-banner-content">
+          <p className="sae-home-eyebrow">SAE CIAPI · VISÃO GERAL</p>
+          <h1>{saudacao()}, {nomePrimeiro(user)}! <span aria-hidden="true">👋</span></h1>
+          <p>Valorização, respeito e cuidado com as pessoas.</p>
+          <div className="sae-home-date"><Clock3 size={16} /><span className="capitalize">{data}</span></div>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-colors hover:bg-primary-hover sm:w-auto"
-        >
-          <CalendarDays size={18} />
-          Novo Agendamento
-        </button>
+        <div className="sae-home-banner-motto">Centro Integrado de Atenção à Pessoa Idosa</div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        {CARDS.map((card) => {
-          const Icon = card.icon;
+      {avisos.length > 0 && <div className="sae-home-warning" role="alert"><strong>Algumas consultas não foram concluídas:</strong><ul>{avisos.map(x => <li key={x}>{x}</li>)}</ul></div>}
 
-          return (
-            <article
-              key={card.label}
-              className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-3xl sm:p-5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                    {card.label}
-                  </p>
-
-                  <p className="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                    {card.value}
-                  </p>
-
-                  <p className="mt-2 text-xs text-slate-500">
-                    {card.helper}
-                  </p>
-                </div>
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                  <Icon size={19} />
-                </div>
-              </div>
-            </article>
-          );
-        })}
+      <div className="sae-home-metrics">
+        {metricas.map(({nome,valor,descricao,Icon}) => <article className="sae-home-metric" key={nome}>
+          <div><p className="sae-home-metric-label">{nome}</p><strong>{carregando ? '…' : valor === null ? '—' : valor.toLocaleString('pt-BR')}</strong><p>{descricao}</p></div>
+          <span className="sae-home-metric-icon"><Icon size={22}/></span>
+        </article>)}
       </div>
 
-      <div className="grid gap-4 sm:gap-5 xl:grid-cols-[1.45fr_0.75fr]">
-        <section className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-3xl sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <CalendarDays size={18} className="text-primary" />
-                <h2 className="text-base font-bold text-white">
-                  Agendamentos do Dia
-                </h2>
-              </div>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Os próximos atendimentos aparecerão aqui.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="flex min-h-9 items-center gap-1 self-start text-xs font-bold text-primary sm:self-auto"
-            >
-              Ver agenda
-              <ArrowRight size={14} />
-            </button>
-          </div>
-
-          <div className="responsive-scroll mt-5 overflow-hidden rounded-2xl border border-border-dark">
-            <div className="min-w-[620px]">
-              <div className="grid grid-cols-[90px_1fr_1fr_120px] gap-3 bg-slate-800/60 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-              <span>Horário</span>
-              <span>Usuário</span>
-              <span>Serviço</span>
-              <span>Status</span>
-              </div>
-
-              <div className="flex min-h-[220px] items-center justify-center px-5 py-10 text-center">
-              <div>
-                <CalendarDays size={32} className="mx-auto text-slate-700" />
-                <p className="mt-3 text-sm font-semibold text-slate-400">
-                  Nenhum agendamento carregado
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Os dados aparecerão após a integração do banco SAE.
-                </p>
-              </div>
-              </div>
-            </div>
-          </div>
+      <div className="sae-home-section-heading"><h2>Atividades do SAE</h2><button type="button" onClick={() => setVersao(v=>v+1)} disabled={carregando}><RefreshCw size={16} className={carregando ? 'animate-spin' : ''}/> Atualizar dados</button></div>
+      <div className="sae-home-columns">
+        <section className="sae-home-panel">
+          <div className="sae-home-panel-heading"><div><h3><CalendarDays size={20}/> Agendamentos do dia</h3><p>Compromissos cadastrados para hoje.</p></div><span className="sae-home-count">{dados.agenda.length}</span></div>
+          <div className="sae-home-table-scroll"><table className="sae-home-table"><thead><tr><th>Hora</th><th>Usuário</th><th>Serviço</th><th>Situação</th></tr></thead><tbody>{dados.agenda.map(a => <tr key={a.id}><td>{a.horario}</td><td>{a.usuario}</td><td>{a.servico}</td><td>{a.status}</td></tr>)}</tbody></table></div>
+          {!carregando && dados.agenda.length === 0 && <div className="sae-home-empty"><CalendarDays size={24}/><p>Nenhum agendamento encontrado para hoje.</p></div>}
+          {carregando && <div className="sae-home-empty">Atualizando agendamentos…</div>}
         </section>
 
-        <section className="rounded-2xl border border-border-dark bg-card-dark p-4 sm:rounded-3xl sm:p-5">
-          <div className="flex items-center gap-2">
-            <Activity size={18} className="text-primary" />
-            <h2 className="text-base font-bold text-white">
-              Resumo do SAE
-            </h2>
-          </div>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Situação operacional do ambiente.
-          </p>
-
-          <div className="mt-5 space-y-3">
-            <StatusRow
-              label="Banco de usuários"
-              value="Aguardando integração"
-            />
-            <StatusRow
-              label="Agenda dos profissionais"
-              value="Aguardando configuração"
-            />
-            <StatusRow
-              label="Sinais vitais"
-              value="Aguardando integração"
-            />
-            <StatusRow
-              label="Relatórios"
-              value="Aguardando dados"
-            />
-          </div>
+        <section className="sae-home-panel">
+          <div className="sae-home-panel-heading"><div><h3><ClipboardList size={20}/> Agenda e lembretes</h3><p>Anotações administrativas deste navegador.</p></div><button type="button" onClick={() => setFormAberto(v=>!v)} className="sae-home-add"><Plus size={16}/> Novo</button></div>
+          {formAberto && <form className="sae-home-form" onSubmit={criarLembrete}>
+            <label>Descrição<input maxLength={180} value={novoTitulo} onChange={e=>setNovoTitulo(e.target.value)} placeholder="Ex.: Conferir documentos" required/></label>
+            <label>Data<input type="date" value={novaData} onChange={e=>setNovaData(e.target.value)} required/></label>
+            <div><button type="submit">Salvar lembrete</button><button type="button" onClick={()=>setFormAberto(false)}>Cancelar</button></div>
+          </form>}
+          {listaLembretes.length === 0 ? <div className="sae-home-empty"><ClipboardList size={24}/><p>Nenhum lembrete cadastrado.</p><small>Use “Novo” para registrar seu primeiro lembrete.</small></div> :
+          <ul className="sae-home-reminders">{listaLembretes.map(item => <li key={item.id} className={item.feito ? 'is-done' : ''}><button type="button" title={item.feito?'Reabrir':'Concluir'} aria-label={item.feito?'Reabrir lembrete':'Concluir lembrete'} onClick={()=>guardarLembretes(lembretes.map(v=>v.id===item.id?{...v,feito:!v.feito}:v))}><Check size={16}/></button><div><strong>{item.titulo}</strong><small>{item.data.split('-').reverse().join('/')}</small></div><button type="button" className="sae-home-trash" title="Excluir lembrete" aria-label="Excluir lembrete" onClick={()=>guardarLembretes(lembretes.filter(v=>v.id!==item.id))}><Trash2 size={16}/></button></li>)}</ul>}
+          <p className="sae-home-storage">Lembretes salvos apenas neste navegador; não são sincronizados com o Supabase. Não registre dados pessoais ou clínicos neste campo.</p>
         </section>
       </div>
+      <div className="sae-home-footer"><Activity size={16}/><span>Indicadores dos serviços existentes do SAE · Competência {hojeLocal().slice(5,7)}/{hojeLocal().slice(0,4)}</span></div>
     </section>
-  );
-}
-
-function StatusRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border-dark bg-slate-800/30 p-4">
-      <p className="text-xs font-semibold text-slate-300">
-        {label}
-      </p>
-
-      <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-        {value}
-      </p>
-    </div>
   );
 }

@@ -1,0 +1,19 @@
+
+/* Servidores - consulta sob demanda e ficha na área de trabalho (2026) */
+.rh-servidores-restaurado .rh-servidores-intro{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid #dce7f4;border-radius:16px;padding:24px;color:#0b3158}
+.rh-servidores-restaurado .rh-servidores-intro h2{font-size:25px;font-weight:800;line-height:1.3}
+.rh-servidores-restaurado .rh-servidores-intro p:not(.rh-servidores-eyebrow){font-size:13px;color:#55718d;margin-top:5px}
+.rh-servidores-restaurado .rh-servidores-eyebrow{font-size:10px;color:#1767ae;text-transform:uppercase;letter-spacing:.14em;font-weight:800;margin-bottom:6px}
+.rh-servidores-switch{border:1px solid #bcd1e7;border-radius:10px;padding:10px 14px;background:#f4f9ff;color:#0a5397;font-size:13px;font-weight:700}
+.rh-servidores-switch:hover{background:#e6f1fc}
+.rh-servidores-restaurado .rh-servidores-consulta{background:#fff;border:1px solid #dce7f4;border-radius:15px}
+.rh-servidores-restaurado .rh-servidores-consulta>div:first-child{background:#fff;border-color:#e0e9f2}
+.rh-servidores-restaurado .rh-servidores-consulta input,.rh-servidores-restaurado .rh-servidores-consulta select{background:#fff;color:#123b63;border-color:#ccdaea}
+.rh-servidores-restaurado .rh-servidores-consulta input::placeholder{color:#8097ac}
+.rh-servidores-restaurado .rh-servidores-consulta .group{background:#fff;border-color:#e3ecf5}
+.rh-servidores-restaurado .rh-servidores-consulta .group:hover{background:#eff6fd}
+.rh-servidores-restaurado .rh-servidores-consulta .group span.text-white{color:#123b63}
+.rh-servidores-empty{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#4879a7;text-align:center;padding:30px}
+.rh-servidores-empty strong{color:#103d69;font-size:16px}.rh-servidores-empty span{font-size:13px;max-width:420px}
+.rh-servidores-ficha-area{width:100%;min-width:0}
+@media(max-width:700px){.rh-servidores-restaurado .rh-servidores-intro{padding:17px}.rh-servidores-restaurado .rh-servidores-intro h2{font-size:21px}}

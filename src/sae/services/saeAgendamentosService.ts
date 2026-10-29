@@ -144,6 +144,8 @@ const listarPaginado = async (
       });
     }
 
+    // Desempate estável evita duplicações/perdas entre páginas.
+    query = query.order('id', { ascending: true });
     const { data, error } = await query.range(inicio, fim);
 
     if (error) {

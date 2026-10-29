@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-import SaeSidebar, { SaeTab } from './components/SaeSidebar';
+import type { SaeTab } from './components/SaeSidebar';
+import SaeHorizontalNav from './components/SaeHorizontalNav';
+import { InstitutionalHeader } from '../components/InstitutionalHeader';
+import './sae-layout-horizontal.css';
+import './sae-usuarios-contextual.css';
 import SaeTopbar from './components/SaeTopbar';
 import SaeDashboardPage from './pages/SaeDashboardPage';
 import SaeUsuariosPage from './pages/SaeUsuariosPage';
+import SaePainelUsuariosPage from './pages/SaePainelUsuariosPage';
 import SaeUsuarioPerfilPage from './pages/SaeUsuarioPerfilPage';
 import SaeTriagemPage from './pages/SaeTriagemPage';
 import SaeAgendamentosPage from './pages/SaeAgendamentosPage';
@@ -21,8 +26,10 @@ export default function SaeApp() {
   const { signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState<SaeTab>('dashboard');
+  const [visaoTriagem, setVisaoTriagem] = useState<'NOVA' | 'PENDENTES' | 'CONCLUIDAS' | 'HISTORICO'>('PENDENTES');
   const [restrictedProfessional, setRestrictedProfessional] = useState(false);
   const [accessResolved, setAccessResolved] = useState(false);
+  const [visaoUsuarios,setVisaoUsuarios] = useState<'pesquisa'|'inativos'|'novo'|'painel'>('pesquisa');
   const [usuarioSelecionadoId, setUsuarioSelecionadoId] =
     useState<string | null>(null);
   const [agendamentoFoco, setAgendamentoFoco] =
@@ -47,7 +54,7 @@ export default function SaeApp() {
           setUsuarioSelecionadoId(null);
           setAgendamentoFoco(null);
         } else {
-          setActiveTab('usuarios');
+          setActiveTab('dashboard');
         }
       })
       .catch(() => {
@@ -78,6 +85,7 @@ export default function SaeApp() {
     }
 
     setActiveTab(tab);
+    if (tab === 'triagem') setVisaoTriagem('PENDENTES');
 
     if (tab !== 'usuarios') {
       setUsuarioSelecionadoId(null);
@@ -120,10 +128,8 @@ export default function SaeApp() {
           );
         }
 
-        return (
-          <SaeUsuariosPage
-            onAbrirUsuario={abrirUsuario}
-          />
+        return visaoUsuarios === 'painel' ? <SaePainelUsuariosPage onAbrirUsuario={abrirUsuario} /> : (
+          <SaeUsuariosPage key={visaoUsuarios} modo={visaoUsuarios} situacaoInicial={visaoUsuarios==='inativos'?'INATIVO':'TODOS'} onAbrirUsuario={abrirUsuario} />
         );
 
       case 'triagem':
@@ -131,6 +137,7 @@ export default function SaeApp() {
           <SaeTriagemPage
             onIrAgendamentos={abrirAgendamentos}
             onAbrirUsuario={abrirUsuario}
+            visao={visaoTriagem}
           />
         );
 
@@ -177,25 +184,30 @@ export default function SaeApp() {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg-dark text-white">
-      <SaeSidebar
+    <div className="sae-horizontal-shell">
+      <InstitutionalHeader compact subtitle="Serviço de Atenção Especializada · SAE CIAPI" />
+      <SaeHorizontalNav
         activeTab={activeTab}
         onChange={handleChangeTab}
         onLogout={handleLogout}
         restrictedProfessional={restrictedProfessional}
+        visaoTriagem={visaoTriagem}
+        onSelecionarTriagem={(visao) => {
+          setActiveTab('triagem');
+          setUsuarioSelecionadoId(null);
+          setVisaoTriagem(visao);
+        }}
       />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <SaeTopbar
-          activeTab={activeTab}
-          restrictedProfessional={restrictedProfessional}
-        />
-
-        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-          <div className="mx-auto w-full max-w-[1600px]">
-            {renderContent()}
-          </div>
-        </main>
+      <div className="sae-horizontal-utility">
+        <SaeTopbar activeTab={activeTab} restrictedProfessional={restrictedProfessional} />
+      </div>
+      <div className={activeTab==='usuarios' ? 'sae-usuarios-workspace' : 'sae-outros-workspace'}>
+      {activeTab === 'usuarios' && !restrictedProfessional && <aside className="sae-usuarios-sidebar" aria-label="Opções de usuários"><div className="sae-usuarios-sidebar-title">Usuários</div>{([['pesquisa','Pesquisar usuário'],['inativos','Usuários inativos'],['novo','Novo usuário'],['painel','Painel de Usuários']] as const).map(([v,label])=><button type="button" key={v} className={visaoUsuarios===v?'selected':''} onClick={()=>{setUsuarioSelecionadoId(null);setVisaoUsuarios(v)}}>{label}<span>›</span></button>)}</aside>}
+      <main className="sae-horizontal-workspace">
+        <div className="sae-horizontal-workspace-inner">
+          {renderContent()}
+        </div>
+      </main>
       </div>
     </div>
   );

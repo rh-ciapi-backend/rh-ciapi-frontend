@@ -1,0 +1,11 @@
+
+.ciapi-mapas-competencia-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0 16px;padding:12px;background:#fff;border:1px solid #d5e2f2;border-radius:10px;color:#153c66}
+.ciapi-mapas-competencia-bar select,.ciapi-mapas-competencia-bar input{background:#fff;color:#14375a;border:1px solid #c7d7e9;border-radius:7px;padding:8px;max-width:180px}
+.ciapi-mapas-editar{display:block;margin-top:8px;background:#e8f1ff;border:1px solid #b5d2f7;color:#075ba8;padding:5px 8px;border-radius:6px;font-size:12px;cursor:pointer}
+.ciapi-mapas-dialog-overlay{position:fixed;inset:0;background:#0b1e3899;display:grid;place-items:center;z-index:80;padding:16px}
+.ciapi-mapas-dialog{width:min(550px,100%);background:white;padding:24px;border-radius:16px;box-shadow:0 15px 60px #001c4080;color:#14365b;display:grid;gap:12px}
+.ciapi-mapas-dialog h3{font-size:20px;font-weight:700}.ciapi-mapas-dialog label{display:grid;gap:6px;font-weight:600}
+.ciapi-mapas-dialog input,.ciapi-mapas-dialog select,.ciapi-mapas-dialog textarea{border:1px solid #cbd8e8;background:#fff;color:#142c4b;padding:10px;border-radius:8px;width:100%}
+.ciapi-mapas-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.ciapi-mapas-dialog-actions button{background:#1764c2;color:white;padding:10px 18px;border-radius:7px}
+.ciapi-mapas-dialog-actions button:first-child{background:#e8eef5;color:#23456c}.ciapi-mapas-alerta{font-size:12px;color:#8d5a14;background:#fff9ec;padding:9px;border-radius:7px}
+.ciapi-mapas-periodo{display:flex;gap:14px;flex-wrap:wrap;padding:12px 0}.ciapi-mapas-periodo label{display:grid;gap:5px}

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
-import { saeProfissionaisService } from '../../services/saeProfissionaisService';
+
 
 import type {
   SaeProfissional,
@@ -40,8 +40,7 @@ export default function VinculoUsuarioSistemaPanel({
     try {
       setCarregando(true);
       setErro(null);
-      const response = await saeProfissionaisService.listarUsuariosSistema();
-      setUsuarios(response.usuarios || []);
+      setUsuarios([]);
       setSelecionado(profissional.authUserId || '');
     } catch (error) {
       setErro(
@@ -84,39 +83,8 @@ export default function VinculoUsuarioSistemaPanel({
     );
   }, [usuarios, busca]);
 
-  const salvarVinculo = async (authUserId: string | null) => {
-    if (!podeEditar) {
-      setErro('Você não possui permissão para alterar o vínculo da conta.');
-      return;
-    }
-
-    try {
-      setSalvando(true);
-      setErro(null);
-
-      const response = await saeProfissionaisService.vincularUsuario(
-        profissional.id,
-        authUserId,
-      );
-
-      onProfissionalAtualizado(response.profissional);
-      setSelecionado(response.profissional.authUserId || '');
-      setSucesso(
-        authUserId
-          ? 'Conta do sistema vinculada com sucesso.'
-          : 'Conta do sistema desvinculada com sucesso.',
-      );
-
-      await carregar();
-    } catch (error) {
-      setErro(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível atualizar o vínculo da conta.',
-      );
-    } finally {
-      setSalvando(false);
-    }
+  const salvarVinculo = async (_authUserId: string | null) => {
+    setErro('O vínculo de contas ainda depende de uma rota autenticada no backend. Nenhuma alteração foi realizada.');
   };
 
   return (
@@ -128,7 +96,7 @@ export default function VinculoUsuarioSistemaPanel({
             <h4 className="text-sm font-bold text-white">Conta do sistema</h4>
           </div>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Vincule a conta autenticada que representará este profissional no SAE.
+            Visualização do vínculo atual. Para alterar vínculos, é necessário habilitar a rota autorizada no backend.
             Essa conta poderá usar a opção Minha agenda.
           </p>
         </div>

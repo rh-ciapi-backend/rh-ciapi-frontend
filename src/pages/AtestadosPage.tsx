@@ -1,3 +1,4 @@
+import './atestados-institucional.css';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import atestadosService from '../services/atestadosService';
+import { mapasService } from '../services/mapasService';
 import servidoresService from '../services/servidoresService';
 import type {
   Atestado,
@@ -33,6 +35,34 @@ import type {
 } from '../types';
 
 type FormErrors = Partial<Record<keyof AtestadoFormData, string>>;
+
+// As categorias acompanham os seis mapas institucionais existentes.
+// Não são criadas ocorrências paralelas nem alteradas as regras de sincronização.
+const ATESTADOS_CATEGORIAS: Record<string, string> = {
+  'atestado-comissionados-setrabes': 'COMISSIONADOS',
+  'atestado-federais-setrabes': 'FEDERAIS SETRABES',
+  'atestado-efetivos-setrabes': 'EFETIVO SETRABES',
+  'atestado-seletivos-setrabes': 'SELETIVO SETRABES',
+  'atestado-efetivos-sesau': 'EFETIVO SESAU',
+  'atestado-seletivos-sesau': 'SELETIVO SESAU',
+};
+const ATESTADOS_TITULOS: Record<string, string> = {
+  'atestado-comissionados-setrabes': 'Comissionados SETRABES',
+  'atestado-federais-setrabes': 'Federais SETRABES',
+  'atestado-efetivos-setrabes': 'Efetivos SETRABES',
+  'atestado-seletivos-setrabes': 'Seletivos SETRABES',
+  'atestado-efetivos-sesau': 'Efetivos SESAU',
+  'atestado-seletivos-sesau': 'Seletivos SESAU',
+};
+const normalizarCategoria = (v: unknown) => String(v || '').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
+const coincideCategoria = (categoria: unknown, filtro: string) => {
+  const c = normalizarCategoria(categoria);
+  const f = normalizarCategoria(filtro);
+  if (f === 'COMISSIONADOS') return c.includes('COMISSIONAD');
+  if (f === 'FEDERAIS') return c.includes('FEDERAL');
+  return c === f || c === `${f}S`;
+};
 
 const STATUS_OPTIONS: Array<'TODOS' | StatusAtestado> = ['TODOS', 'PENDENTE', 'VALIDADO', 'REJEITADO'];
 const TIPO_OPTIONS: Array<'TODOS' | TipoAtestado> = ['TODOS', 'MÉDICO', 'ODONTOLÓGICO', 'PSICOLÓGICO', 'ACOMPANHAMENTO'];
@@ -442,7 +472,7 @@ const FeedbackBanner: React.FC<{
   );
 };
 
-const AtestadosPage: React.FC = () => {
+const AtestadosPage: React.FC<{ initialAction?: string | null }> = ({ initialAction }) => {
   const pageTopRef = useRef<HTMLDivElement | null>(null);
   const serverAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const [items, setItems] = useState<Atestado[]>([]);
@@ -453,14 +483,19 @@ const AtestadosPage: React.FC = () => {
   const [showServerSuggestions, setShowServerSuggestions] = useState(false);
 
   const [search, setSearch] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
-  const [selectedYear, setSelectedYear] = useState<string>('TODOS');
+  const categoriaDoMenu = initialAction ? ATESTADOS_CATEGORIAS[initialAction] : undefined;
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
   const [selectedSetor, setSelectedSetor] = useState<string>('TODOS');
   const [selectedCategoria, setSelectedCategoria] = useState<string>('TODOS');
+  const categoriaMapa = categoriaDoMenu || 'COMISSIONADOS';
+  const [servidoresMapa, setServidoresMapa] = useState<Array<{nomeCompleto:string; matricula:string; cpf:string; cargo:string; observacao:string}>>([]);
+  const [mapaCarregando, setMapaCarregando] = useState(false);
+  const [mapaErro, setMapaErro] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'TODOS' | StatusAtestado>('TODOS');
   const [selectedTipo, setSelectedTipo] = useState<'TODOS' | TipoAtestado>('TODOS');
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(initialAction === 'atestado-novo');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<AtestadoFormData>(createEmptyAtestadoForm());
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -570,6 +605,31 @@ const AtestadosPage: React.FC = () => {
     }));
   }, [formData.dataInicio, formData.dataFim, formData.considerarDiasUteis]);
 
+  // O mapa usa a mesma fonte oficial de servidores dos Mapas Institucionais.
+  // Inclui pessoas sem atestado e não cria ocorrências novas.
+  useEffect(() => {
+    if (isFormOpen) return;
+    let ativo = true;
+    setMapaCarregando(true);
+    setMapaErro('');
+    const hoje = new Date();
+    const mes = selectedMonth === 'TODOS' ? hoje.getMonth() + 1 : Number(selectedMonth);
+    const ano = selectedYear === 'TODOS' ? hoje.getFullYear() : Number(selectedYear);
+    mapasService.listarPreview({ mes, ano, categoria: categoriaMapa, setor: '', status: 'ATIVO', layout: 'automatico', modoExportacao: 'arquivo_unico' })
+      .then(result => { if (ativo) setServidoresMapa(result.linhas.map(l => ({
+        nomeCompleto: l.nomeCompleto, matricula: l.matricula, cpf: l.cpf,
+        cargo: l.cargo, observacao: l.observacao,
+      }))); })
+      .catch(err => { if (ativo) {setMapaErro(err instanceof Error ? err.message : 'Falha ao carregar servidores.'); setServidoresMapa([]);} })
+      .finally(() => { if (ativo) setMapaCarregando(false); });
+    return () => { ativo = false; };
+  }, [categoriaMapa, selectedMonth, selectedYear, isFormOpen]);
+
+  const servidoresMapaFiltrados = useMemo(() => {
+    const busca = search.toLowerCase().trim();
+    return servidoresMapa.filter(s => !busca || [s.nomeCompleto, s.matricula, s.cpf, s.cargo].some(v => v.toLowerCase().includes(busca)));
+  }, [servidoresMapa, search]);
+
   const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => safeText(item.setor))), [items]);
   const categoriaOptions = useMemo(
     () => getUniqueSorted(items.map((item) => safeText(item.categoria))),
@@ -594,7 +654,8 @@ const AtestadosPage: React.FC = () => {
         const matchesMonth = selectedMonth === 'TODOS' || getMonthFromDate(safeText(item.dataInicio)) === selectedMonth;
         const matchesYear = selectedYear === 'TODOS' || getYearFromDate(safeText(item.dataInicio)) === selectedYear;
         const matchesSetor = selectedSetor === 'TODOS' || safeText(item.setor) === selectedSetor;
-        const matchesCategoria = selectedCategoria === 'TODOS' || safeText(item.categoria) === selectedCategoria;
+        const matchesCategoria = (selectedCategoria === 'TODOS' || safeText(item.categoria) === selectedCategoria)
+          && (!categoriaDoMenu || coincideCategoria(item.categoria, categoriaDoMenu));
         const matchesStatus = selectedStatus === 'TODOS' || item.status === selectedStatus;
         const matchesTipo = selectedTipo === 'TODOS' || item.tipo === selectedTipo;
 
@@ -616,6 +677,7 @@ const AtestadosPage: React.FC = () => {
     selectedYear,
     selectedSetor,
     selectedCategoria,
+    categoriaDoMenu,
     selectedStatus,
     selectedTipo,
   ]);
@@ -656,6 +718,11 @@ const AtestadosPage: React.FC = () => {
     setShowServerSuggestions(false);
     setIsFormOpen(true);
   };
+
+  // O formulário existente é reutilizado, incluindo upload, validações e sincronização.
+  useEffect(() => {
+    if (initialAction === 'atestado-novo') openCreateModal();
+  }, [initialAction]);
 
   const openEditModal = (item: Atestado) => {
     setEditingId(item.id);
@@ -837,20 +904,108 @@ ${result.warning}`;
     }
   };
 
+  // Tela exclusiva da categoria: a relação usa os servidores ativos dos Mapas,
+  // mesmo quando não existe atestado no mês. O formulário permanece intacto.
+  if (categoriaDoMenu && !isFormOpen) {
+    const mesNumerico = Number(selectedMonth);
+    const anoNumerico = Number(selectedYear);
+    const inicioPeriodo = `${selectedYear}-${String(mesNumerico).padStart(2, '0')}-01`;
+    const ultimoDia = new Date(anoNumerico, mesNumerico, 0).getDate();
+    const fimPeriodo = `${selectedYear}-${String(mesNumerico).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+    const tituloCategoria = ATESTADOS_TITULOS[initialAction || ''] || 'Servidores';
+    const atestadosDaCategoria = items.filter((a) =>
+      coincideCategoria(a.categoria, categoriaDoMenu) &&
+      Boolean(a.dataInicio && a.dataFim) &&
+      String(a.dataInicio).slice(0, 10) <= fimPeriodo &&
+      String(a.dataFim).slice(0, 10) >= inicioPeriodo
+    );
+    const linhas = servidoresMapa.map((servidor, indice) => {
+      const cpf = normalizeCpf(servidor.cpf);
+      const matricula = String(servidor.matricula || '').replace(/[^0-9a-z]/gi, '').toLowerCase();
+      const doServidor = atestadosDaCategoria.filter((a) => {
+        const cpfAtestado = normalizeCpf(safeText(a.cpf));
+        const matriculaAtestado = safeText(a.matricula).replace(/[^0-9a-z]/gi, '').toLowerCase();
+        return (cpf.length === 11 && cpfAtestado === cpf) ||
+          (matricula.length > 0 && matriculaAtestado === matricula);
+      });
+      return { servidor, indice, atestados: doServidor };
+    });
+    const nomeMes = MONTH_OPTIONS.find((m) => m.value === selectedMonth)?.label || '';
+    return (
+      <div ref={pageTopRef} className="ciapi-atestados-mapa-unico space-y-3">
+        <section className="rounded-xl border border-[#c9daf0] bg-white p-3 sm:p-5">
+          <div className="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-[#d5e3f2] bg-[#f7faff] p-3">
+            <strong className="text-sm text-[#0b3055]">Competência</strong>
+            <label className="flex items-center gap-2 text-sm text-[#0b3055]">Mês
+              <select aria-label="Mês da competência" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="rounded-md border border-[#c9daf0] bg-white px-3 py-2">
+                {MONTH_OPTIONS.filter((m) => m.value !== 'TODOS').map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[#0b3055]">Ano
+              <select aria-label="Ano da competência" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="rounded-md border border-[#c9daf0] bg-white px-3 py-2">
+                {Array.from({ length: 12 }, (_, i) => String(new Date().getFullYear() + 1 - i)).map((ano) => <option key={ano} value={ano}>{ano}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={() => { void loadAtestados(); }} className="rounded-md border border-[#c9daf0] bg-[#edf5ff] px-3 py-2 text-sm font-semibold text-[#0b3055]">Atualizar atestados</button>
+            <span className="ml-auto text-xs text-[#55718d]">{linhas.length} servidor(es)</span>
+          </div>
+          <header className="mb-5 text-center text-[#0b3055]">
+            <p className="text-xs font-medium uppercase">GOVERNO DO ESTADO DE RORAIMA</p>
+            <p className="text-xs font-medium uppercase">SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</p>
+            <h1 className="mt-3 text-lg font-bold">MAPA DE ATESTADOS MÉDICOS — {tituloCategoria}</h1>
+            <p className="mt-1 text-sm">COMPETÊNCIA: {nomeMes.toUpperCase()}/{selectedYear}</p>
+          </header>
+          {mapaErro && <p role="alert" className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{mapaErro}</p>}
+          <div className="overflow-x-auto rounded-md border border-[#c9daf0]">
+            <table className="w-full min-w-[1050px] border-collapse text-sm text-[#153a60]">
+              <thead><tr>{['Nº', 'MATRÍCULA', 'SERVIDOR', 'CPF', 'CARGO', 'INÍCIO', 'FIM', 'DIAS', 'OBSERVAÇÃO', 'AÇÕES'].map((h) =>
+                <th key={h} className="border border-[#c9daf0] bg-[#edf3fa] px-2 py-3 text-center text-xs font-semibold">{h}</th>
+              )}</tr></thead>
+              <tbody>
+                {mapaCarregando ? <tr><td colSpan={10} className="p-8 text-center">Carregando servidores...</td></tr> :
+                 linhas.length === 0 ? <tr><td colSpan={10} className="p-8 text-center">Nenhum servidor ativo encontrado para a categoria.</td></tr> :
+                 linhas.map(({ servidor, indice, atestados }) => <tr key={`${servidor.matricula}-${indice}`} className="even:bg-[#f7faff]">
+                   <td className="border border-[#d8e5f2] px-2 py-2 text-center">{String(indice + 1).padStart(2, '0')}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2">{servidor.matricula || '—'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2 font-semibold">{servidor.nomeCompleto}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2">{servidor.cpf || '—'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2">{servidor.cargo || '—'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2 text-center">{atestados.length ? atestados.map(a => formatDate(safeText(a.dataInicio))).join('; ') : '—'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2 text-center">{atestados.length ? atestados.map(a => formatDate(safeText(a.dataFim))).join('; ') : '—'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2 text-center">{atestados.length ? atestados.reduce((total, a) => total + (Number(a.dias) || 0), 0) : '—'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2">{atestados.length ? atestados.map(a => safeText(a.observacao) || `Atestado ${safeText(a.tipo)}`).join('; ') : 'Sem Alterações'}</td>
+                   <td className="border border-[#d8e5f2] px-2 py-2 text-center">{atestados.map(a => <button key={a.id} type="button" onClick={() => setDetailsItem(a)} className="m-0.5 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">Ver</button>)}</td>
+                 </tr>)}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-[#55718d]">Todos os servidores ativos da categoria são exibidos. “Sem Alterações” indica ausência de atestado registrado no período selecionado.</p>
+        </section>
+        {detailsItem && <section className="rounded-lg border border-[#c9daf0] bg-white p-4 text-sm text-[#153a60]" aria-label="Detalhes do atestado">
+          <div className="mb-2 flex justify-between gap-3"><strong>Atestado — {detailsItem.servidorNome}</strong><button type="button" onClick={() => setDetailsItem(null)} className="rounded border px-3 py-1">Fechar</button></div>
+          <p>Tipo: {safeText(detailsItem.tipo)} · Período: {formatDate(safeText(detailsItem.dataInicio))} a {formatDate(safeText(detailsItem.dataFim))} · Situação: {safeText(detailsItem.status)}</p>
+          <p className="mt-2">Observação: {safeText(detailsItem.observacao) || 'Não informada'}</p>
+          <button type="button" onClick={() => { openEditModal(detailsItem); setDetailsItem(null); }} className="mt-3 rounded bg-[#1665b8] px-3 py-2 text-white">Editar atestado</button>
+        </section>}
+      </div>
+    );
+  }
+
   return (
-    <div ref={pageTopRef} className="min-h-full space-y-5 sm:space-y-6">
+    <div ref={pageTopRef} className="ciapi-atestados-institucional min-h-full space-y-5 sm:space-y-6">
+      {!isFormOpen && (<>
       <SectionCard className="px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Saúde ocupacional
+              CIAPI RH / CONTROLE DE PESSOAL
             </p>
 
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Atestados
+              Painel de Gestão de Atestados Médicos — {ATESTADOS_TITULOS[initialAction || ''] || 'Comissionados SETRABES'}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Cadastre, acompanhe e consulte afastamentos dos servidores.
+              Consulte os servidores da categoria, seus atestados e as observações integradas à Frequência.
             </p>
           </div>
 
@@ -1038,12 +1193,44 @@ ${result.warning}`;
         </div>
       </SectionCard>
 
+      <SectionCard className="ciapi-atestados-roster p-4 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-[#0b3055]">Relação de servidores — {ATESTADOS_TITULOS[initialAction || ''] || 'Comissionados SETRABES'}</h2>
+            <p className="text-sm text-[#56708b]">Todos os servidores ativos da categoria, mesmo sem atestado registrado.</p>
+          </div>
+
+        </div>
+        {mapaErro && <p role="alert" className="text-sm text-red-700 mb-3">{mapaErro}</p>}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[740px] border-collapse text-sm text-[#183b5c]">
+            <thead><tr>{['Nº','MATRÍCULA','SERVIDOR','CPF','CARGO','OBSERVAÇÃO NO MAPA'].map(h => <th key={h} className="border border-[#bed0e4] bg-[#edf3fa] p-2 text-left text-xs">{h}</th>)}</tr></thead>
+            <tbody>
+              {mapaCarregando ? <tr><td colSpan={6} className="p-5 text-center">Carregando servidores...</td></tr> :
+               servidoresMapaFiltrados.length === 0 ? <tr><td colSpan={6} className="p-5 text-center">Nenhum servidor encontrado para a categoria e a busca.</td></tr> :
+               servidoresMapaFiltrados.map((serv, i) => <tr key={`${serv.matricula}-${i}`} className="hover:bg-blue-50">
+                <td className="border border-[#d7e3f0] p-2">{String(i+1).padStart(2,'0')}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.matricula || '—'}</td>
+                <td className="border border-[#d7e3f0] p-2 font-semibold">{serv.nomeCompleto}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.cpf || '—'}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.cargo || '—'}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.observacao || '—'}</td>
+               </tr>)}
+            </tbody>
+          </table>
+        </div>
+        {!mapaCarregando && !mapaErro && <p className="mt-3 text-xs text-[#56708b]">{servidoresMapaFiltrados.length} servidor(es) exibido(s). Observações recuperadas da mesma consulta dos Mapas Institucionais.</p>}
+      </SectionCard>
+
       <SectionCard className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:px-5 md:flex-row md:items-center md:justify-between md:px-6">
           <div>
-            <h2 className="text-[20px] font-bold text-white">Lista de Atestados</h2>
+            <p className="text-center text-xs font-semibold uppercase text-[#153a60]">GOVERNO DO ESTADO DE RORAIMA<br/>SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</p>
+            <h2 className="mt-2 text-center text-[18px] font-bold text-[#0b3055]">MAPA DE ATESTADOS MÉDICOS — {ATESTADOS_TITULOS[initialAction || ''] || 'SERVIDORES'}</h2>
+            <h3 className="mt-1 text-center text-sm font-medium text-[#0b3055]">Competência: {selectedMonth === 'TODOS' ? 'Todos os meses' : MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label} / {selectedYear === 'TODOS' ? 'Todos os anos' : selectedYear}</h3>
+            <h4 className="mt-3 text-[15px] font-semibold text-[#0b3055]">Lista de Atestados</h4>
             <p className="mt-0.5 text-sm text-zinc-400">
-              Conectado ao Supabase com upload real e integração com frequência.
+              Registros de atestados existentes, vinculados à Frequência quando a sincronização está habilitada.
             </p>
           </div>
 
@@ -1053,127 +1240,38 @@ ${result.warning}`;
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="min-w-full">
-            <thead className="bg-slate-900/25">
-              <tr className="text-left">
-                {['Servidor', 'CPF / Matrícula', 'Setor / Categoria', 'Tipo', 'Período', 'Dias', 'Status', 'Arquivo', 'Ações'].map(
-                  (header) => (
-                    <th
-                      key={header}
-                      className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500"
-                    >
-                      {header}
-                    </th>
-                  ),
-                )}
+        <div className="hidden overflow-x-auto lg:block ciapi-atestados-map-table">
+          <table className="w-full min-w-[1130px] border-collapse text-sm">
+            <thead>
+              <tr>
+                {['Nº', 'MATRÍCULA', 'SERVIDOR', 'CPF', 'TIPO', 'INÍCIO', 'FIM', 'DIAS', 'OBSERVAÇÃO', 'AÇÕES'].map(h => (
+                  <th key={h} className="border border-[#bed0e4] bg-[#edf3fa] px-3 py-3 text-center text-[11px] font-bold text-[#16395a]">{h}</th>
+                ))}
               </tr>
             </thead>
-
             <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-16 text-center text-sm text-zinc-400">
-                    Carregando atestados...
-                  </td>
-                </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-16 text-center text-sm text-zinc-400">
-                    Nenhum atestado encontrado com os filtros atuais.
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr key={item.id} className="border-t border-border-dark/50 transition hover:bg-slate-800/20">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</span>
-                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.id)}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{safeText(item.cpf) || '-'}</span>
-                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.matricula) || '-'}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{safeText(item.setor) || '-'}</span>
-                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.categoria) || '-'}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getTypeBadgeClass(safeText(item.tipo))}`}>
-                        {safeText(item.tipo) || '-'}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{formatDate(safeText(item.dataInicio))}</span>
-                        <span className="mt-1 text-xs text-zinc-500">até {formatDate(safeText(item.dataFim))}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4 text-sm font-semibold text-white">{Number(item.dias) || 0}</td>
-
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(safeText(item.status))}`}>
-                        {safeText(item.status) || '-'}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      {item.arquivoNome ? (
-                        <button
-                          type="button"
-                          onClick={() => void handleDownload(item)}
-                          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-cyan-200"
-                        >
-                          <Paperclip size={14} />
-                          {safeText(item.arquivoNome)}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-zinc-500">Sem arquivo</span>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleOpenDetails(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.08]"
-                        >
-                          <Eye size={14} />
-                          Detalhes
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.08]"
-                        >
-                          <Edit2 size={14} />
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteItem(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20"
-                        >
-                          <Trash2 size={14} />
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+              {isLoading ? <tr><td colSpan={10} className="p-8 text-center">Carregando...</td></tr> :
+               filteredData.length === 0 ? <tr><td colSpan={10} className="p-8 text-center">Nenhum atestado encontrado para a categoria e os filtros selecionados.</td></tr> :
+               filteredData.map((item, index) => (
+                 <tr key={item.id} className="hover:bg-[#f3f8fd]">
+                   <td className="border border-[#d7e3f0] px-2 py-3 text-center">{String(index+1).padStart(2,'0')}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{safeText(item.matricula) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3 font-semibold">{safeText(item.servidorNome) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{safeText(item.cpf) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{safeText(item.tipo) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{formatDate(safeText(item.dataInicio))}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{formatDate(safeText(item.dataFim))}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3 text-center">{Number(item.dias) || 0}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3 max-w-[260px] break-words">{safeText(item.observacao) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-2 py-3">
+                     <div className="flex flex-wrap justify-center gap-1.5">
+                       <button type="button" onClick={() => void handleOpenDetails(item)} className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700">Ver</button>
+                       <button type="button" onClick={() => openEditModal(item)} className="rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-blue-700">Editar</button>
+                       <button type="button" onClick={() => setDeleteItem(item)} className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700">Excluir</button>
+                     </div>
+                   </td>
+                 </tr>
+               ))}
             </tbody>
           </table>
         </div>
@@ -1249,22 +1347,11 @@ ${result.warning}`;
         </div>
       </SectionCard>
 
-      <AnimatePresence>
-        {isFormOpen && (
-          <motion.div
-            key="atestado-form-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:p-2 md:items-center md:p-6"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              className="flex max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0B1220] shadow-[0_30px_90px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-1rem)] md:max-h-[95vh] md:rounded-3xl"
-            >
+      </>)}
+
+      {isFormOpen && (
+          <div className="ciapi-atestados-inline-form">
+            <div className="ciapi-atestados-inline-panel flex w-full flex-col overflow-visible rounded-2xl border border-[#d5e2f2] bg-white">
               <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5 md:px-6">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-300">
@@ -1289,7 +1376,7 @@ ${result.warning}`;
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 md:px-6">
+              <div className="flex-1 px-4 py-4 sm:px-5 sm:py-5 md:px-6">
                 <div className="space-y-6">
                   {formFeedback.type && (
                     <FeedbackBanner
@@ -1662,10 +1749,9 @@ ${result.warning}`;
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
 
       <AnimatePresence>
         {detailsItem && (

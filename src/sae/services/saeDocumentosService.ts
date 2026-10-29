@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../../config/api';
 export type SaeCampoModeloDocumento = {
   name: string;
   label: string;
-  type: 'text' | 'date' | 'textarea' | 'select';
+  type: 'text' | 'date' | 'textarea' | 'select' | 'multiselect';
   section?: string;
   options?: string[];
   placeholder?: string;

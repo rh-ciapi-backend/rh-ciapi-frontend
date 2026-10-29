@@ -32,8 +32,8 @@ export default function SaeAlterarSenhaModal({
       setErro('');
       setSucesso('');
 
-      if (senha.length < 6) {
-        throw new Error('A nova senha deve ter pelo menos 6 caracteres.');
+      if (senha.length < 8) {
+        throw new Error('A nova senha deve ter pelo menos 8 caracteres.');
       }
 
       if (senha !== confirmar) {
@@ -70,7 +70,7 @@ export default function SaeAlterarSenhaModal({
                 <div>
                   <h3 className="font-bold text-white">Alterar minha senha</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Escolha uma nova senha com pelo menos 6 caracteres.
+                    Escolha uma nova senha com pelo menos 8 caracteres.
                   </p>
                 </div>
               </div>
@@ -78,6 +78,7 @@ export default function SaeAlterarSenhaModal({
               <button
                 type="button"
                 onClick={fechar}
+                 disabled={salvando}
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-dark text-slate-400"
               >
                 <X size={17} />
@@ -144,6 +145,7 @@ export default function SaeAlterarSenhaModal({
               <button
                 type="button"
                 onClick={salvar}
+                 aria-label="Confirmar alteração de senha"
                 disabled={salvando}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white disabled:opacity-50"
               >

@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -133,7 +134,7 @@ export default function SaeRelatoriosAdminPage() {
             .map((item) => item.bairro)
             .filter(Boolean),
         ),
-      ).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      ).sort((a, b) => String(a).localeCompare(String(b), 'pt-BR')),
     [usuarios],
   );
 
@@ -541,7 +542,7 @@ export default function SaeRelatoriosAdminPage() {
   }
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6 sae-refresh">
       <section className="app-surface overflow-hidden border-primary/10 bg-gradient-to-br from-card-dark via-card-dark to-blue-950/25 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

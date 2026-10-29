@@ -21,6 +21,7 @@ import { motion } from 'motion/react';
 import { saeUsuariosService } from '../services/saeUsuariosService';
 import EditarUsuarioModal from '../components/usuarios/EditarUsuarioModal';
 import SaeProntuarioDocumentos from '../components/documentos/SaeProntuarioDocumentos';
+import './sae-perfil-abas.css';
 
 import type {
   SaeUsuarioPerfil,
@@ -41,7 +42,6 @@ type AbaPerfil =
   | 'agendamentos'
   | 'atendimentos'
   | 'avaliacoes'
-  | 'sinais-vitais'
   | 'documentos';
 
 const statusUsuarioStyles = {
@@ -60,6 +60,7 @@ export default function SaeUsuarioPerfilPage({
   const [erro, setErro] = useState<string | null>(null);
   const [aba, setAba] = useState<AbaPerfil>('resumo');
   const [editarAberto, setEditarAberto] = useState(false);
+  const [resumoSecao, setResumoSecao] = useState<'dados' | 'sinais'>('dados');
 
   useEffect(() => {
     carregarPerfil();
@@ -144,7 +145,7 @@ export default function SaeUsuarioPerfilPage({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18 }}
-      className="space-y-6"
+      className="sae-prontuario-institucional space-y-6"
     >
       <section className="app-surface relative overflow-hidden p-5 sm:p-6">
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
@@ -201,7 +202,7 @@ export default function SaeUsuarioPerfilPage({
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard
           label="Agendamentos"
           value={perfil.agendamentos.length}
@@ -233,16 +234,10 @@ export default function SaeUsuarioPerfilPage({
           icon={ClipboardList}
         />
 
-        <KpiCard
-          label="Sinais vitais"
-          value={perfil.sinaisVitais.length}
-          helper="Registros de aferição"
-          icon={Activity}
-        />
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="inline-flex min-w-full gap-1 rounded-2xl border border-border-dark bg-card-dark/90 p-1.5 shadow-sm sm:min-w-0">
+      <nav aria-label="Seções do prontuário" className="sae-perfil-nav">
+        <div className="sae-perfil-nav__items">
           <TabButton
             active={aba === 'resumo'}
             onClick={() => setAba('resumo')}
@@ -272,23 +267,24 @@ export default function SaeUsuarioPerfilPage({
           </TabButton>
 
           <TabButton
-            active={aba === 'sinais-vitais'}
-            onClick={() => setAba('sinais-vitais')}
-          >
-            Sinais vitais
-          </TabButton>
-
-          <TabButton
             active={aba === 'documentos'}
             onClick={() => setAba('documentos')}
           >
             Documentos
           </TabButton>
         </div>
-      </div>
+      </nav>
 
       {aba === 'resumo' && (
-        <ResumoTab perfil={perfil} />
+        <div className="space-y-5">
+          <div className="sae-resumo-subnav" role="group" aria-label="Opções do resumo">
+            <button type="button" aria-pressed={resumoSecao === 'dados'} className={resumoSecao === 'dados' ? 'is-active' : ''} onClick={() => setResumoSecao('dados')}>Dados gerais</button>
+            <button type="button" aria-pressed={resumoSecao === 'sinais'} className={resumoSecao === 'sinais' ? 'is-active' : ''} onClick={() => setResumoSecao('sinais')}><Activity size={16} /> Sinais vitais <span className="sae-resumo-count">{perfil.sinaisVitais.length}</span></button>
+          </div>
+          {resumoSecao === 'dados'
+            ? <ResumoTab perfil={perfil} />
+            : <section className="sae-resumo-vitals"><div className="sae-resumo-vitals__head"><h2>Sinais vitais</h2><p>Histórico de aferições registradas para este usuário.</p></div><SinaisVitaisTab itens={perfil.sinaisVitais} /></section>}
+        </div>
       )}
 
       {aba === 'agendamentos' && (
@@ -304,10 +300,6 @@ export default function SaeUsuarioPerfilPage({
           avaliacoes={perfil.avaliacoes}
           ciclos={perfil.ciclosAvaliacao}
         />
-      )}
-
-      {aba === 'sinais-vitais' && (
-        <SinaisVitaisTab itens={perfil.sinaisVitais} />
       )}
 
       {aba === 'documentos' && (

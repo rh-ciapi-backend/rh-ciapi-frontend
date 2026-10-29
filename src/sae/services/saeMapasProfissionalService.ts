@@ -80,7 +80,7 @@ export const saeMapasProfissionalService = {
     const blob = await response.blob();
     const header = response.headers.get('content-disposition') || '';
     const match = header.match(/filename="?([^"]+)"?/i);
-    const filename = match?.[1] || `mapa-atendimento-${ano}-${String(mes).padStart(2, '0')}.docx`;
+    const filename = (match?.[1] || `mapa-atendimento-${ano}-${String(mes).padStart(2, '0')}.docx`).replace(/[\\/\x00-\x1f]/g, '_');
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

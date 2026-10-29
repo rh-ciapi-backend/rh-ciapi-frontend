@@ -1,3 +1,4 @@
+import './RequerimentosEstadual.css';
 import React, { useEffect, useRef, useState } from 'react';
 import { ClipboardList, FilePlus2, Info, Search, Trash2 } from 'lucide-react';
 import { servidoresService } from '../services/servidoresService';
@@ -186,8 +187,8 @@ function dataParaInput(value: string | null | undefined) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
 }
 
-export default function RequerimentosPage({ modoServidor = false }: { modoServidor?: boolean; podeArquivar?: boolean }) {
-  const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : 'lista');
+export default function RequerimentosPage({ modoServidor = false, initialView = 'lista' }: { modoServidor?: boolean; podeArquivar?: boolean; initialView?: 'lista' | 'novo' }) {
+  const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : initialView);
   const [tipo, setTipo] = useState('');
   const [busca, setBusca] = useState('');
   const [sugestoes, setSugestoes] = useState<Servidor[]>([]);
@@ -327,7 +328,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
     try {
       const novo = await requerimentosService.criar({
         servidorId: selecionado.id, tipo, detalhes, dados: Object.fromEntries(
-          Object.entries(valores).map(([chave, valor]) => [chave, chave.startsWith('data') ? valor : valor.toLocaleUpperCase('pt-BR')]),
+          Object.entries(valores).map(([chave, valor]) => [chave, chave.startsWith('data') ? String(valor ?? '') : String(valor ?? '').toLocaleUpperCase('pt-BR')]),
         ),
       });
       setRequerimentos((anteriores) => [
@@ -371,7 +372,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
   };
 
   return (
-    <div className="min-w-0 space-y-5 text-slate-200 sm:space-y-6">
+    <div className="ciapi-estadual min-w-0 space-y-5 text-slate-200 sm:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Requerimentos</h1>
@@ -429,7 +430,16 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
             )}
         </section>
       ) : (
-        <div className="space-y-5">
+        <div className="ciapi-estadual__folha space-y-5">
+          <header className="ciapi-estadual__cabecalho">
+            <div className="ciapi-estadual__orgao">
+              <strong>ESTADO DE RORAIMA</strong>
+              <strong>SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</strong>
+              <span>“AMAZÔNIA: PATRIMÔNIO DOS BRASILEIROS”</span>
+            </div>
+            <div className="ciapi-estadual__tipo"><strong>REQUERIMENTO</strong><strong>SERVIDOR ESTADUAL</strong><span>Lei n.º 053/2001</span></div>
+            <p className="ciapi-estadual__destino">À COORDENADORIA GERAL DE RECURSOS HUMANOS DO GOVERNO DO ESTADO DE RORAIMA – SEGAD</p>
+          </header>
           <div className="flex gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100"><Info size={18} className="mt-0.5 shrink-0" /><p>{modoServidor ? 'Confira seus dados e complete os campos que faltam.' : 'Os dados conhecidos são preenchidos ao escolher um servidor. Complete os campos restantes antes de enviar.'}</p></div>
           {!modoServidor && <section className="rounded-2xl border border-[#26344a] bg-[#172033] p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-white">Selecionar servidor</h2>

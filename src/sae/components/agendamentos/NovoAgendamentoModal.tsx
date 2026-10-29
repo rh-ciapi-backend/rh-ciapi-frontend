@@ -142,8 +142,8 @@ export default function NovoAgendamentoModal({ aberto, onClose, onCriado }: Prop
         return;
       }
 
-      const mapas=respostas.map(r=>new Map((r.datas||[]).map(item=>[item.data,item])));
-      const datasBase=Array.from(mapas[0].keys());
+      const mapas=respostas.map(r=>new Map<string, SaeDisponibilidadeDataResumo>((r.datas||[]).map(item=>[String(item.data),item])));
+      const datasBase: string[]=Array.from(mapas[0].keys());
 
       const intersecao=datasBase
         .filter(date=>mapas.every(m=>m.has(date)))

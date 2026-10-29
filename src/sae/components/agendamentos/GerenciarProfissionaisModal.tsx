@@ -309,7 +309,7 @@ export default function GerenciarProfissionaisModal({
 
     if (
       !window.confirm(
-        `Redefinir a senha de ${selecionado.nome} para a senha provisória baseada no CPF?`,
+        `Redefinir a senha de ${selecionado.nome} para uma senha temporária?`,
       )
     ) {
       return;
@@ -671,8 +671,9 @@ export default function GerenciarProfissionaisModal({
 
                   {abaAtiva === 'agenda' ? (
                     <AgendaProfissionalPanel
-                      profissionalId={selecionado.id}
-                      profissionalNome={selecionado.nome}
+                      profissional={selecionado}
+                      servicos={servicos}
+                      podeEditar={podeEditar}
                     />
                   ) : (
                     <>

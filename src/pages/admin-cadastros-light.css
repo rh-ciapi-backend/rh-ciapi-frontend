@@ -1,0 +1,16 @@
+/* Páginas de administração: adaptação visual isolada */
+.ciapi-admin-light { color:#183454; }
+.ciapi-admin-light .bg-card-dark,.ciapi-admin-light .bg-slate-900\/50,.ciapi-admin-light .bg-slate-900\/60,.ciapi-admin-light .bg-slate-800\/50,.ciapi-admin-light .bg-slate-800,.ciapi-admin-light .bg-slate-900 {background:#fff!important;}
+.ciapi-admin-light .border-border-dark {border-color:#dce5ef!important;}
+.ciapi-admin-light .text-white,.ciapi-admin-light .text-slate-300,.ciapi-admin-light .text-slate-400 {color:#173457!important;}
+.ciapi-admin-light .text-slate-500 {color:#52677e!important;}
+.ciapi-admin-light input,.ciapi-admin-light select {color:#173457!important;background:#fff!important;border:1px solid #d3dfea!important;}
+.ciapi-admin-light table {background:#fff;color:#173457;}
+.ciapi-admin-light thead {background:#f1f5fb!important;}
+.ciapi-admin-light tbody tr:hover {background:#f6f9fc!important;}
+.ciapi-admin-light .ciapi-toggle-status {border:1px solid #c8d6e5;background:#f5f8fc;color:#244a6f;padding:7px 10px;border-radius:9px;font-size:12px;font-weight:600;white-space:nowrap;}
+.ciapi-admin-light .ciapi-toggle-status:hover {background:#e6f0fb;}
+.ciapi-admin-light .bg-emerald-500\/10 {background:#e8f7ef!important;}
+.ciapi-admin-light .text-emerald-400 {color:#087a46!important;}
+.ciapi-admin-light .text-rose-400 {color:#a92d3c!important;}
+.ciapi-admin-light .fixed.inset-0 .bg-card-dark {background:#fff!important;}

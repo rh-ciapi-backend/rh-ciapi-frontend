@@ -71,6 +71,7 @@ const dataSomente = (row: any) =>
       'data_atendimento',
       'atendido_em',
       'data_registro',
+      'data_afericao',
       'created_at',
     ]),
   ).slice(0, 10);
@@ -84,6 +85,7 @@ async function listarTodos(table: string, select = '*') {
     const { data, error } = await supabase
       .from(table)
       .select(select)
+      .order('id', { ascending: true })
       .range(start, start + PAGE - 1);
 
     if (error) throw error;
@@ -265,6 +267,12 @@ export const saeAdministrativoService = {
             value: safeString(firstValue(row, [...keys])),
           }))
           .filter((item) => item.value);
+        // O formulário de aferição também utiliza as colunas separadas.
+        const sistolica = safeString(row.pressao_sistolica);
+        const diastolica = safeString(row.pressao_diastolica);
+        if (sistolica && diastolica && !valores.some(v => v.label === 'Pressão')) {
+          valores.unshift({ label: 'Pressão', value: `${sistolica}/${diastolica} mmHg` });
+        }
 
         return {
           id: safeString(row.id),

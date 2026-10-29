@@ -1,0 +1,47 @@
+/* Somente a consulta de Atestados: não altera menus globais, RH, SAE ou modais. */
+.ciapi-atestados-institucional > .app-surface,
+.ciapi-atestados-institucional > section.app-surface,
+.ciapi-atestados-institucional > section > .app-surface {
+  background:#fff !important;
+  border:1px solid #d5e2f2 !important;
+  color:#0b3055 !important;
+  box-shadow:0 7px 24px rgba(20,47,78,.04);
+  border-radius:16px;
+}
+.ciapi-atestados-institucional > section .text-white,
+.ciapi-atestados-institucional > .app-surface .text-white { color:#0b3055 !important; }
+.ciapi-atestados-institucional > section .text-zinc-400,
+.ciapi-atestados-institucional > section .text-slate-500 { color:#617a96 !important; }
+.ciapi-atestados-institucional > section table { width:100%; }
+.ciapi-atestados-institucional > section table th { background:#eef4fb; color:#284967 !important; border-bottom:1px solid #c9d9e9; }
+.ciapi-atestados-institucional > section table td { color:#143a60; border-bottom:1px solid #e1eaf4; }
+.ciapi-atestados-institucional > section input,
+.ciapi-atestados-institucional > section select { color:#0b3055; background:#fff; border-color:#ceddeb; }
+@media(max-width:768px) { .ciapi-atestados-institucional { min-width:0; } }
+
+/* Formulário incorporado à área central: nenhum overlay ou janela modal. */
+.ciapi-atestados-inline-form {width:100%; min-width:0; position:relative; z-index:1;}
+.ciapi-atestados-inline-panel {box-shadow:0 8px 22px rgba(20,47,78,.05);}
+.ciapi-atestados-inline-panel > div:first-child {background:#f1f6fc;}
+.ciapi-atestados-inline-panel .text-white,
+.ciapi-atestados-inline-panel .text-zinc-100,
+.ciapi-atestados-inline-panel .text-zinc-200 {color:#12365b!important;}
+.ciapi-atestados-inline-panel .text-zinc-400,
+.ciapi-atestados-inline-panel .text-zinc-500 {color:#607b98!important;}
+.ciapi-atestados-inline-panel section {background:#f8fbff!important; border-color:#d6e4f3!important;}
+.ciapi-atestados-inline-panel input:not([type=checkbox]),
+.ciapi-atestados-inline-panel select,
+.ciapi-atestados-inline-panel textarea {background:#fff!important; color:#12365b!important; border:1px solid #cbd9e9!important;}
+.ciapi-atestados-inline-panel input::placeholder,
+.ciapi-atestados-inline-panel textarea::placeholder {color:#7188a2!important;}
+.ciapi-atestados-inline-panel .border-white\/10 {border-color:#d6e4f3!important;}
+.ciapi-atestados-map-table td {color:#133b61!important; background:#fff; vertical-align:middle;}
+.ciapi-atestados-map-table button {white-space:nowrap;}
+@media(max-width:768px){.ciapi-atestados-inline-panel {border-radius:12px;}}
+
+/* Refinamentos exclusivos do painel de atestados — sem afetar outros módulos. */
+.ciapi-atestados-institucional .ciapi-atestados-roster {background:#fff!important;border:1px solid #d5e2f2!important;}
+.ciapi-atestados-institucional .ciapi-atestados-roster table {min-width:740px;}
+.ciapi-atestados-institucional section input[type="text"] {min-width:0;}
+.ciapi-atestados-institucional section .text-white {color:#0b3055!important;}
+@media (max-width:640px){.ciapi-atestados-institucional .ciapi-atestados-roster{padding:12px!important;}}

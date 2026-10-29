@@ -3,7 +3,6 @@ import React, {
   useState,
 } from 'react';
 import {
-  Activity,
   BarChart3,
   CalendarDays,
   ClipboardList,
@@ -11,7 +10,6 @@ import {
   LogOut,
   Map,
   Menu,
-  Settings,
   Stethoscope,
   Users,
   UserCog,
@@ -34,6 +32,10 @@ interface SaeSidebarProps {
   onChange: (tab: SaeTab) => void;
   onLogout: () => void;
   restrictedProfessional?: boolean;
+  filtroUsuarios?: 'ATIVO' | 'INATIVO' | null;
+  onSelecionarUsuarios?: (situacao: 'ATIVO' | 'INATIVO') => void;
+  visaoTriagem?: 'NOVA' | 'PENDENTES' | 'CONCLUIDAS' | 'HISTORICO';
+  onSelecionarTriagem?: (visao: 'NOVA' | 'PENDENTES' | 'CONCLUIDAS' | 'HISTORICO') => void;
 }
 
 const MENU: Array<{
@@ -41,6 +43,7 @@ const MENU: Array<{
   label: string;
   icon: React.ElementType;
 }> = [
+  { id: 'dashboard', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'usuarios', label: 'Usuários', icon: Users },
   { id: 'triagem', label: 'Triagem', icon: ClipboardList },
   { id: 'agendamentos', label: 'Agendamentos', icon: CalendarDays },
@@ -55,6 +58,10 @@ export default function SaeSidebar({
   onChange,
   onLogout,
   restrictedProfessional = false,
+  filtroUsuarios = null,
+  onSelecionarUsuarios,
+  visaoTriagem = 'PENDENTES',
+  onSelecionarTriagem,
 }: SaeSidebarProps) {
   const [mobileOpen, setMobileOpen] =
     useState(false);
@@ -99,8 +106,8 @@ export default function SaeSidebar({
     <>
       <div className="border-b border-border-dark px-5 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-xl font-bold text-white shadow-lg shadow-primary/20">
-            C
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-extrabold text-white shadow-lg shadow-primary/20">
+            SAE
           </div>
 
           <div className="min-w-0 flex-1">
@@ -161,6 +168,34 @@ export default function SaeSidebar({
               </button>
             );
           })}
+          {!restrictedProfessional && activeTab === 'triagem' && (
+            <div className="mt-2 ml-3 space-y-1 border-l border-slate-500/30 pl-3">
+              {([
+                ['NOVA', 'Nova triagem'],
+                ['PENDENTES', 'Triagens pendentes'],
+                ['CONCLUIDAS', 'Triagens concluídas'],
+                ['HISTORICO', 'Histórico'],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => { onSelecionarTriagem?.(value); setMobileOpen(false); }}
+                  aria-current={visaoTriagem === value ? 'page' : undefined}
+                  className={`w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold transition ${visaoTriagem === value ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {!restrictedProfessional && activeTab === 'usuarios' && (
+            <div className="mt-2 ml-3 space-y-1 border-l border-slate-500/30 pl-3">
+              {(['ATIVO', 'INATIVO'] as const).map((status) => (
+                <button key={status} type="button"
+                  onClick={() => { onSelecionarUsuarios?.(status); setMobileOpen(false); }}
+                  aria-current={filtroUsuarios === status ? 'page' : undefined}
+                  className={`w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold transition ${filtroUsuarios === status ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'}`}>
+                  Usuários {status === 'ATIVO' ? 'ativos' : 'inativos'}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
       </div>
 

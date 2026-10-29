@@ -157,7 +157,7 @@ export default function NovaTriagemModal({
                 Nova triagem
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Inicie o fluxo Serviço Social → Psicologia → Médico.
+                Inicie o fluxo Serviço Social → Enfermagem → Psicologia → Médico → Terapia Ocupacional.
               </p>
             </div>
 
@@ -197,7 +197,7 @@ export default function NovaTriagemModal({
 
               <button
                 type="button"
-                onClick={() => setModo('CADASTRADO')}
+                onClick={() => { setModo('CADASTRADO'); setUsuarioSelecionado(null); }}
                 className={[
                   'rounded-lg px-3 py-2.5 text-xs font-bold',
                   modo === 'CADASTRADO'

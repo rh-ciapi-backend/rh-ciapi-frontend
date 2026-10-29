@@ -72,3 +72,14 @@ export interface SaeCriarProfissionalResponse {
   senhaTemporaria?: string | null;
   contaReutilizada?: boolean;
 }
+
+// Opção exibida na seleção de contas autenticadas do SAE.
+export interface SaeUsuarioSistemaOpcao {
+  authUserId: string;
+  nomeCompleto: string;
+  email: string;
+  perfil?: string | null;
+  setorNome?: string | null;
+  vinculadoProfissionalId?: string | null;
+  vinculadoProfissionalNome?: string | null;
+}

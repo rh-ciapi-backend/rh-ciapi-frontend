@@ -1,0 +1,159 @@
+/* Navegação horizontal tradicional CIAPI RH. Arquivo isolado: não altera institutional.css */
+.ciapi-hnav{position:relative;z-index:80;background:linear-gradient(180deg,#203c56,#172a42);border-top:1px solid #405974;box-shadow:0 3px 12px #00162a2e}
+.ciapi-hnav__inner{width:100%;margin:0 auto;padding:0 14px;max-width:1920px}
+.ciapi-hnav__items{display:flex;align-items:stretch;min-height:47px;gap:2px;flex-wrap:wrap}
+.ciapi-hnav__group{position:relative;display:flex}
+.ciapi-hnav__trigger{border:0;background:transparent;cursor:pointer;color:#e8f3ff;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;font-size:12px;font-weight:650;line-height:1.2;padding:13px 12px;min-height:46px;transition:background .14s ease}
+.ciapi-hnav__trigger:hover,.ciapi-hnav__trigger:focus-visible,.ciapi-hnav__trigger--active{background:#1364ab;color:#fff}
+.ciapi-hnav__trigger:focus-visible,.ciapi-hnav__dropdown button:focus-visible,.ciapi-hnav__mobile-toggle:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
+.ciapi-hnav__trigger>svg:last-child:not(:first-child){opacity:.75}
+.ciapi-hnav__dropdown{position:absolute;top:100%;left:0;z-index:90;min-width:238px;padding:7px;background:white;border:1px solid #d8e2ed;border-radius:0 0 10px 10px;box-shadow:0 15px 40px #05162a30;display:flex;flex-direction:column;gap:2px}
+.ciapi-hnav__dropdown button{display:flex;align-items:center;text-align:left;gap:10px;width:100%;border:0;background:white;color:#233e5c;padding:11px 12px;border-radius:7px;cursor:pointer;font:600 12px/1.35 inherit;white-space:nowrap}
+.ciapi-hnav__dropdown button:hover,.ciapi-hnav__dropdown button:focus-visible{background:#e9f3ff;color:#075e9e}
+.ciapi-hnav__dropdown button svg{flex-shrink:0;color:#2872af}
+.ciapi-hnav__sae{margin-left:auto;background:#224a72}
+.ciapi-hnav__logout{color:#ffdbdd}
+.ciapi-hnav__mobile-toggle{display:none}
+@media(max-width:1100px){.ciapi-hnav__inner{padding:0 10px}.ciapi-hnav__trigger{font-size:11px;padding:12px 8px}}
+@media(max-width:800px){
+ .ciapi-hnav__mobile-toggle{display:flex;gap:8px;align-items:center;background:transparent;border:0;padding:13px 10px;color:#fff;cursor:pointer;font:700 13px/1.4 inherit;min-height:47px}
+ .ciapi-hnav__items{display:none;flex-direction:column;align-items:stretch;gap:0;padding:0 0 8px;max-height:calc(100dvh - 160px);overflow:auto}
+ .ciapi-hnav__items--open{display:flex}
+ .ciapi-hnav__group{display:block}
+ .ciapi-hnav__trigger{justify-content:flex-start;width:100%;padding:13px 12px}
+ .ciapi-hnav__sae{margin-left:0}
+ .ciapi-hnav__dropdown{position:static;min-width:0;width:100%;border-radius:0;box-shadow:none;padding:4px 5px 7px 18px;background:#18334f;border:0}
+ .ciapi-hnav__dropdown button{background:transparent;color:#ebf4ff;white-space:normal}
+ .ciapi-hnav__dropdown button svg{color:#94c7fd}
+ .ciapi-hnav__dropdown button:hover{background:#27567d;color:#fff}
+}
+
+/* Integração com App.tsx: sobrepõe o layout lateral antigo sem tocar no SAE. */
+.ciapi-horizontal-layout.app-shell.institutional-app{display:flex;flex-direction:column;align-items:stretch;min-height:100vh;width:100%;overflow-x:clip}
+.ciapi-horizontal-layout>.institutional-header,.ciapi-horizontal-layout>.ciapi-hnav,.ciapi-horizontal-layout>.app-content-column{width:100%;flex:none;min-width:0}
+.ciapi-horizontal-layout>.app-content-column{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;margin-left:0!important;max-width:none!important}
+.ciapi-horizontal-layout .app-main{width:100%;min-width:0;overflow-x:auto}
+.ciapi-horizontal-layout .app-main-inner,.ciapi-horizontal-layout .app-page{max-width:none;min-width:0}
+.ciapi-horizontal-layout>.ciapi-hnav{flex-shrink:0;overflow:visible}
+.ciapi-horizontal-layout>.ciapi-hnav .ciapi-hnav__dropdown{z-index:200}
+@media(max-width:800px){.ciapi-horizontal-layout>.ciapi-hnav .ciapi-hnav__items{width:100%}}
+
+/* CIAPI RH — harmonia visual do cabeçalho, navegação e área interna.
+   Escopo intencional: somente app RH com classe ciapi-horizontal-layout. */
+.ciapi-horizontal-layout{
+  --ciapi-navy:#092d50;
+  --ciapi-navy-deep:#081e37;
+  --ciapi-navy-soft:#12395d;
+  --ciapi-accent:#3484e6;
+  --ciapi-line:rgba(168,197,232,.15);
+}
+.ciapi-horizontal-layout>.institutional-header{
+  background:linear-gradient(110deg,#0a345c 0%,#092d50 55%,#081e37 100%);
+  box-shadow:none;
+  border-bottom:1px solid rgba(179,204,232,.17);
+}
+.ciapi-horizontal-layout>.institutional-header .institutional-header__inner{
+  min-height:90px;
+  padding-top:12px;
+  padding-bottom:12px;
+}
+.ciapi-horizontal-layout>.ciapi-hnav{
+  background:linear-gradient(180deg,#0d3355 0%,#0b2946 100%);
+  border-top:0;
+  border-bottom:1px solid rgba(160,193,226,.24);
+  box-shadow:0 7px 20px rgba(1,11,25,.14);
+}
+.ciapi-horizontal-layout .ciapi-hnav__inner{max-width:none;padding:0 18px;}
+.ciapi-horizontal-layout .ciapi-hnav__items{
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px;
+  padding:5px 0;
+  min-height:54px;
+}
+.ciapi-horizontal-layout .ciapi-hnav__trigger{
+  border-radius:9px;
+  background:transparent;
+  color:#dbe9f8;
+  min-height:40px;
+  padding:10px 12px;
+  font-weight:650;
+  font-size:12px;
+  letter-spacing:.01em;
+  transition:background .16s ease,color .16s ease,box-shadow .16s ease;
+}
+.ciapi-horizontal-layout .ciapi-hnav__trigger:hover,
+.ciapi-horizontal-layout .ciapi-hnav__trigger:focus-visible{
+  background:rgba(104,164,236,.18);
+  color:#fff;
+}
+.ciapi-horizontal-layout .ciapi-hnav__trigger--active{
+  color:#fff;
+  background:linear-gradient(180deg,#2372c5,#155997);
+  box-shadow:inset 0 0 0 1px rgba(192,221,255,.18);
+}
+.ciapi-horizontal-layout .ciapi-hnav__sae{
+  margin-left:auto;
+  color:#eff7ff;
+  border:1px solid rgba(171,212,255,.26);
+  background:rgba(39,94,147,.35);
+}
+.ciapi-horizontal-layout .ciapi-hnav__logout{color:#ffd4dd;}
+.ciapi-horizontal-layout .ciapi-hnav__dropdown{
+  top:calc(100% + 5px);
+  border:1px solid #d9e5f2;
+  border-radius:12px;
+  min-width:236px;
+  padding:7px;
+  box-shadow:0 18px 38px rgba(3,18,42,.24);
+}
+.ciapi-horizontal-layout .ciapi-hnav__dropdown button{
+  border-radius:8px;
+  font-size:12px;
+  padding:11px 12px;
+}
+.ciapi-horizontal-layout .ciapi-hnav__dropdown button:hover,
+.ciapi-horizontal-layout .ciapi-hnav__dropdown button:focus-visible{
+  background:#edf5ff;
+  color:#0b589a;
+}
+/* Barra clara de identificação: mais integrada visualmente à navegação. */
+.ciapi-horizontal-layout .app-content-column>.topbar,
+.ciapi-horizontal-layout .app-content-column>header.topbar{
+  border-bottom:1px solid #dce7f4;
+}
+.ciapi-horizontal-layout .app-main{background:#0b1220;}
+@media (max-width:1100px){
+  .ciapi-horizontal-layout .ciapi-hnav__inner{padding:0 10px;}
+  .ciapi-horizontal-layout .ciapi-hnav__trigger{padding:10px 9px;font-size:11px;}
+}
+@media (max-width:800px){
+  .ciapi-horizontal-layout>.institutional-header .institutional-header__inner{min-height:0;}
+  .ciapi-horizontal-layout .ciapi-hnav__inner{padding:0 12px;}
+  .ciapi-horizontal-layout .ciapi-hnav__mobile-toggle{
+    display:flex;
+    min-height:49px;
+    color:#edf5ff;
+  }
+  .ciapi-horizontal-layout .ciapi-hnav__items{
+    display:none;
+    padding:7px 0 12px;
+    max-height:calc(100dvh - 185px);
+    overflow-y:auto;
+    align-items:stretch;
+    gap:2px;
+  }
+  .ciapi-horizontal-layout .ciapi-hnav__items--open{display:flex;}
+  .ciapi-horizontal-layout .ciapi-hnav__group{display:block;}
+  .ciapi-horizontal-layout .ciapi-hnav__trigger{width:100%;justify-content:flex-start;font-size:13px;min-height:44px;}
+  .ciapi-horizontal-layout .ciapi-hnav__sae{margin-left:0;}
+  .ciapi-horizontal-layout .ciapi-hnav__dropdown{
+    position:static;min-width:0;width:100%;margin:2px 0 6px;
+    border:0;border-radius:9px;box-shadow:none;background:#153d62;
+  }
+  .ciapi-horizontal-layout .ciapi-hnav__dropdown button{background:transparent;color:#e8f3ff;}
+  .ciapi-horizontal-layout .ciapi-hnav__dropdown button:hover{background:#255780;color:#fff;}
+}
+@media (prefers-reduced-motion:reduce){
+  .ciapi-horizontal-layout .ciapi-hnav__trigger{transition:none;}
+}

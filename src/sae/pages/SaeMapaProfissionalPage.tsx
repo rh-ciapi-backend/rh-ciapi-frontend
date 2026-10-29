@@ -1,3 +1,4 @@
+import './sae-institucional-claro.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import { BriefcaseMedical, Loader2, RefreshCw, Settings2, UserCog, Users, UserCheck, UserX } from 'lucide-react';
 
@@ -38,7 +39,7 @@ export default function SaeProfissionaisPage() {
   const totalInativos = profissionais.length - totalAtivos;
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6 sae-refresh">
       <section className="app-surface relative overflow-hidden p-5 sm:p-6">
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">

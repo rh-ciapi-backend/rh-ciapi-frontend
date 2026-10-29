@@ -1,0 +1,73 @@
+/* Isolado ao módulo Requerimentos: não interfere no RH, SAE ou ABRIGO. */
+.ciapi-estadual {
+  --req-ink: #18314c;
+  --req-line: #cad8e6;
+  background: #fff !important;
+  color: var(--req-ink) !important;
+  width: 100%;
+  max-width: none;
+  border: 1px solid #d8e3ee;
+  border-radius: 10px;
+  padding: clamp(12px, 2vw, 28px);
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.ciapi-estadual > .flex:first-child { border-bottom: 1px solid var(--req-line); padding-bottom: 12px; }
+.ciapi-estadual h1, .ciapi-estadual h2, .ciapi-estadual legend,
+.ciapi-estadual label, .ciapi-estadual p, .ciapi-estadual strong { color: var(--req-ink) !important; }
+.ciapi-estadual__folha { background: #fff; min-width: 0; }
+.ciapi-estadual__cabecalho { position: relative; text-align: center; padding: 14px 0 8px; border-bottom: 1px solid #b3c5d8; }
+.ciapi-estadual__orgao { display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; }
+.ciapi-estadual__orgao span { font-size: 10px; }
+.ciapi-estadual__tipo { position: absolute; right: 0; top: 12px; display: flex; flex-direction: column; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; line-height: 1.25; }
+.ciapi-estadual__tipo span { font-size: 10px; font-weight: normal; }
+.ciapi-estadual__destino { font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 700; text-align: left; margin: 18px 0 0; }
+.ciapi-estadual fieldset,
+.ciapi-estadual section { background: #fff !important; border: 1px solid var(--req-line) !important; border-radius: 8px !important; padding: 10px 12px !important; min-width: 0; box-shadow: none !important; }
+.ciapi-estadual fieldset legend { font-family: Georgia, 'Times New Roman', serif; font-size: 13px !important; font-weight: 700; padding: 0 5px; }
+.ciapi-estadual fieldset > div.grid { gap: 8px 12px !important; }
+.ciapi-estadual fieldset label { font-size: 11px !important; font-weight: 600; min-width: 0; }
+.ciapi-estadual input, .ciapi-estadual select, .ciapi-estadual textarea { background: #fff !important; color: #172f49 !important; border: 1px solid #b8cadd !important; border-radius: 4px !important; box-shadow: none !important; font-size: 12px !important; }
+.ciapi-estadual input:not([type='checkbox']):not([type='radio']), .ciapi-estadual select { min-height: 33px !important; padding: 5px 9px !important; margin-top: 4px !important; width: 100%; max-width: 100%; }
+.ciapi-estadual textarea { min-height: 96px; padding: 8px !important; line-height: 1.5; }
+.ciapi-estadual input:focus, .ciapi-estadual select:focus, .ciapi-estadual textarea:focus { outline: 2px solid #79abec !important; outline-offset: 1px; }
+.ciapi-estadual input::placeholder { color: #8396a8 !important; }
+.ciapi-estadual .text-slate-400, .ciapi-estadual .text-slate-300, .ciapi-estadual .text-blue-100 { color: #506985 !important; }
+.ciapi-estadual .bg-\[\#172033\], .ciapi-estadual .bg-\[\#0b1220\], .ciapi-estadual .bg-\[\#1e293b\] { background: #fff !important; }
+.ciapi-estadual .border-\[\#26344a\] { border-color: var(--req-line) !important; }
+.ciapi-estadual .text-white { color: #173453 !important; }
+.ciapi-estadual button.bg-blue-600, .ciapi-estadual button.bg-blue-600.text-white { color: #fff !important; background: #1768bf !important; border-radius: 5px !important; }
+.ciapi-estadual button { transition: background .15s ease; }
+.ciapi-estadual button:focus-visible { outline: 2px solid #1768bf; outline-offset: 2px; }
+.ciapi-estadual .bg-blue-500\/10, .ciapi-estadual .bg-emerald-500\/10 { background: #eef6ff !important; }
+.ciapi-estadual .bg-rose-500\/10 { background: #fff0f0 !important; }
+.ciapi-estadual .text-rose-300 { color: #a42424 !important; }
+.ciapi-estadual .text-emerald-300 { color: #12633d !important; }
+.ciapi-estadual .text-blue-300 { color: #1459a0 !important; }
+.ciapi-estadual .relative .absolute.z-10 { background: white !important; border-color: #c8d8e8 !important; }
+.ciapi-estadual .relative .absolute.z-10 button:hover { background: #edf5ff !important; }
+@media (min-width: 1100px) {
+ .ciapi-estadual fieldset > div.grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+ .ciapi-estadual fieldset > div.grid label:has(input[name='nome']), .ciapi-estadual fieldset > div.grid label:has(input[name='pai']), .ciapi-estadual fieldset > div.grid label:has(input[name='mae']), .ciapi-estadual fieldset > div.grid label:has(input[name='endereco']) { grid-column: span 2; }
+}
+@media (max-width: 800px) {
+ .ciapi-estadual__tipo { position: static; margin: 9px auto 0; }
+ .ciapi-estadual__destino { margin-top: 12px; }
+}
+@media (max-width: 540px) {
+ .ciapi-estadual { padding: 12px; }
+ .ciapi-estadual fieldset { padding: 8px !important; }
+ .ciapi-estadual__orgao { font-size: 11px; }
+ .ciapi-estadual__destino { font-size: 10px; }
+ .ciapi-estadual button { white-space: normal; }
+}
+@media print {
+ .ciapi-estadual { padding: 0; border: 0; }
+ .ciapi-estadual button { display: none !important; }
+}
+
+/* Busca de servidor: mantém a lupa separada do texto digitado e do placeholder. */
+.ciapi-estadual input[type='search'].pl-10 {
+  padding-left: 44px !important;
+  padding-right: 12px !important;
+}
