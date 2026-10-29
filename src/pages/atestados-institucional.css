@@ -1,0 +1,20 @@
+/* Somente a consulta de Atestados: não altera menus globais, RH, SAE ou modais. */
+.ciapi-atestados-institucional > .app-surface,
+.ciapi-atestados-institucional > section.app-surface,
+.ciapi-atestados-institucional > section > .app-surface {
+  background:#fff !important;
+  border:1px solid #d5e2f2 !important;
+  color:#0b3055 !important;
+  box-shadow:0 7px 24px rgba(20,47,78,.04);
+  border-radius:16px;
+}
+.ciapi-atestados-institucional > section .text-white,
+.ciapi-atestados-institucional > .app-surface .text-white { color:#0b3055 !important; }
+.ciapi-atestados-institucional > section .text-zinc-400,
+.ciapi-atestados-institucional > section .text-slate-500 { color:#617a96 !important; }
+.ciapi-atestados-institucional > section table { width:100%; }
+.ciapi-atestados-institucional > section table th { background:#eef4fb; color:#284967 !important; border-bottom:1px solid #c9d9e9; }
+.ciapi-atestados-institucional > section table td { color:#143a60; border-bottom:1px solid #e1eaf4; }
+.ciapi-atestados-institucional > section input,
+.ciapi-atestados-institucional > section select { color:#0b3055; background:#fff; border-color:#ceddeb; }
+@media(max-width:768px) { .ciapi-atestados-institucional { min-width:0; } }

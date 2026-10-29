@@ -1,3 +1,4 @@
+import './atestados-institucional.css';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -33,6 +34,34 @@ import type {
 } from '../types';
 
 type FormErrors = Partial<Record<keyof AtestadoFormData, string>>;
+
+// As categorias acompanham os seis mapas institucionais existentes.
+// Não são criadas ocorrências paralelas nem alteradas as regras de sincronização.
+const ATESTADOS_CATEGORIAS: Record<string, string> = {
+  'atestado-comissionados-setrabes': 'COMISSIONADOS',
+  'atestado-federais-setrabes': 'FEDERAIS',
+  'atestado-efetivos-setrabes': 'EFETIVO SETRABES',
+  'atestado-seletivos-setrabes': 'SELETIVO SETRABES',
+  'atestado-efetivos-sesau': 'EFETIVO SESAU',
+  'atestado-seletivos-sesau': 'SELETIVO SESAU',
+};
+const ATESTADOS_TITULOS: Record<string, string> = {
+  'atestado-comissionados-setrabes': 'Comissionados SETRABES',
+  'atestado-federais-setrabes': 'Federais SETRABES',
+  'atestado-efetivos-setrabes': 'Efetivos SETRABES',
+  'atestado-seletivos-setrabes': 'Seletivos SETRABES',
+  'atestado-efetivos-sesau': 'Efetivos SESAU',
+  'atestado-seletivos-sesau': 'Seletivos SESAU',
+};
+const normalizarCategoria = (v: unknown) => String(v || '').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
+const coincideCategoria = (categoria: unknown, filtro: string) => {
+  const c = normalizarCategoria(categoria);
+  const f = normalizarCategoria(filtro);
+  if (f === 'COMISSIONADOS') return c.includes('COMISSIONAD');
+  if (f === 'FEDERAIS') return c.includes('FEDERAL');
+  return c === f || c === `${f}S`;
+};
 
 const STATUS_OPTIONS: Array<'TODOS' | StatusAtestado> = ['TODOS', 'PENDENTE', 'VALIDADO', 'REJEITADO'];
 const TIPO_OPTIONS: Array<'TODOS' | TipoAtestado> = ['TODOS', 'MÉDICO', 'ODONTOLÓGICO', 'PSICOLÓGICO', 'ACOMPANHAMENTO'];
@@ -442,7 +471,7 @@ const FeedbackBanner: React.FC<{
   );
 };
 
-const AtestadosPage: React.FC = () => {
+const AtestadosPage: React.FC<{ initialAction?: string | null }> = ({ initialAction }) => {
   const pageTopRef = useRef<HTMLDivElement | null>(null);
   const serverAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const [items, setItems] = useState<Atestado[]>([]);
@@ -453,6 +482,7 @@ const AtestadosPage: React.FC = () => {
   const [showServerSuggestions, setShowServerSuggestions] = useState(false);
 
   const [search, setSearch] = useState('');
+  const categoriaDoMenu = initialAction ? ATESTADOS_CATEGORIAS[initialAction] : ATESTADOS_CATEGORIAS['atestado-comissionados-setrabes'];
   const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
   const [selectedYear, setSelectedYear] = useState<string>('TODOS');
   const [selectedSetor, setSelectedSetor] = useState<string>('TODOS');
@@ -594,7 +624,8 @@ const AtestadosPage: React.FC = () => {
         const matchesMonth = selectedMonth === 'TODOS' || getMonthFromDate(safeText(item.dataInicio)) === selectedMonth;
         const matchesYear = selectedYear === 'TODOS' || getYearFromDate(safeText(item.dataInicio)) === selectedYear;
         const matchesSetor = selectedSetor === 'TODOS' || safeText(item.setor) === selectedSetor;
-        const matchesCategoria = selectedCategoria === 'TODOS' || safeText(item.categoria) === selectedCategoria;
+        const matchesCategoria = (selectedCategoria === 'TODOS' || safeText(item.categoria) === selectedCategoria)
+          && (!categoriaDoMenu || coincideCategoria(item.categoria, categoriaDoMenu));
         const matchesStatus = selectedStatus === 'TODOS' || item.status === selectedStatus;
         const matchesTipo = selectedTipo === 'TODOS' || item.tipo === selectedTipo;
 
@@ -616,6 +647,7 @@ const AtestadosPage: React.FC = () => {
     selectedYear,
     selectedSetor,
     selectedCategoria,
+    categoriaDoMenu,
     selectedStatus,
     selectedTipo,
   ]);
@@ -656,6 +688,11 @@ const AtestadosPage: React.FC = () => {
     setShowServerSuggestions(false);
     setIsFormOpen(true);
   };
+
+  // O formulário existente é reutilizado, incluindo upload, validações e sincronização.
+  useEffect(() => {
+    if (initialAction === 'atestado-novo') openCreateModal();
+  }, [initialAction]);
 
   const openEditModal = (item: Atestado) => {
     setEditingId(item.id);
@@ -838,19 +875,19 @@ ${result.warning}`;
   };
 
   return (
-    <div ref={pageTopRef} className="min-h-full space-y-5 sm:space-y-6">
+    <div ref={pageTopRef} className="ciapi-atestados-institucional min-h-full space-y-5 sm:space-y-6">
       <SectionCard className="px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Saúde ocupacional
+              CIAPI RH / CONTROLE DE PESSOAL
             </p>
 
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Atestados
+              {ATESTADOS_TITULOS[initialAction || ''] || 'Atestados'}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Cadastre, acompanhe e consulte afastamentos dos servidores.
+              Consulte atestados e suas observações por categoria. Novos lançamentos utilizam o cadastro integrado à Frequência.
             </p>
           </div>
 
@@ -1043,7 +1080,7 @@ ${result.warning}`;
           <div>
             <h2 className="text-[20px] font-bold text-white">Lista de Atestados</h2>
             <p className="mt-0.5 text-sm text-zinc-400">
-              Conectado ao Supabase com upload real e integração com frequência.
+              Registros de atestados existentes, vinculados à Frequência quando a sincronização está habilitada.
             </p>
           </div>
 

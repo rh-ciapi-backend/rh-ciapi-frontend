@@ -82,8 +82,8 @@ export default function App() {
   const openModule = (module: string, tab: string) => {
     setSelectedModule(module);
     setActiveTab(isValidTab(tab) ? tab : 'dashboard');
-    setInitialAction(module === 'servidores' ? 'pesquisar' : module === 'mapas' ? 'mapa-comissionados-setrabes' : module === 'requerimentos' ? 'estadual' : null);
-    setShowModulePage(module === 'servidores' || module === 'mapas' || module === 'requerimentos');
+    setInitialAction(module === 'servidores' ? 'pesquisar' : module === 'mapas' ? 'mapa-comissionados-setrabes' : module === 'requerimentos' ? 'estadual' : module === 'atestados' ? 'atestado-comissionados-setrabes' : null);
+    setShowModulePage(module === 'servidores' || module === 'mapas' || module === 'requerimentos' || module === 'atestados');
     if (module === 'servidores') setServidoresNavigationId(v => v + 1);
     setSidebarCollapsed(false);
   };
@@ -128,7 +128,7 @@ export default function App() {
     switch (activeTab) {
       case 'dashboard': return <DashboardPage onNavigate={navigateWithAction} />;
       case 'servidores': return <ServidoresPage key={servidoresNavigationId} initialAction={initialAction || 'pesquisar'} onActionHandled={() => setInitialAction(null)} />;
-      case 'atestados': return <AtestadosPage />;
+      case 'atestados': return <AtestadosPage initialAction={initialAction} />;
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage initialAction={initialAction} />;
       case 'mapas': return <MapasPage initialAction={initialAction} />;
@@ -212,7 +212,7 @@ export default function App() {
               <main className="app-main ciapi-contextual-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
                 <div className="app-page app-main-inner">
                   <AnimatePresence mode="wait">
-                    <motion.div key={`${activeTab}-${showModulePage}-${activeTab === 'mapas' || activeTab === 'requerimentos' ? (initialAction || '') : ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                    <motion.div key={`${activeTab}-${showModulePage}-${activeTab === 'mapas' || activeTab === 'requerimentos' || activeTab === 'atestados' ? (initialAction || '') : ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
                       {renderSelectedContent()}
                     </motion.div>
                   </AnimatePresence>
