@@ -40,7 +40,7 @@ type FormErrors = Partial<Record<keyof AtestadoFormData, string>>;
 // Não são criadas ocorrências paralelas nem alteradas as regras de sincronização.
 const ATESTADOS_CATEGORIAS: Record<string, string> = {
   'atestado-comissionados-setrabes': 'COMISSIONADOS',
-  'atestado-federais-setrabes': 'FEDERAIS',
+  'atestado-federais-setrabes': 'FEDERAIS SETRABES',
   'atestado-efetivos-setrabes': 'EFETIVO SETRABES',
   'atestado-seletivos-setrabes': 'SELETIVO SETRABES',
   'atestado-efetivos-sesau': 'EFETIVO SESAU',
