@@ -488,14 +488,14 @@ const AtestadosPage: React.FC<{ initialAction?: string | null }> = ({ initialAct
   const [selectedYear, setSelectedYear] = useState<string>('TODOS');
   const [selectedSetor, setSelectedSetor] = useState<string>('TODOS');
   const [selectedCategoria, setSelectedCategoria] = useState<string>('TODOS');
-  const [categoriaMapa, setCategoriaMapa] = useState('COMISSIONADOS');
+  const [categoriaMapa] = useState(categoriaDoMenu || 'COMISSIONADOS');
   const [servidoresMapa, setServidoresMapa] = useState<Array<{nomeCompleto:string; matricula:string; cpf:string; cargo:string; observacao:string}>>([]);
   const [mapaCarregando, setMapaCarregando] = useState(false);
   const [mapaErro, setMapaErro] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'TODOS' | StatusAtestado>('TODOS');
   const [selectedTipo, setSelectedTipo] = useState<'TODOS' | TipoAtestado>('TODOS');
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(initialAction === 'atestado-novo');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<AtestadoFormData>(createEmptyAtestadoForm());
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -915,10 +915,10 @@ ${result.warning}`;
             </p>
 
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Mapas de Atestados Médicos
+              Painel de Gestão de Atestados Médicos — {ATESTADOS_TITULOS[initialAction || ''] || 'Comissionados SETRABES'}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Consulte atestados e suas observações por categoria. Novos lançamentos utilizam o cadastro integrado à Frequência.
+              Consulte os servidores da categoria, seus atestados e as observações integradas à Frequência.
             </p>
           </div>
 
@@ -1109,20 +1109,10 @@ ${result.warning}`;
       <SectionCard className="ciapi-atestados-roster p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-lg font-bold text-[#0b3055]">Relação de servidores por categoria</h2>
+            <h2 className="text-lg font-bold text-[#0b3055]">Relação de servidores — {ATESTADOS_TITULOS[initialAction || ''] || 'Comissionados SETRABES'}</h2>
             <p className="text-sm text-[#56708b]">Todos os servidores ativos da categoria, mesmo sem atestado registrado.</p>
           </div>
-          <label className="flex flex-col gap-1 text-xs font-semibold text-[#0b3055]">
-            Categoria do mapa
-            <select className="rounded-lg border border-[#bed0e4] bg-white px-3 py-2 text-sm text-[#0b3055]" value={categoriaMapa} onChange={e => setCategoriaMapa(e.target.value)}>
-              <option value="COMISSIONADOS">Comissionados SETRABES</option>
-              <option value="FEDERAIS SETRABES">Federais SETRABES</option>
-              <option value="EFETIVO SETRABES">Efetivos SETRABES</option>
-              <option value="SELETIVO SETRABES">Seletivos SETRABES</option>
-              <option value="EFETIVO SESAU">Efetivos SESAU</option>
-              <option value="SELETIVO SESAU">Seletivos SESAU</option>
-            </select>
-          </label>
+
         </div>
         {mapaErro && <p role="alert" className="text-sm text-red-700 mb-3">{mapaErro}</p>}
         <div className="overflow-x-auto">

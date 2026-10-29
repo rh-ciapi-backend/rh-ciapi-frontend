@@ -38,3 +38,10 @@
 .ciapi-atestados-map-table td {color:#133b61!important; background:#fff; vertical-align:middle;}
 .ciapi-atestados-map-table button {white-space:nowrap;}
 @media(max-width:768px){.ciapi-atestados-inline-panel {border-radius:12px;}}
+
+/* Refinamentos exclusivos do painel de atestados — sem afetar outros módulos. */
+.ciapi-atestados-institucional .ciapi-atestados-roster {background:#fff!important;border:1px solid #d5e2f2!important;}
+.ciapi-atestados-institucional .ciapi-atestados-roster table {min-width:740px;}
+.ciapi-atestados-institucional section input[type="text"] {min-width:0;}
+.ciapi-atestados-institucional section .text-white {color:#0b3055!important;}
+@media (max-width:640px){.ciapi-atestados-institucional .ciapi-atestados-roster{padding:12px!important;}}
