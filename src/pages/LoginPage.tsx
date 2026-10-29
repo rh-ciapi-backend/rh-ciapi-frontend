@@ -1,3 +1,4 @@
+import AbrigoPortalCard from '../components/AbrigoPortalCard';
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Info, AlertCircle, Layers3, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -47,7 +48,7 @@ export const LoginPage: React.FC = () => {
             <div className="institutional-login__systems institutional-login__systems--portal" aria-label="Sistemas disponíveis">
               <button type="button" className="institutional-system-card" onClick={() => choose('rh')}><span className="institutional-system-card__icon"><UsersRound size={34}/></span><strong>CIAPI RH</strong><small>Sistema Integrado de Gestão de Recursos Humanos</small><span className="institutional-system-card__action">Acessar sistema →</span></button>
               <button type="button" className="institutional-system-card" onClick={() => choose('sae')}><span className="institutional-system-card__icon"><HeartPulse size={34}/></span><strong>SAE</strong><small>Serviço de Atenção Especializada</small><span className="institutional-system-card__action">Acessar sistema →</span></button>
-              <div className="institutional-system-card institutional-system-card--coming-soon" aria-label="ABRIGO: sistema em breve" title="O acesso ao ABRIGO será disponibilizado após a definição do link"><span className="institutional-system-card__icon"><House size={34}/></span><strong>ABRIGO</strong><small>Gestão do Abrigo</small><span className="institutional-system-card__action">Em breve</span></div>
+              <AbrigoPortalCard className="institutional-system-card" />
             </div>
           </div>
         </>
