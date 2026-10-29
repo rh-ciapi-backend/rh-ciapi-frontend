@@ -876,6 +876,7 @@ ${result.warning}`;
 
   return (
     <div ref={pageTopRef} className="ciapi-atestados-institucional min-h-full space-y-5 sm:space-y-6">
+      {!isFormOpen && (<>
       <SectionCard className="px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
@@ -1078,7 +1079,10 @@ ${result.warning}`;
       <SectionCard className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:px-5 md:flex-row md:items-center md:justify-between md:px-6">
           <div>
-            <h2 className="text-[20px] font-bold text-white">Lista de Atestados</h2>
+            <p className="text-center text-xs font-semibold uppercase text-[#153a60]">GOVERNO DO ESTADO DE RORAIMA<br/>SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</p>
+            <h2 className="mt-2 text-center text-[18px] font-bold text-[#0b3055]">MAPA DE ATESTADOS MÉDICOS — {ATESTADOS_TITULOS[initialAction || ''] || 'SERVIDORES'}</h2>
+            <h3 className="mt-1 text-center text-sm font-medium text-[#0b3055]">Competência: {selectedMonth === 'TODOS' ? 'Todos os meses' : MONTH_OPTIONS.find(m => m.value === selectedMonth)?.label} / {selectedYear === 'TODOS' ? 'Todos os anos' : selectedYear}</h3>
+            <h4 className="mt-3 text-[15px] font-semibold text-[#0b3055]">Lista de Atestados</h4>
             <p className="mt-0.5 text-sm text-zinc-400">
               Registros de atestados existentes, vinculados à Frequência quando a sincronização está habilitada.
             </p>
@@ -1090,127 +1094,38 @@ ${result.warning}`;
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="min-w-full">
-            <thead className="bg-slate-900/25">
-              <tr className="text-left">
-                {['Servidor', 'CPF / Matrícula', 'Setor / Categoria', 'Tipo', 'Período', 'Dias', 'Status', 'Arquivo', 'Ações'].map(
-                  (header) => (
-                    <th
-                      key={header}
-                      className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500"
-                    >
-                      {header}
-                    </th>
-                  ),
-                )}
+        <div className="hidden overflow-x-auto lg:block ciapi-atestados-map-table">
+          <table className="w-full min-w-[1130px] border-collapse text-sm">
+            <thead>
+              <tr>
+                {['Nº', 'MATRÍCULA', 'SERVIDOR', 'CPF', 'TIPO', 'INÍCIO', 'FIM', 'DIAS', 'OBSERVAÇÃO', 'AÇÕES'].map(h => (
+                  <th key={h} className="border border-[#bed0e4] bg-[#edf3fa] px-3 py-3 text-center text-[11px] font-bold text-[#16395a]">{h}</th>
+                ))}
               </tr>
             </thead>
-
             <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-16 text-center text-sm text-zinc-400">
-                    Carregando atestados...
-                  </td>
-                </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-16 text-center text-sm text-zinc-400">
-                    Nenhum atestado encontrado com os filtros atuais.
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr key={item.id} className="border-t border-border-dark/50 transition hover:bg-slate-800/20">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-white">{safeText(item.servidorNome) || '-'}</span>
-                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.id)}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{safeText(item.cpf) || '-'}</span>
-                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.matricula) || '-'}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{safeText(item.setor) || '-'}</span>
-                        <span className="mt-1 text-xs text-zinc-500">{safeText(item.categoria) || '-'}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getTypeBadgeClass(safeText(item.tipo))}`}>
-                        {safeText(item.tipo) || '-'}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-zinc-200">{formatDate(safeText(item.dataInicio))}</span>
-                        <span className="mt-1 text-xs text-zinc-500">até {formatDate(safeText(item.dataFim))}</span>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4 text-sm font-semibold text-white">{Number(item.dias) || 0}</td>
-
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusBadgeClass(safeText(item.status))}`}>
-                        {safeText(item.status) || '-'}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      {item.arquivoNome ? (
-                        <button
-                          type="button"
-                          onClick={() => void handleDownload(item)}
-                          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-cyan-200"
-                        >
-                          <Paperclip size={14} />
-                          {safeText(item.arquivoNome)}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-zinc-500">Sem arquivo</span>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleOpenDetails(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.08]"
-                        >
-                          <Eye size={14} />
-                          Detalhes
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.08]"
-                        >
-                          <Edit2 size={14} />
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteItem(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20"
-                        >
-                          <Trash2 size={14} />
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+              {isLoading ? <tr><td colSpan={10} className="p-8 text-center">Carregando...</td></tr> :
+               filteredData.length === 0 ? <tr><td colSpan={10} className="p-8 text-center">Nenhum atestado encontrado para a categoria e os filtros selecionados.</td></tr> :
+               filteredData.map((item, index) => (
+                 <tr key={item.id} className="hover:bg-[#f3f8fd]">
+                   <td className="border border-[#d7e3f0] px-2 py-3 text-center">{String(index+1).padStart(2,'0')}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{safeText(item.matricula) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3 font-semibold">{safeText(item.servidorNome) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{safeText(item.cpf) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{safeText(item.tipo) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{formatDate(safeText(item.dataInicio))}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3">{formatDate(safeText(item.dataFim))}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3 text-center">{Number(item.dias) || 0}</td>
+                   <td className="border border-[#d7e3f0] px-3 py-3 max-w-[260px] break-words">{safeText(item.observacao) || '-'}</td>
+                   <td className="border border-[#d7e3f0] px-2 py-3">
+                     <div className="flex flex-wrap justify-center gap-1.5">
+                       <button type="button" onClick={() => void handleOpenDetails(item)} className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700">Ver</button>
+                       <button type="button" onClick={() => openEditModal(item)} className="rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-blue-700">Editar</button>
+                       <button type="button" onClick={() => setDeleteItem(item)} className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700">Excluir</button>
+                     </div>
+                   </td>
+                 </tr>
+               ))}
             </tbody>
           </table>
         </div>
@@ -1286,22 +1201,11 @@ ${result.warning}`;
         </div>
       </SectionCard>
 
-      <AnimatePresence>
-        {isFormOpen && (
-          <motion.div
-            key="atestado-form-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:p-2 md:items-center md:p-6"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              className="flex max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0B1220] shadow-[0_30px_90px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-1rem)] md:max-h-[95vh] md:rounded-3xl"
-            >
+      </>)}
+
+      {isFormOpen && (
+          <div className="ciapi-atestados-inline-form">
+            <div className="ciapi-atestados-inline-panel flex w-full flex-col overflow-visible rounded-2xl border border-[#d5e2f2] bg-white">
               <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5 md:px-6">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-300">
@@ -1326,7 +1230,7 @@ ${result.warning}`;
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 md:px-6">
+              <div className="flex-1 px-4 py-4 sm:px-5 sm:py-5 md:px-6">
                 <div className="space-y-6">
                   {formFeedback.type && (
                     <FeedbackBanner
@@ -1699,10 +1603,9 @@ ${result.warning}`;
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
 
       <AnimatePresence>
         {detailsItem && (
