@@ -82,8 +82,8 @@ export default function App() {
   const openModule = (module: string, tab: string) => {
     setSelectedModule(module);
     setActiveTab(isValidTab(tab) ? tab : 'dashboard');
-    setInitialAction(module === 'servidores' ? 'pesquisar' : module === 'mapas' ? 'mapa-comissionados-setrabes' : null);
-    setShowModulePage(module === 'servidores' || module === 'mapas');
+    setInitialAction(module === 'servidores' ? 'pesquisar' : module === 'mapas' ? 'mapa-comissionados-setrabes' : module === 'requerimentos' ? 'estadual' : null);
+    setShowModulePage(module === 'servidores' || module === 'mapas' || module === 'requerimentos');
     if (module === 'servidores') setServidoresNavigationId(v => v + 1);
     setSidebarCollapsed(false);
   };
@@ -98,7 +98,25 @@ export default function App() {
   const emailAutenticado = String(session?.user?.email || '').trim().toLowerCase();
   const manutencaoPermitida = Boolean(session && acessoAtual && emailAutenticado === 'joabbys@hotmail.com' && String(acesso?.email || '').trim().toLowerCase() === emailAutenticado);
   const moduloEmManutencao = (activeTab === 'ferias' || activeTab === 'atestados') && !manutencaoPermitida;
+  const requerimentoEmManutencao = activeTab === 'requerimentos' &&
+    (initialAction === 'federal' || initialAction === 'insalubridade');
   const renderSelectedContent = () => {
+    if (requerimentoEmManutencao) {
+      return (
+        <section role="status" className="mx-auto w-full max-w-3xl rounded-2xl border border-[#d8e5f5] bg-white px-6 py-12 text-center shadow-sm sm:px-10">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#eaf3ff] text-3xl" aria-hidden="true">🛠️</div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[#2563eb]">CIAPI RH · Requerimentos</p>
+          <h2 className="text-2xl font-extrabold text-[#082c50]">Módulo em manutenção</h2>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-slate-600">
+            {initialAction === 'federal' ? 'Servidor Federal' : 'Insalubridade'} está em preparação. O acesso estará disponível em breve.
+          </p>
+          <button type="button" className="mt-7 rounded-lg bg-[#1566bf] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d519b]" onClick={() => navigateWithAction('requerimentos', 'estadual')}>
+            Abrir Servidor Estadual
+          </button>
+        </section>
+      );
+    }
+
     if (moduloEmManutencao) {
       return (
         <section className="mx-auto w-full max-w-3xl rounded-2xl border border-[#d8e5f5] bg-white px-6 py-12 text-center shadow-sm sm:px-10" role="status" aria-live="polite">
@@ -135,7 +153,7 @@ export default function App() {
       case 'ferias': return <FeriasPage />;
       case 'frequencia': return <FrequenciaPage initialAction={initialAction} />;
       case 'mapas': return <MapasPage initialAction={initialAction} />;
-      case 'requerimentos': return <RequerimentosPage podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
+      case 'requerimentos': return <RequerimentosPage key={initialAction === 'estadual' ? 'estadual' : 'lista'} initialView={initialAction === 'estadual' ? 'novo' : 'lista'} podeArquivar={Boolean(acessoAtual?.isMaster || ['ADMINISTRADOR', 'RH'].includes(acessoAtual?.perfil || ''))} />;
       case 'admin': return <AdminPage onNavigate={navigateWithAction} />;
       case 'admin-usuarios': return <AdminUsuariosPage />;
       case 'admin-categorias': return <AdminCategoriasPage />;
@@ -215,7 +233,7 @@ export default function App() {
               <main className="app-main ciapi-contextual-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
                 <div className="app-page app-main-inner">
                   <AnimatePresence mode="wait">
-                    <motion.div key={`${activeTab}-${showModulePage}-${activeTab === 'mapas' ? (initialAction || '') : ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                    <motion.div key={`${activeTab}-${showModulePage}-${activeTab === 'mapas' || activeTab === 'requerimentos' ? (initialAction || '') : ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
                       {renderSelectedContent()}
                     </motion.div>
                   </AnimatePresence>

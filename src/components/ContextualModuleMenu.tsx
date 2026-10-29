@@ -16,7 +16,7 @@ const sections: Record<string,{title:string; entries:Entry[]}> = {
     {label:'Exportar mapas',tab:'mapas',action:'mapas-exportar'},
   ]},
   atestados:{title:'Atestados',entries:[{label:'Consultar atestados',tab:'atestados',action:'open'},{label:'Lançamentos',tab:'atestados',action:'open'}]},
-  requerimentos:{title:'Requerimentos',entries:[{label:'Consultar requerimentos',tab:'requerimentos',action:'open'},{label:'Recebidos',tab:'requerimentos',action:'open'}]},
+  requerimentos:{title:'Requerimentos',entries:[{label:'Servidor Estadual',tab:'requerimentos',action:'estadual'},{label:'Servidor Federal',tab:'requerimentos',action:'federal'},{label:'Insalubridade',tab:'requerimentos',action:'insalubridade'}]},
   relatorios:{title:'Relatórios',entries:[{label:'Indicadores',tab:'dashboard',action:'open'},{label:'Mapas e relatórios',tab:'mapas',action:'open'},{label:'Frequência',tab:'frequencia',action:'open'},{label:'Férias',tab:'ferias',action:'open'}]},
   admin:{title:'Administração',entries:[{label:'Painel administrativo',tab:'admin',action:'open'},{label:'Usuários',tab:'admin-usuarios',action:'open'},{label:'Setores',tab:'admin-setores',action:'open'},{label:'Logs',tab:'admin-logs',action:'open'}]},
   diagnostico:{title:'Diagnóstico',entries:[{label:'Diagnóstico do sistema',tab:'diagnostico',action:'open'}]},

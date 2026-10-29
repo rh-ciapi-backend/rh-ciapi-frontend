@@ -186,8 +186,8 @@ function dataParaInput(value: string | null | undefined) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
 }
 
-export default function RequerimentosPage({ modoServidor = false }: { modoServidor?: boolean; podeArquivar?: boolean }) {
-  const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : 'lista');
+export default function RequerimentosPage({ modoServidor = false, initialView = 'lista' }: { modoServidor?: boolean; podeArquivar?: boolean; initialView?: 'lista' | 'novo' }) {
+  const [aba, setAba] = useState<'lista' | 'novo'>(modoServidor ? 'novo' : initialView);
   const [tipo, setTipo] = useState('');
   const [busca, setBusca] = useState('');
   const [sugestoes, setSugestoes] = useState<Servidor[]>([]);
@@ -327,7 +327,7 @@ export default function RequerimentosPage({ modoServidor = false }: { modoServid
     try {
       const novo = await requerimentosService.criar({
         servidorId: selecionado.id, tipo, detalhes, dados: Object.fromEntries(
-          Object.entries(valores).map(([chave, valor]) => [chave, chave.startsWith('data') ? valor : valor.toLocaleUpperCase('pt-BR')]),
+          Object.entries(valores).map(([chave, valor]) => [chave, chave.startsWith('data') ? String(valor ?? '') : String(valor ?? '').toLocaleUpperCase('pt-BR')]),
         ),
       });
       setRequerimentos((anteriores) => [
