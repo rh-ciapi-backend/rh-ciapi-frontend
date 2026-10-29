@@ -65,3 +65,9 @@
  .ciapi-estadual { padding: 0; border: 0; }
  .ciapi-estadual button { display: none !important; }
 }
+
+/* Busca de servidor: mantém a lupa separada do texto digitado e do placeholder. */
+.ciapi-estadual input[type='search'].pl-10 {
+  padding-left: 44px !important;
+  padding-right: 12px !important;
+}
