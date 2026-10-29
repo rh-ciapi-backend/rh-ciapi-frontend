@@ -16,12 +16,7 @@ const sections: Record<string,{title:string; entries:Entry[]}> = {
     {label:'Exportar mapas',tab:'mapas',action:'mapas-exportar'},
   ]},
   atestados:{title:'Atestados',entries:[
-    {label:'Comissionados SETRABES',tab:'atestados',action:'atestado-comissionados-setrabes'},
-    {label:'Federais SETRABES',tab:'atestados',action:'atestado-federais-setrabes'},
-    {label:'Efetivos SETRABES',tab:'atestados',action:'atestado-efetivos-setrabes'},
-    {label:'Seletivos SETRABES',tab:'atestados',action:'atestado-seletivos-setrabes'},
-    {label:'Efetivos SESAU',tab:'atestados',action:'atestado-efetivos-sesau'},
-    {label:'Seletivos SESAU',tab:'atestados',action:'atestado-seletivos-sesau'},
+    {label:'Mapas de Atestados Médicos',tab:'atestados',action:'atestado-mapas'},
     {label:'Lançar novo atestado',tab:'atestados',action:'atestado-novo'},
   ]},
   requerimentos:{title:'Requerimentos',entries:[{label:'Servidor Estadual',tab:'requerimentos',action:'estadual'},{label:'Servidor Federal',tab:'requerimentos',action:'federal'},{label:'Insalubridade',tab:'requerimentos',action:'insalubridade'}]},

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import atestadosService from '../services/atestadosService';
+import { mapasService } from '../services/mapasService';
 import servidoresService from '../services/servidoresService';
 import type {
   Atestado,
@@ -482,11 +483,15 @@ const AtestadosPage: React.FC<{ initialAction?: string | null }> = ({ initialAct
   const [showServerSuggestions, setShowServerSuggestions] = useState(false);
 
   const [search, setSearch] = useState('');
-  const categoriaDoMenu = initialAction ? ATESTADOS_CATEGORIAS[initialAction] : ATESTADOS_CATEGORIAS['atestado-comissionados-setrabes'];
+  const categoriaDoMenu = initialAction ? ATESTADOS_CATEGORIAS[initialAction] : undefined;
   const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
   const [selectedYear, setSelectedYear] = useState<string>('TODOS');
   const [selectedSetor, setSelectedSetor] = useState<string>('TODOS');
   const [selectedCategoria, setSelectedCategoria] = useState<string>('TODOS');
+  const [categoriaMapa, setCategoriaMapa] = useState('COMISSIONADOS');
+  const [servidoresMapa, setServidoresMapa] = useState<Array<{nomeCompleto:string; matricula:string; cpf:string; cargo:string; observacao:string}>>([]);
+  const [mapaCarregando, setMapaCarregando] = useState(false);
+  const [mapaErro, setMapaErro] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'TODOS' | StatusAtestado>('TODOS');
   const [selectedTipo, setSelectedTipo] = useState<'TODOS' | TipoAtestado>('TODOS');
 
@@ -599,6 +604,31 @@ const AtestadosPage: React.FC<{ initialAction?: string | null }> = ({ initialAct
       dias: calculated > 0 ? String(calculated) : '',
     }));
   }, [formData.dataInicio, formData.dataFim, formData.considerarDiasUteis]);
+
+  // O mapa usa a mesma fonte oficial de servidores dos Mapas Institucionais.
+  // Inclui pessoas sem atestado e não cria ocorrências novas.
+  useEffect(() => {
+    if (isFormOpen) return;
+    let ativo = true;
+    setMapaCarregando(true);
+    setMapaErro('');
+    const hoje = new Date();
+    const mes = selectedMonth === 'TODOS' ? hoje.getMonth() + 1 : Number(selectedMonth);
+    const ano = selectedYear === 'TODOS' ? hoje.getFullYear() : Number(selectedYear);
+    mapasService.listarPreview({ mes, ano, categoria: categoriaMapa, setor: '', status: 'ATIVO', layout: 'automatico', modoExportacao: 'arquivo_unico' })
+      .then(result => { if (ativo) setServidoresMapa(result.linhas.map(l => ({
+        nomeCompleto: l.nomeCompleto, matricula: l.matricula, cpf: l.cpf,
+        cargo: l.cargo, observacao: l.observacao,
+      }))); })
+      .catch(err => { if (ativo) {setMapaErro(err instanceof Error ? err.message : 'Falha ao carregar servidores.'); setServidoresMapa([]);} })
+      .finally(() => { if (ativo) setMapaCarregando(false); });
+    return () => { ativo = false; };
+  }, [categoriaMapa, selectedMonth, selectedYear, isFormOpen]);
+
+  const servidoresMapaFiltrados = useMemo(() => {
+    const busca = search.toLowerCase().trim();
+    return servidoresMapa.filter(s => !busca || [s.nomeCompleto, s.matricula, s.cpf, s.cargo].some(v => v.toLowerCase().includes(busca)));
+  }, [servidoresMapa, search]);
 
   const setorOptions = useMemo(() => getUniqueSorted(items.map((item) => safeText(item.setor))), [items]);
   const categoriaOptions = useMemo(
@@ -885,7 +915,7 @@ ${result.warning}`;
             </p>
 
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              {ATESTADOS_TITULOS[initialAction || ''] || 'Atestados'}
+              Mapas de Atestados Médicos
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Consulte atestados e suas observações por categoria. Novos lançamentos utilizam o cadastro integrado à Frequência.
@@ -1074,6 +1104,45 @@ ${result.warning}`;
             </button>
           </div>
         </div>
+      </SectionCard>
+
+      <SectionCard className="ciapi-atestados-roster p-4 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-[#0b3055]">Relação de servidores por categoria</h2>
+            <p className="text-sm text-[#56708b]">Todos os servidores ativos da categoria, mesmo sem atestado registrado.</p>
+          </div>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-[#0b3055]">
+            Categoria do mapa
+            <select className="rounded-lg border border-[#bed0e4] bg-white px-3 py-2 text-sm text-[#0b3055]" value={categoriaMapa} onChange={e => setCategoriaMapa(e.target.value)}>
+              <option value="COMISSIONADOS">Comissionados SETRABES</option>
+              <option value="FEDERAIS SETRABES">Federais SETRABES</option>
+              <option value="EFETIVO SETRABES">Efetivos SETRABES</option>
+              <option value="SELETIVO SETRABES">Seletivos SETRABES</option>
+              <option value="EFETIVO SESAU">Efetivos SESAU</option>
+              <option value="SELETIVO SESAU">Seletivos SESAU</option>
+            </select>
+          </label>
+        </div>
+        {mapaErro && <p role="alert" className="text-sm text-red-700 mb-3">{mapaErro}</p>}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[740px] border-collapse text-sm text-[#183b5c]">
+            <thead><tr>{['Nº','MATRÍCULA','SERVIDOR','CPF','CARGO','OBSERVAÇÃO NO MAPA'].map(h => <th key={h} className="border border-[#bed0e4] bg-[#edf3fa] p-2 text-left text-xs">{h}</th>)}</tr></thead>
+            <tbody>
+              {mapaCarregando ? <tr><td colSpan={6} className="p-5 text-center">Carregando servidores...</td></tr> :
+               servidoresMapaFiltrados.length === 0 ? <tr><td colSpan={6} className="p-5 text-center">Nenhum servidor encontrado para a categoria e a busca.</td></tr> :
+               servidoresMapaFiltrados.map((serv, i) => <tr key={`${serv.matricula}-${i}`} className="hover:bg-blue-50">
+                <td className="border border-[#d7e3f0] p-2">{String(i+1).padStart(2,'0')}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.matricula || '—'}</td>
+                <td className="border border-[#d7e3f0] p-2 font-semibold">{serv.nomeCompleto}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.cpf || '—'}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.cargo || '—'}</td>
+                <td className="border border-[#d7e3f0] p-2">{serv.observacao || '—'}</td>
+               </tr>)}
+            </tbody>
+          </table>
+        </div>
+        {!mapaCarregando && !mapaErro && <p className="mt-3 text-xs text-[#56708b]">{servidoresMapaFiltrados.length} servidor(es) exibido(s). Observações recuperadas da mesma consulta dos Mapas Institucionais.</p>}
       </SectionCard>
 
       <SectionCard className="overflow-hidden">
