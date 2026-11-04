@@ -3,11 +3,13 @@ import { ShieldCheck } from 'lucide-react';
 
 type InstitutionalHeaderProps = {
   subtitle?: string;
+  title?: string;
   compact?: boolean;
 };
 
 /** Cabeçalho institucional — apenas apresentação; nenhuma mudança em autenticação. */
 export function InstitutionalHeader({
+  title = 'Portal Intranet CIAPI',
   subtitle = 'Centro Integrado de Atenção à Pessoa Idosa',
   compact = false,
 }: InstitutionalHeaderProps) {
@@ -22,7 +24,7 @@ export function InstitutionalHeader({
           </div>
         </div>
         <div className="institutional-heading">
-          <strong>Portal Intranet CIAPI</strong>
+          <strong>{title}</strong>
           <span>{subtitle}</span>
         </div>
         <div className="institutional-seal" aria-label="Ambiente institucional">

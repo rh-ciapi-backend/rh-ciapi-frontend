@@ -1,9 +1,9 @@
 import AbrigoPortalCard from '../components/AbrigoPortalCard';
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, Info, AlertCircle, Layers3, ChevronDown } from 'lucide-react';
+import { User, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { InstitutionalHeader } from '../components/InstitutionalHeader';
-import { HeartPulse, UsersRound, House, ShieldCheck } from 'lucide-react';
+import { HeartPulse, UsersRound, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth, AmbienteSistema } from '../contexts/AuthContext';
 import './ciapi-abrigo-portal.css';
@@ -39,18 +39,31 @@ export const LoginPage: React.FC = () => {
 
   const choose = (id: AmbienteSistema) => { setAmbienteSelecionado(id); setError(null); };
   return (
-    <div className="institutional-login min-h-screen">
+    <div className={`institutional-login min-h-screen${!ambienteSelecionado ? ' ciapi-portal' : ''}`}>
       {!ambienteSelecionado ? (
         <>
-          <InstitutionalHeader subtitle="Centro Integrado de Atenção à Pessoa Idosa" />
-          <div className="institutional-login__content institutional-login__content--portal">
-            <div className="institutional-login__intro"><h1>Sistemas Internos</h1><p>Selecione o sistema que deseja acessar.</p></div>
-            <div className="institutional-login__systems institutional-login__systems--portal" aria-label="Sistemas disponíveis">
-              <button type="button" className="institutional-system-card" onClick={() => choose('rh')}><span className="institutional-system-card__icon"><UsersRound size={34}/></span><strong>CIAPI RH</strong><small>Sistema Integrado de Gestão de Recursos Humanos</small><span className="institutional-system-card__action">Acessar sistema →</span></button>
-              <button type="button" className="institutional-system-card" onClick={() => choose('sae')}><span className="institutional-system-card__icon"><HeartPulse size={34}/></span><strong>SAE</strong><small>Serviço de Atenção Especializada</small><span className="institutional-system-card__action">Acessar sistema →</span></button>
-              <AbrigoPortalCard className="institutional-system-card" />
+          <InstitutionalHeader title="Portal CIAPI" subtitle="Centro Integrado de Atenção à Pessoa Idosa" />
+          <main className="ciapi-portal__main">
+            <div className="ciapi-portal__intro">
+              <p className="ciapi-portal__eyebrow">SEU ESPAÇO DE TRABALHO</p>
+              <h1>Como podemos ajudar hoje?</h1>
+              <p>Escolha o sistema para começar.</p>
             </div>
-          </div>
+            <div className="ciapi-portal__systems" aria-label="Sistemas disponíveis">
+              <button type="button" className="ciapi-portal-card ciapi-portal-card--rh" onClick={() => choose('rh')}>
+                <span className="ciapi-portal-card__top"><span className="ciapi-portal-card__icon" aria-hidden="true"><UsersRound size={27} strokeWidth={1.7}/></span><span className="ciapi-portal-card__tag">Gestão de pessoas</span></span>
+                <span className="ciapi-portal-card__body"><strong>CIAPI RH</strong><span>Recursos humanos</span><small>Servidores, frequência e férias em um só lugar.</small></span>
+                <span className="ciapi-portal-card__action">Acessar RH <ArrowRight size={17} aria-hidden="true"/></span>
+              </button>
+              <button type="button" className="ciapi-portal-card ciapi-portal-card--sae" onClick={() => choose('sae')}>
+                <span className="ciapi-portal-card__top"><span className="ciapi-portal-card__icon" aria-hidden="true"><HeartPulse size={27} strokeWidth={1.7}/></span><span className="ciapi-portal-card__tag">Atenção à pessoa idosa</span></span>
+                <span className="ciapi-portal-card__body"><strong>SAE</strong><span>Serviço de Atenção Especializada</span><small>Acompanhamento, atendimentos e cuidado.</small></span>
+                <span className="ciapi-portal-card__action">Acessar SAE <ArrowRight size={17} aria-hidden="true"/></span>
+              </button>
+              <AbrigoPortalCard />
+            </div>
+            <p className="ciapi-portal__access"><ShieldCheck size={15} aria-hidden="true"/>Acesso exclusivo para usuários autorizados</p>
+          </main>
         </>
       ) : (
         <div className="institutional-login__standalone">
