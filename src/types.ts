@@ -76,7 +76,7 @@ export interface LinhaMapa {
   frequencia: number;
   faltas: number;
   observacao: string;
-  categoria: Categoria;
+  categoria: Categoria | '';
   setor: string;
 }
 

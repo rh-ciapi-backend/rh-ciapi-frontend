@@ -1,0 +1,22 @@
+.ciapi-welcome{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:radial-gradient(ellipse at 50% 42%,#173248 0%,#0b1220 67%);color:#f8fafc;text-align:center;opacity:1;transition:opacity .28s ease;font-family:system-ui,sans-serif;overflow:auto}
+.ciapi-welcome--leaving{opacity:0;pointer-events:none}
+.ciapi-welcome__content{width:min(100%,380px);animation:ciapi-welcome-arrive .65s ease both}
+.ciapi-welcome__art{position:relative;width:min(74vw,280px);margin:0 auto 12px}
+.ciapi-welcome__couple{position:relative;display:block;width:100%;height:auto;overflow:visible}
+.ciapi-welcome__halo{position:absolute;inset:15% 0 4%;border-radius:50%;background:radial-gradient(circle,#4d9fa82b,transparent 70%);box-shadow:0 0 60px #75c6c010}
+.ciapi-welcome__brand{margin:0 0 10px;color:#96d9dd;font-size:14px;font-weight:750;letter-spacing:.32em;padding-left:.32em}
+.ciapi-welcome h1{margin:0;font-size:clamp(21px,5.8vw,28px);font-weight:700;letter-spacing:-.035em;line-height:1.3;color:#f8fafc}
+.ciapi-welcome__subtitle{margin:12px 0 0;font-size:14px;line-height:1.6;color:#b8c9d6}
+.ciapi-welcome__line{display:block;width:44px;height:3px;margin:24px auto 0;border-radius:99px;background:#89c4ab}
+.ciapi-welcome__heart{position:absolute;right:6%;top:10%;color:#e9a8c9;font-size:28px;animation:ciapi-welcome-heart 2.3s ease both}
+.ciapi-welcome__wave{transform-box:view-box}
+.ciapi-welcome__wave--man{transform-origin:134px 127px;animation:ciapi-welcome-wave 1.2s .35s ease-in-out 2}
+.ciapi-welcome__wave--woman{transform-origin:164px 181px;animation:ciapi-welcome-wave 1.1s .55s ease-in-out 2}
+.ciapi-welcome__skip{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));border:1px solid #7192a64d;border-radius:999px;background:#ffffff08;color:#d3e4ef;padding:12px 20px;min-height:44px;font:500 13px system-ui,sans-serif;cursor:pointer}
+.ciapi-welcome__skip:hover{background:#ffffff15}
+.ciapi-welcome__skip:focus-visible{outline:3px solid #96d9dd;outline-offset:4px}
+@keyframes ciapi-welcome-wave{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}50%{transform:rotate(9deg)}75%{transform:rotate(-10deg)}}
+@keyframes ciapi-welcome-arrive{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ciapi-welcome-heart{0%{opacity:0;transform:translateY(12px) scale(.6)}35%,75%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-15px) scale(1.1)}}
+@media(max-height:600px){.ciapi-welcome{padding:16px 16px 80px}.ciapi-welcome__art{width:min(40vh,180px)}.ciapi-welcome__line{margin-top:12px}}
+@media(prefers-reduced-motion:reduce){.ciapi-welcome,.ciapi-welcome__content,.ciapi-welcome__wave,.ciapi-welcome__heart{animation:none;transition:none}.ciapi-welcome__heart{display:none}}
