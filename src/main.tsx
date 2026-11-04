@@ -13,6 +13,7 @@ import "./institutional.css";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
+import { WelcomeScreen } from "./components/WelcomeScreen";
 
 function PwaStatus() {
   const [online, setOnline] =
@@ -164,10 +165,12 @@ ReactDOM.createRoot(
 ).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <App />
-        <PwaStatus />
-      </AuthProvider>
+      <WelcomeScreen>
+        <AuthProvider>
+          <App />
+          <PwaStatus />
+        </AuthProvider>
+      </WelcomeScreen>
     </ErrorBoundary>
   </React.StrictMode>,
 );

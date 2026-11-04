@@ -15,6 +15,7 @@ export interface ApiResponse<T> {
 }
 
 export interface ListarServidoresParams {
+  limite?: number;
   nome?: string;
   busca?: string;
   categoria?: Categoria;
