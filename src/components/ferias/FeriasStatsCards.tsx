@@ -1,3 +1,4 @@
+import DashboardIcon from '../dashboard/DashboardIcon';
 import React from 'react';
 import { CalendarDays, CalendarRange, BriefcaseBusiness, BarChart3 } from 'lucide-react';
 
@@ -26,7 +27,7 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="relative overflow-hidden app-surface p-5">
+    <div className="ciapi-vacation-stat relative overflow-hidden app-surface p-5">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(6,182,212,0.08),transparent_30%)]" />
       <div className="relative flex items-start justify-between gap-4">
         <div>
@@ -46,30 +47,30 @@ export function FeriasStatsCards({ stats, carregando = false }: FeriasStatsCards
   const coverage = Number.isFinite(stats.coberturaPlanejada) ? `${Math.round(stats.coberturaPlanejada)}%` : '0%';
 
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="ciapi-vacation-stats grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         title="Registros"
         value={carregando ? '...' : stats.totalRegistros}
         subtitle="Períodos cadastrados no painel"
-        icon={<CalendarDays className="h-5 w-5" />}
+        icon={<DashboardIcon name="holiday" size={46} />}
       />
       <StatCard
         title="Em férias agora"
         value={carregando ? '...' : stats.emFeriasAgora}
         subtitle="Servidores afastados neste momento"
-        icon={<BriefcaseBusiness className="h-5 w-5" />}
+        icon={<DashboardIcon name="active" size={46} />}
       />
       <StatCard
         title="Previstas no mês"
         value={carregando ? '...' : stats.previstasMes}
         subtitle="Saídas previstas no filtro atual"
-        icon={<CalendarRange className="h-5 w-5" />}
+        icon={<DashboardIcon name="agenda" size={46} />}
       />
       <StatCard
         title="Cobertura anual"
         value={carregando ? '...' : coverage}
         subtitle="Percentual planejado dentro do ano"
-        icon={<BarChart3 className="h-5 w-5" />}
+        icon={<DashboardIcon name="reports" size={46} />}
       />
     </section>
   );

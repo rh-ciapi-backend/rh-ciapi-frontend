@@ -1,3 +1,4 @@
+import DashboardIcon from '../components/dashboard/DashboardIcon';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Download, FileText, Loader2, Printer, Search, RefreshCw, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { listarFrequenciaMensal, baixarFrequenciaArquivo, type FrequenciaMensalItem, type FrequenciaDayItem, type FrequenciaExportPayload } from '../services/frequenciaService';
@@ -46,110 +47,86 @@ function Ficha({item,ano,mes,assinante}:{item:FrequenciaMensalItem;ano:number;me
       <div className="cf-official-meta-line"><span><b>Servidor (a):</b> {value(s?.nome)}</span><span><b>Matrícula:</b> {value(s?.matricula)}</span></div>
       <div className="cf-official-meta-line"><span><b>Categoria:</b> {value(s?.categoria)}</span><span><b>CPF:</b> {value(s?.cpf)}</span></div>
       <div className="cf-official-meta-line"><span className="cf-full"><b>Cargo:</b> {value(s?.cargo)}</span></div>
-      <div className="cf-official-meta-line cf-official-meta-three"><span><b>Frequência:</b></span><span><b>C.H-Diária:</b> —</span><span><b>C.H-Semanal:</b> —</span></div>
-      <div className="cf-official-meta-line"><span><b>MÊS:</b> {MESES[mes-1]?.toUpperCase()}</span><span><b>Ano:</b> {ano}</span></div>
-    </div>
-    <div className="cf-tablewrap"><table className="cf-sheet cf-official-grid"><colgroup>
-      <col style={{width:'7%'}}/>
-      {[0,1].flatMap(turn=>['9%','8%','13%','10%','7%'].map((width,i)=><col key={`${turn}-${i}`} style={{width}}/>))}
-    </colgroup><thead><tr className="cf-turn-head"><th rowSpan={2}>DIA</th><th colSpan={5}>1º TURNO</th><th colSpan={5}>2º TURNO</th></tr><tr>{[0,1].flatMap(t=>['HORA ENTRADA','HORA SAÍDA','RUBRICA DO SERVIDOR','OCORRÊNCIA','ABONO DO CHEFE'].map((heading,i)=><th key={`${t}-${i}`}>{heading}</th>))}</tr></thead>
-    <tbody>{entries.map(r=><tr key={r.dia}>
-      <td className="cf-day-number">{r.dia}</td>
-      {[r.first,r.second].flatMap((turn,index)=>{
-        const isWeekend=!!r.weekend;
-        const rubrica=weekendOr(turn?.rubrica,r.weekend);
-        const ocorrencia=weekendOr(turn?.ocorrencia,r.final&&!isWeekend?r.final:'');
-        return [
-          <td key={`${index}a`}>{isWeekend?'——':''}</td>,
-          <td key={`${index}b`}>{isWeekend?'——':''}</td>,
-          <td key={`${index}c`}>{rubrica==='—'?'':rubrica}</td>,
-          <td key={`${index}d`}>{ocorrencia==='—'?'':ocorrencia}</td>,
-          <td key={`${index}e`}></td>
-        ];
-      })}
-    </tr>)}</tbody></table></div>
-    <footer className="cf-paper-sign cf-official-signatures">
-      <div><span className="cf-signature-line"/><small>Assinatura do servidor</small></div>
-      <div><span className="cf-signature-line"/><small>{assinante.nome || "Responsável não configurado"}</small><small>{assinante.matricula ? `Mat. ${assinante.matricula}` : ""}</small><small>{assinante.cargo || ""}</small></div>
-    </footer>
-    <p className="cf-hint cf-print-hidden">Consulta em tela. Confira os dados e utilize o PDF oficial para emissão institucional.</p>
-  </article>;
-}
-export default function FrequenciaPage({initialAction,onActionHandled}:ActionProps){
-  const [assinaturas,setAssinaturas]=useState<AssinaturasFrequencia>(ASSINATURAS_INICIAIS);
-  const [assinaturasErro,setAssinaturasErro]=useState('');
-  const [assinaturasSucesso,setAssinaturasSucesso]=useState('');
-  const [assinaturasCarregando,setAssinaturasCarregando]=useState(true);
-  const [assinaturasSalvando,setAssinaturasSalvando]=useState(false);
-  const [guia,setGuia]=useState<Guia>(parseState(initialAction));
-  const [ano,setAno]=useState(initialYear); const [mes,setMes]=useState(initialMonth);
-  const [items,setItems]=useState<FrequenciaMensalItem[]>([]);const [cadastros,setCadastros]=useState<ServidorComVinculo[]>([]);const [cadastrosError,setCadastrosError]=useState('');const [loading,setLoading]=useState(false);const [error,setError]=useState('');const [query,setQuery]=useState('');const [searched,setSearched]=useState(false);const [selected,setSelected]=useState('');const [revision,setRevision]=useState(0);const [busy,setBusy]=useState(false);
-  const [exportQuery,setExportQuery]=useState('');const [categoria,setCategoria]=useState('');const [setor,setSetor]=useState('');
-  const [inicioAno,setInicioAno]=useState(initialYear);const [inicioMes,setInicioMes]=useState(initialMonth);const [fimAno,setFimAno]=useState(initialYear);const [fimMes,setFimMes]=useState(initialMonth);const [periodo,setPeriodo]=useState(false); const [modo,setModo]=useState<'individual'|'lote'>('lote');const [formato,setFormato]=useState<'pdf'|'docx'>('pdf');const [escopo,setEscopo]=useState<'todos_ativos'|'todos'|'categoria'|'setor'>('todos_ativos');const [estrategia,setEstrategia]=useState<'zip'|'documento_unico'>('zip');
-  const [eventos,setEventos]=useState<EventoCalendario[]>([]);const [eventLoading,setEventLoading]=useState(false);const [eventDate,setEventDate]=useState(`${iso(initialYear,initialMonth)}-01`);const [eventTitle,setEventTitle]=useState('');const [eventDesc,setEventDesc]=useState('');const [eventType,setEventType]=useState<TipoEvento>('FERIADO');const [eventActive,setEventActive]=useState(true);
-  useEffect(()=>{if(initialAction){setGuia(parseState(initialAction));onActionHandled?.();}},[initialAction,onActionHandled]);
-  useEffect(()=>{let active=true;carregarAssinaturas().then(data=>{if(active){setAssinaturas(data);setAssinaturasErro('');}}).catch(e=>{if(active)setAssinaturasErro(e instanceof Error?e.message:'Não foi possível carregar os responsáveis.');}).finally(()=>{if(active)setAssinaturasCarregando(false);});return()=>{active=false;};},[]);
-  const setAssinanteField=(key:'gerente'|'secretario',field:keyof AutoridadeAssinatura,value:string)=>setAssinaturas(old=>({...old,[key]:{...old[key],[field]:value}}));
-  const salvarResponsaveis=async()=>{setAssinaturasSalvando(true);setAssinaturasErro('');setAssinaturasSucesso('');try{await salvarAssinaturas(assinaturas);setAssinaturasSucesso('Dados da Gerência salvos no banco de dados.');}catch(e:any){setAssinaturasErro(e?.message||'Falha ao salvar responsáveis.');}finally{setAssinaturasSalvando(false);}};
-  const responsavelPara=(_cargo:unknown)=>assinaturas.gerente;
-
-  const changeMonth=(y:number,m:number)=>{setAno(y);setMes(m);setSearched(false);setSelected('');setEventDate(`${iso(y,m)}-01`);};
-  const load=useCallback(async()=>{setLoading(true);setError('');try{const result=await listarFrequenciaMensal({ano,mes,status:'TODOS'});setItems(Array.isArray(result?.data)?result.data:[]);}catch(e:any){setItems([]);setError(e?.message||'Não foi possível consultar as frequências.');}finally{setLoading(false);}},[ano,mes,revision]);
-  useEffect(()=>{if(guia==='pesquisar'||guia==='exportar')void load();},[load,guia]);
-  useEffect(()=>{let active=true;servidoresService.listar().then(rows=>{if(active){setCadastros(Array.isArray(rows)?rows:[]);setCadastrosError('');}}).catch(e=>{if(active)setCadastrosError(e?.message||'Não foi possível carregar o cadastro de servidores.');});return()=>{active=false;};},[]);
-  const loadEvents=useCallback(async()=>{setEventLoading(true);setError('');try{const rows=await listarEventos({ano,mes});setEventos(Array.isArray(rows)?rows:[]);}catch(e:any){setError(e?.message||'Erro ao carregar feriados.');}finally{setEventLoading(false);}},[ano,mes,revision]);
-  useEffect(()=>{if(guia==='feriados')void loadEvents();},[guia,loadEvents]);
-  // Busca diretamente no cadastro existente: não depende de marcações de frequência no mês.
-  const found=useMemo(()=>{
-    const needle=norm(query);if(!needle)return [] as FrequenciaMensalItem[];
-    const matches=cadastros.filter(s=>[s.nomeCompleto,s.nome,s.matricula,s.matriculaSegunda,s.cpf].some(v=>norm(String(v||'')).includes(needle)));
-    const known=new Set(matches.map(s=>String(s.id)));
-    const fromMonthly=items.filter(i=>{const s=i.servidor;return s&&(known.has(String(s.id))||[s.nome,s.matricula,s.cpf].some(v=>norm(String(v||'')).includes(needle)));});
-    const keys=new Set(fromMonthly.map(i=>String(i.servidor?.id)));
-    const fallback=matches.filter(s=>!keys.has(String(s.id))).map(s=>({
-      servidor:{id:s.id,nome:s.nomeCompleto||s.nome,cpf:s.cpf,matricula:s.matricula,categoria:s.categoria,setor:s.setor,cargo:s.cargo,status:s.status},
-      dayItems:[]
-    } as FrequenciaMensalItem));
-    return [...fromMonthly,...fallback];
-  },[items,cadastros,query]);
-  const chosen=useMemo(()=>found.find(i=>String(i.servidor?.id)===selected)|| (found.length===1?found[0]:null),[found,selected]);
-  const exportMatches=useMemo(()=>{
-    const q=norm(exportQuery);return q?cadastros.filter(s=>[s.nomeCompleto,s.nome,s.matricula,s.matriculaSegunda,s.cpf].some(v=>norm(String(v||'')).includes(q))).slice(0,30):[];
-  },[cadastros,exportQuery]);
-  const chosenForExport=useMemo(()=>{
-    if(modo!=='individual')return null;
-    const person=cadastros.find(s=>String(s.id)===selected);
-    if(person)return {id:person.id,cpf:person.cpf,nome:person.nomeCompleto||person.nome,matricula:person.matricula};
-    return chosen?.servidor||null;
-  },[cadastros,chosen,modo,selected]);
-  const categorias=useMemo(()=>Array.from(new Set(cadastros.map(i=>text(i.categoria)).filter(Boolean))).sort(),[cadastros]);
-  const setores=useMemo(()=>Array.from(new Set(cadastros.map(i=>text(i.setor)).filter(Boolean))).sort(),[cadastros]);
-  const changeGuia=(g:Guia)=>{setGuia(g);setError('');};
-  const exportOne=async(y:number,m:number)=>{const payload:FrequenciaExportPayload={ano:y,mes:m,formato,modoExportacao:modo,escopoExportacao:modo==='individual'?'servidor_selecionado':escopo,estrategiaLote:formato==='pdf'?'zip':estrategia,servidorId:modo==='individual'?chosenForExport?.id:undefined,servidorCpf:modo==='individual'?chosenForExport?.cpf:undefined,categoria:categoria||undefined,setor:setor||undefined,status:escopo==='todos_ativos'?'ATIVO':undefined}; Object.assign(payload, {responsavelAssinatura: modo==='individual'?responsavelPara(chosenForExport?.cargo):null,assinaturasInstitucionais:assinaturas,regraAssinatura:'GERENTE_CIAPI'}); await baixarFrequenciaArquivo(payload, (chosenForExport||undefined) as any);};
-  const exportRun=async()=>{if(modo==='individual'&&!chosenForExport){setError('Pesquise e selecione um servidor no campo ao lado.');return;}if(modo==='lote'&&escopo==='categoria'&&!categoria){setError('Selecione a categoria.');return;}if(modo==='lote'&&escopo==='setor'&&!setor){setError('Selecione o setor.');return;}const from=periodo?inicioAno*12+inicioMes:ano*12+mes;const to=periodo?fimAno*12+fimMes:from;if(to<from||to-from>11){setError('Escolha um período de até 12 competências, com data final igual ou posterior à inicial.');return;}setBusy(true);setError('');try{for(let i=from;i<=to;i++){const year=Math.floor((i-1)/12);const month=i-year*12;await exportOne(year,month);}}catch(e:any){setError(e?.message||'Falha ao exportar.');}finally{setBusy(false);}};
-  const saveEvent=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError('');try{const payload:EventoInput={data:eventDate,tipo:eventType,titulo:eventTitle.trim(),descricao:eventDesc.trim(),ativo:eventActive};await criarEvento(payload);setEventTitle('');setEventDesc('');await loadEvents();setRevision(v=>v+1);}catch(err:any){setError(err?.message||'Falha ao salvar o evento. Confirme sua autenticação.');}finally{setBusy(false);}};
-  const deleteEvent=async(id:string)=>{if(!window.confirm('Excluir este evento?'))return;setBusy(true);setError('');try{await excluirEvento(id);await loadEvents();setRevision(v=>v+1);}catch(e:any){setError(e?.message||'Não foi possível excluir.');}finally{setBusy(false);}};
-  return <main className="cf-root"><header className="cf-top"><div><span className="cf-eyebrow">CIAPI RH / CONTROLE DE PESSOAL</span><h1>Frequência</h1><p>Consulta individual, calendário institucional e emissão de documentos.</p></div><Btn onClick={()=>setRevision(v=>v+1)}><RefreshCw size={15}/> Atualizar</Btn></header>
-  {error&&<div className="cf-alert" role="alert">{error}</div>}
-  {guia==='pesquisar'&&<><section className="cf-panel"><div className="cf-panel-title"><Search size={20}/><h2>Localizar frequência do servidor</h2></div><form className="cf-search-form" onSubmit={e=>{e.preventDefault();setSearched(true);setSelected('');}}><label>Nome, CPF ou matrícula<input value={query} onChange={e=>{setQuery(e.target.value);setSearched(false);setSelected('');}} placeholder="Digite o nome, CPF ou matrícula do servidor" required/></label><MonthChooser ano={ano} mes={mes} onChange={changeMonth}/><div className="cf-buttons"><button className="cf-btn cf-btn--primary" disabled={loading||!query.trim()} type="submit"><Search size={16}/> Pesquisar</button><Btn onClick={()=>{setQuery('');setSearched(false);setSelected('');}}>Limpar</Btn></div></form></section>
-  {loading&&<div className="cf-panel">Carregando frequência…</div>}{cadastrosError&&<div className="cf-alert">{cadastrosError}</div>}{searched&&!loading&&(!found.length?<div className="cf-panel cf-empty">Nenhum servidor encontrado. Confira o nome, CPF ou matrícula.</div>:<><section className="cf-panel"><h2>Resultado da pesquisa · {found.length} servidor(es)</h2>{found.length>1&&<div className="cf-results">{found.map(i=><button type="button" className={String(i.servidor?.id)===selected?'active':''} key={String(i.servidor?.id)} onClick={()=>setSelected(String(i.servidor?.id))}><strong>{i.servidor?.nome}</strong><small>{i.servidor?.matricula} · {i.servidor?.categoria}</small></button>)}</div>}</section>{chosen&&<section className="cf-panel cf-sheet-host"><div className="cf-toolbar"><h2>{chosen.servidor?.nome}</h2><div className="cf-buttons cf-print-hidden"><Btn onClick={()=>changeMonth(next(ano,mes,-1).ano,next(ano,mes,-1).mes)}><ChevronLeft size={15}/> Anterior</Btn><Btn onClick={()=>changeMonth(next(ano,mes,1).ano,next(ano,mes,1).mes)}>Próximo <ChevronRight size={15}/></Btn><Btn onClick={()=>window.print()}><Printer size={16}/> Imprimir tela</Btn><Btn variant="primary" disabled={busy} onClick={async()=>{setBusy(true);try{await baixarFrequenciaArquivo({ano,mes,formato:'pdf',modoExportacao:'individual',escopoExportacao:'servidor_selecionado',servidorId:chosen.servidor?.id,servidorCpf:chosen.servidor?.cpf},chosen.servidor||undefined);}catch(e:any){setError(e?.message||'Erro ao baixar.');}finally{setBusy(false);}}}><Download size={15}/> PDF oficial</Btn></div></div>{!(chosen.dayItems||[]).length&&<div className="cf-note">Este servidor foi encontrado no cadastro, mas não há ocorrências de frequência retornadas para esta competência. A folha abaixo é uma estrutura em branco para consulta; utilize o PDF oficial quando necessário.</div>}<Ficha item={chosen} ano={ano} mes={mes} assinante={responsavelPara(chosen.servidor?.cargo)}/></section>}</>)}</>}
-  {guia==='feriados'&&<div className="cf-events"><section className="cf-panel"><div className="cf-panel-title"><CalendarDays size={20}/><h2>Gerenciar feriados e eventos</h2></div><p>Registros permanentes na base de dados, usados no calendário e nas exportações.</p><MonthChooser ano={ano} mes={mes} onChange={changeMonth}/><form className="cf-form" onSubmit={saveEvent}><label>Data<input type="date" value={eventDate} onChange={e=>setEventDate(e.target.value)} required/></label><label>Tipo<select value={eventType} onChange={e=>setEventType(e.target.value as TipoEvento)}><option value="FERIADO">Feriado</option><option value="PONTO_FACULTATIVO">Ponto facultativo</option><option value="EVENTO">Evento</option></select></label><label>Título<input value={eventTitle} onChange={e=>setEventTitle(e.target.value)} placeholder="Nome do feriado" required/></label><label>Descrição<textarea value={eventDesc} onChange={e=>setEventDesc(e.target.value)} rows={3}/></label><label className="cf-check"><input type="checkbox" checked={eventActive} onChange={e=>setEventActive(e.target.checked)}/> Ativo no calendário</label><button type="submit" className="cf-btn cf-btn--primary" disabled={busy}><Plus size={16}/> Salvar evento</button></form></section><section className="cf-panel"><div className="cf-toolbar"><h2>Eventos — {label(ano,mes)}</h2><Btn onClick={()=>void loadEvents()}><RefreshCw size={15}/> Atualizar lista</Btn></div>{eventLoading?<p>Carregando…</p>:!eventos.length?<div className="cf-empty">Nenhum evento cadastrado para a competência.</div>:<div className="cf-event-list">{eventos.map(e=><div className="cf-event" key={e.id}><div><b>{dateBr(e.data)}</b> <span className="cf-tag">{e.tipo.replace('_',' ')}</span><h3>{e.titulo}</h3><p>{e.descricao}</p></div><Btn variant="danger" disabled={busy} onClick={()=>void deleteEvent(e.id)}><Trash2 size={15}/> Excluir</Btn></div>)}</div>}</section></div>}
-  {guia==='exportar'&&<section className="cf-panel"><div className="cf-panel-title"><Download size={20}/><h2>Exportação de frequências</h2></div><p>Escolha os filtros abaixo. Não é necessário navegar por listas de servidores.</p><div className="cf-form cf-export"><fieldset><legend>Tipo de arquivo</legend><label className="cf-check"><input type="radio" checked={formato==='pdf'} onChange={()=>setFormato('pdf')}/> PDF</label><label className="cf-check"><input type="radio" checked={formato==='docx'} onChange={()=>setFormato('docx')}/> Word (DOCX)</label></fieldset><fieldset><legend>Modalidade</legend><label className="cf-check"><input type="radio" checked={modo==='lote'} onChange={()=>setModo('lote')}/> Em lote</label><label className="cf-check"><input type="radio" checked={modo==='individual'} onChange={()=>setModo('individual')}/> Servidor escolhido na pesquisa</label></fieldset>{modo==='individual'&&<div className="cf-export-person"><label>Pesquisar servidor para exportação<input placeholder="Digite o nome, CPF ou matrícula" value={exportQuery} onChange={e=>{setExportQuery(e.target.value);setSelected('');}} /></label>{exportQuery.trim()&&<div className="cf-export-choices">{exportMatches.length?exportMatches.map(s=><button type="button" key={String(s.id)} className={selected===String(s.id)?'active':''} onClick={()=>{setSelected(String(s.id));setExportQuery(`${s.nomeCompleto||s.nome} (${s.matricula})`);}}>{s.nomeCompleto||s.nome} · {s.matricula}</button>):<p>Nenhum servidor encontrado.</p>}</div>}{chosenForExport&&<p className="cf-selected-person">Selecionado: {chosenForExport.nome} · {chosenForExport.matricula}</p>}</div>}<fieldset><legend>Competência</legend><label className="cf-check"><input type="radio" checked={!periodo} onChange={()=>setPeriodo(false)}/> Mês selecionado</label><label className="cf-check"><input type="radio" checked={periodo} onChange={()=>setPeriodo(true)}/> Intervalo de meses</label></fieldset>{!periodo?<MonthChooser ano={ano} mes={mes} onChange={changeMonth}/>:<div className="cf-period"><div><b>De</b><MonthChooser ano={inicioAno} mes={inicioMes} onChange={(y,m)=>{setInicioAno(y);setInicioMes(m);}}/></div><div><b>Até</b><MonthChooser ano={fimAno} mes={fimMes} onChange={(y,m)=>{setFimAno(y);setFimMes(m);}}/></div></div>}
-  {modo==='lote'&&<><fieldset><legend>Escopo</legend>{([['todos_ativos','Ativos'],['todos','Todos'],['categoria','Por categoria'],['setor','Por setor']] as const).map(([v,t])=><label key={v} className="cf-check"><input type="radio" checked={escopo===v} onChange={()=>setEscopo(v)}/>{t}</label>)}</fieldset><div className="cf-row"><label>Categoria<select value={categoria} onChange={e=>setCategoria(e.target.value)}><option value="">Todas as categorias</option>{categorias.map(c=><option key={c}>{c}</option>)}</select></label><label>Setor<select value={setor} onChange={e=>setSetor(e.target.value)}><option value="">Todos os setores</option>{setores.map(s=><option key={s}>{s}</option>)}</select></label></div><fieldset><legend>Arquivos do lote</legend><label className="cf-check"><input type="radio" checked={estrategia==='zip'} onChange={()=>setEstrategia('zip')}/> ZIP separado</label><label className="cf-check"><input type="radio" checked={estrategia==='documento_unico'} onChange={()=>setEstrategia('documento_unico')}/> Documento único (DOCX)</label></fieldset></>}
-  <section className="cf-sign-settings" aria-label="Responsáveis pelas assinaturas">
-    <div className="cf-panel-title"><FileText size={20}/><h2>Assinaturas da frequência</h2></div>
-    <p>Altere o nome, a matrícula e o cargo da Gerência do CIAPI. A configuração será reutilizada nas prévias após salvar no Supabase.</p>
-    {assinaturasErro&&<div className="cf-alert" role="alert">{assinaturasErro}</div>}
-    {assinaturasSucesso&&<div className="cf-note" role="status">{assinaturasSucesso}</div>}
-    <div className="cf-sign-editors"><fieldset className="cf-sign-form"><legend>Gerência do CIAPI</legend>
-      <label>Nome completo<input value={assinaturas.gerente.nome} onChange={e=>setAssinanteField('gerente','nome',e.target.value)} placeholder="Nome completo" /></label>
-      <label>Matrícula<input value={assinaturas.gerente.matricula} onChange={e=>setAssinanteField('gerente','matricula',e.target.value)} placeholder="Matrícula" /></label>
-      <label>Cargo / função<input value={assinaturas.gerente.cargo} onChange={e=>setAssinanteField('gerente','cargo',e.target.value)} placeholder="Gerente do CIAPI" /></label>
-    </fieldset></div>
-    <div className="cf-sign-actions"><Btn variant="primary" disabled={assinaturasCarregando||assinaturasSalvando||!assinaturas.gerente.nome.trim()} onClick={()=>void salvarResponsaveis()}>{assinaturasSalvando?'Salvando…':'Salvar gerência'}</Btn></div>
-    <div className="cf-sign-preview"><b>Prévia da assinatura institucional</b><p>{modo==='individual'&&chosenForExport?`Servidor: ${chosenForExport.nome}${chosenForExport.cargo ? " — " + chosenForExport.cargo : ""}`:'Selecione um servidor para aplicar a regra individual.'}</p><div className="cf-signature-line"/><strong>{responsavelPara(chosenForExport?.cargo).nome||'Nome não configurado'}</strong><small>{responsavelPara(chosenForExport?.cargo).matricula?`Mat. ${responsavelPara(chosenForExport?.cargo).matricula}`:''}</small><small>{responsavelPara(chosenForExport?.cargo).cargo}</small></div>
-    <p className="cf-sign-warning">A prévia em tela utiliza a configuração. Para o PDF e o DOCX oficiais, é obrigatório aplicar a integração do gerador no backend descrita no LEIA-ME. Não suponha que o arquivo oficial já incorpora esta assinatura sem essa etapa.</p>
-  </section>
-  <div className="cf-note">O backend atual exporta uma competência por requisição. No modo período, serão feitos downloads por mês; não é gerado um PDF único para todo o intervalo. Alguns navegadores pedem autorização para múltiplos downloads.</div><div className="cf-buttons"><Btn variant="primary" onClick={()=>void exportRun()} disabled={busy||loading}><Download size={16}/>{busy?'Gerando arquivos…':'Baixar frequências'}</Btn></div></div></section>}
+      <div className="cf-official-meta-line cf-official-meta-three"><span><…9557 tokens truncated…bel="Mês" value={filtros.mes} onChange={e=>setFiltros(f=>({...f,mes:Number(e.target.value)}))}>{MESES.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select>
+        <input aria-label="Ano" type="number" min={2020} max={2100} value={filtros.ano} onChange={e=>setFiltros(f=>({...f,ano:Number(e.target.value)}))}/>
+        <button type="button" className="ciapi-mapas-button subtle" onClick={()=>setRecarregar(v=>v+1)}>Atualizar</button>
+      </div>
+      <div className="ciapi-mapas-paper">
+        <div className="ciapi-mapas-paper-heading">
+          <p>GOVERNO DO ESTADO DE RORAIMA</p><p>SECRETARIA DO TRABALHO E BEM-ESTAR SOCIAL</p>
+          <h3>MAPA DE FREQUÊNCIA DOS SERVIDORES {grupo.titulo.toUpperCase()} — {grupo.subtitulo}</h3>
+          <p>COMPETÊNCIA: {MESES[(filtros.mes || 1) - 1]?.toUpperCase()}/{filtros.ano}</p>
+        </div>
+        {carregando ? <div className="ciapi-mapas-empty">Carregando os registros do RH CIAPI...</div>
+        : <div className="ciapi-mapas-table-scroll"><table className="ciapi-mapas-table">
+          <thead><tr>{(isSesau ? ['Nº','Matrícula','Matrícula SIGRH / Início','Servidor','CPF','Cargo','Frequência','Faltas','Lotação / Setor','CH / Observação'] : ['Nº','Matrícula','Servidor','CPF','Cargo','Frequência','Faltas','Observação']).map((h, i) => <th key={h} className={i === 0 ? 'ciapi-mapas-numero' : undefined}>{h}</th>)}</tr></thead>
+          <tbody>{!exibidas.length ? <tr><td colSpan={isSesau ? 10 : 8} className="ciapi-mapas-empty">Nenhum registro retornado para os filtros selecionados.</td></tr>
+          : exibidas.map((r, index) => {
+            const nome = obter(r, 'nome', 'nome_servidor', 'nomeServidor', 'servidor', 'nome_completo', 'nomeCompleto');
+            const matricula = obter(r, 'matricula', 'matricula_servidor', 'matriculaServidor');
+            const cpf = obter(r, 'cpf');
+            const cargo = obter(r, 'cargo', 'funcao');
+            const freq = obter(r, 'frequencia', 'frequencias', 'freq');
+            const faltas = obter(r, 'faltas', 'totalFaltas', 'total_faltas');
+            const obsOriginal = obter(r, 'observacao', 'observacoes');
+            const ocorrencias = eventosPorMatricula.get(matricula.replace(/\D/g,'')) || [];
+            const complemento = ocorrencias.map(o => `${o.tipo}: ${o.descricao}`).join(' | ');
+            const obs = [obsOriginal === '—' ? '' : obsOriginal, complemento].filter(Boolean).join(' | ') || '—';
+            const faltasRegistradas = ocorrencias.filter(o=>o.tipo==='FALTA').length;
+            const setor = obter(r, 'lotacao', 'setor', 'setorInterno', 'setor_interno');
+            const carga = obter(r, 'cargaHoraria', 'carga_horaria', 'chSemanal', 'ch_semanal');
+            const inicio = obter(r, 'inicioAtividades', 'inicio_atividades', 'dataInicio', 'data_inicio');
+            const sig = obter(r, 'matriculaSigrh', 'matricula_sigrh', 'matriculaSIGRH');
+            return <tr key={`${matricula}-${index}`}>
+              <td className="ciapi-mapas-numero">{String((pagina-1)*100+index+1).padStart(2,'0')}</td><td>{cell(matricula)}</td>
+              {isSesau && <td>{cell(sig !== '—' ? sig : inicio)}</td>}
+              <td className="nome">{cell(nome)}</td><td>{cell(cpf)}</td><td>{cell(cargo)}</td>
+              <td>{cell(freq)}</td><td>{cell(faltas)}{faltasRegistradas ? ` · ${faltasRegistradas} lançamento(s) adicional(is)` : ''}</td>
+              {isSesau && <td>{cell(setor)}</td>}
+              <td className="observacao" title={obs}>{cell(isSesau && carga !== '—' ? `${carga}${obs !== '—' ? ' · ' + obs : ''}` : obs)}<button type="button" className="ciapi-mapas-editar" onClick={()=>abrirEdicao(matricula,nome)}>Editar / lançar</button></td>
+            </tr>;
+          })}</tbody></table></div>}
+        <div className="ciapi-mapas-footnote">A tabela utiliza os registros retornados pelo sistema. O documento oficial é gerado pelos botões de exportação.</div>
+      </div>
+      <div className="ciapi-mapas-footer">
+        <span>{filtradas.length} registro(s) na consulta{paginas > 1 ? ` · página ${pagina} de ${paginas}` : ''}</span>
+        {paginas > 1 && <div className="ciapi-mapas-buttons"><button className="ciapi-mapas-button subtle" onClick={() => setPagina(x => Math.max(1,x-1))} disabled={pagina === 1}>Anterior</button><button className="ciapi-mapas-button subtle" onClick={() => setPagina(x => Math.min(paginas,x+1))} disabled={pagina === paginas}>Próximo</button></div>}
+      </div>
+      {mostrarDiagnostico && preview && <aside className="ciapi-mapas-diagnostic"><strong>Validação do mapa</strong><p>Registros inválidos: {preview.diagnostics?.registrosInvalidos?.length ?? 0} · Páginas previstas: {preview.diagnostics?.paginasPrevistas ?? '—'}</p>{(preview.diagnostics?.alertas || []).map((a, i) => <p key={i}>{String(a)}</p>)}</aside>}
+    </section>}
+    {editando && <div className="ciapi-mapas-dialog-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !salvandoRegistro) setEditando(null); }}>
+      <section className="ciapi-mapas-dialog" role="dialog" aria-modal="true" aria-labelledby="ciapi-dialog-titulo">
+        <h3 id="ciapi-dialog-titulo">Registrar ocorrência do servidor</h3>
+        <p><strong>{editando.nome}</strong> · Matrícula {editando.matricula}</p>
+        <p>Competência: {MESES[filtros.mes-1]}/{filtros.ano}</p>
+        <label>Tipo de registro
+          <select value={tipoRegistro} onChange={e => setTipoRegistro(e.target.value as 'OBSERVACAO'|'ATESTADO'|'FALTA')}>
+            <option value="OBSERVACAO">Observação</option><option value="ATESTADO">Atestado (registro informativo)</option><option value="FALTA">Falta (registro informativo)</option>
+          </select>
+        </label>
+        <label>Data
+          <input type="date" value={dataRegistro} min={`${filtros.ano}-${String(filtros.mes).padStart(2,'0')}-01`}
+            max={`${filtros.ano}-${String(filtros.mes).padStart(2,'0')}-${new Date(filtros.ano, filtros.mes, 0).getDate()}`}
+            onChange={e => setDataRegistro(e.target.value)}/>
+        </label>
+        {tipoRegistro === 'FALTA' && <label>Turno
+          <select value={turnoRegistro} onChange={e => setTurnoRegistro(e.target.value as 'T1'|'T2'|'AMBOS')}>
+            <option value="T1">1º turno</option><option value="T2">2º turno</option><option value="AMBOS">Ambos</option>
+          </select>
+        </label>}
+        <label>Descrição
+          <textarea rows={4} maxLength={4000} value={textoRegistro} onChange={e => setTextoRegistro(e.target.value)} placeholder="Descreva a ocorrência..." />
+        </label>
+        {tipoRegistro !== 'OBSERVACAO' && <p className="ciapi-mapas-alerta">Este lançamento registra apenas o histórico complementar. Para atualizar a frequência oficial, utilize o módulo Frequência ou Atestados.</p>}
+        {erroEdicao && <div className="ciapi-mapas-error" role="alert"><AlertTriangle size={16}/>{erroEdicao}</div>}
+        <div className="ciapi-mapas-dialog-actions">
+          <button type="button" disabled={salvandoRegistro} onClick={() => setEditando(null)}>Cancelar</button>
+          <button type="button" disabled={salvandoRegistro || !textoRegistro.trim() || !dataRegistro} onClick={salvarRegistro}>
+            {salvandoRegistro ? 'Salvando...' : 'Salvar ocorrência'}
+          </button>
+        </div>
+        <p className="ciapi-mapas-dialog-hint">Os registros salvos aparecem no histórico do servidor. Esta versão permite novos lançamentos; correções de registros anteriores dependem de procedimento auditável.</p>
+      </section>
+    </div>}
   </main>;
 }

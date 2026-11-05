@@ -111,7 +111,7 @@ export function FeriasCalendar({ ano, mes, registros, onSelectDate }: FeriasCale
           </div>
         </div>
 
-        <div className="responsive-scroll">
+        <div className="responsive-scroll ciapi-vacation-calendar">
           <div className="min-w-[680px]">
             <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {WEEK_LABELS.map((label) => (

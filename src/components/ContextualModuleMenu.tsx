@@ -1,4 +1,5 @@
 import React from 'react';
+import { visualFor } from './workspace/visuals';
 import DashboardIcon, { type DashboardIconName } from './dashboard/DashboardIcon';
 import { PanelLeftClose, PanelLeftOpen, Search, Users, CalendarDays, Map, Clock3, FileText, Settings, Stethoscope, ClipboardList } from 'lucide-react';
 
@@ -42,8 +43,14 @@ export function ContextualModuleMenu({module,activeTab,activeAction,collapsed,on
       {!collapsed && <div className="ciapi-people-menu__cards">{entries.map(entry=><button key={entry.action} type="button" className={`ciapi-people-link ciapi-people-link--${entry.action}`} aria-current={activeAction === entry.action ? 'page' : undefined} onClick={()=>onSelect(entry.tab,entry.action)}><DashboardIcon name={artwork[entry.action || ''] || 'people'} size={46}/><span>{entry.label}</span></button>)}</div>}
     </aside>;
   }
-  return <aside className={`ciapi-side${collapsed?' ciapi-side--collapsed':''}`} aria-label={`Opções de ${section.title}`}>
-    <div className="ciapi-side__heading"><Icon size={20}/>{!collapsed&&<strong>{section.title}</strong>}<button type="button" onClick={onToggle} aria-label={collapsed?'Expandir menu':'Recolher menu'}>{collapsed?<PanelLeftOpen size={17}/>:<PanelLeftClose size={17}/>}</button></div>
-    {!collapsed&&<div className="ciapi-side__items">{entries.map((entry,i)=><button key={`${entry.tab}-${i}`} type="button" className={'ciapi-side__item'} onClick={()=>onSelect(entry.tab,entry.action)}>{entry.label}<span aria-hidden="true">›</span></button>)}</div>}
+  return <aside className={`ciapi-module-menu${collapsed ? ' ciapi-module-menu--collapsed' : ''}`} aria-label={`Opções de ${section.title}`}>
+    <div className="ciapi-module-menu__heading"><strong>{section.title}</strong><button type="button" onClick={onToggle} aria-label={collapsed?'Expandir menu':'Recolher menu'} aria-expanded={!collapsed}>{collapsed?<PanelLeftOpen size={17}/>:<PanelLeftClose size={17}/>}</button></div>
+    {!collapsed && <div className="ciapi-module-menu__cards">{entries.map((entry,i)=>{
+      const key = entry.tab.startsWith('admin-') ? entry.tab : module;
+      const icon = entry.action?.includes('export') ? 'reports' : entry.action?.includes('novo') ? 'medical' : visualFor(key).icon;
+      const unique = entries.filter(e => e.tab === entry.tab && e.action === entry.action).length === 1;
+      const current = unique && (entry.action ? activeAction === entry.action && activeTab === entry.tab : activeTab === entry.tab);
+      return <button key={`${entry.tab}-${i}`} data-tone={['blue','purple','green','orange'][i%4]} type="button" aria-current={current?'page':undefined} className="ciapi-module-link" onClick={()=>onSelect(entry.tab,entry.action)}><DashboardIcon name={icon} size={40}/><span>{entry.label}</span></button>;
+    })}</div>}
   </aside>;
 }
