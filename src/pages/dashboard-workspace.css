@@ -4,38 +4,38 @@
 .ciapi-pagebar-sae:hover { background:#eef7f3; }
 .ciapi-pagebar-sae:focus-visible { outline:3px solid #75aa99; outline-offset:3px; }
 /* Compact shell applies only while viewing the RH home dashboard. */
-.ciapi-rh-home .institutional-header__inner { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:center; justify-content:flex-start; padding:15px 30px!important; gap:22px; max-width:1280px!important; margin:auto; }
-.ciapi-rh-home .institutional-brand--dual { width:auto; }
-.ciapi-rh-home .institutional-brand .institutional-brand__ciapi { width:40px!important; height:48px!important; }
-.ciapi-rh-home .institutional-brand .institutional-brand__gov { width:135px!important; height:48px!important; }
-.ciapi-rh-home .institutional-brand__divider { height:31px; }
-.ciapi-rh-home .institutional-heading { text-align:left; width:auto; order:initial; }
-.ciapi-rh-home .institutional-heading strong { font-size:20px; font-weight:700; }
-.ciapi-rh-home .institutional-heading span { font-size:11px; color:#adc8dc; }
-.ciapi-rh-home .institutional-seal { margin-left:auto; width:auto; min-width:0; font-size:10px; }
-.ciapi-rh-home .ciapi-hnav { box-shadow:none!important; }
-.ciapi-rh-home .institutional-pagebar { min-height:65px; padding:15px 30px; background:#f6f8fb; border-bottom:1px solid #e6edf3; }
-.ciapi-rh-home .institutional-pagebar>div:first-child>span { display:none; }
-.ciapi-rh-home .institutional-pagebar h1 { font-size:17px; color:#3b5b74; font-weight:650; }
-.ciapi-rh-home .institutional-pagebar__user strong { font-size:11px; }
-.ciapi-rh-home .institutional-pagebar__user small { font-size:10px; }
-.ciapi-rh-home .ciapi-contextual-main { padding:27px 30px!important; }
-.ciapi-rh-home .app-page { max-width:1160px!important; margin-inline:auto; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-header__inner { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:center; justify-content:flex-start; padding:15px 30px!important; gap:22px; max-width:1280px!important; margin:auto; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand--dual { width:auto; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand .institutional-brand__ciapi { width:40px!important; height:48px!important; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand .institutional-brand__gov { width:135px!important; height:48px!important; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand__divider { height:31px; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-heading { text-align:left; width:auto; order:initial; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-heading strong { font-size:20px; font-weight:700; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-heading span { font-size:11px; color:#adc8dc; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-seal { margin-left:auto; width:auto; min-width:0; font-size:10px; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .ciapi-hnav { box-shadow:none!important; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar { min-height:65px; padding:15px 30px; background:#f6f8fb; border-bottom:1px solid #e6edf3; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar>div:first-child>span { display:none; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar h1 { font-size:17px; color:#3b5b74; font-weight:650; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar__user strong { font-size:11px; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar__user small { font-size:10px; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .ciapi-contextual-main { padding:27px 30px!important; }
+:is(.ciapi-rh-home,.ciapi-rh-people) .app-page { max-width:1160px!important; margin-inline:auto; }
 @media(max-width:800px) {
-  .ciapi-rh-home .institutional-header__inner { padding:12px 18px!important; gap:15px; }
-  .ciapi-rh-home .institutional-heading strong { font-size:17px; }
-  .ciapi-rh-home .institutional-heading span,.ciapi-rh-home .institutional-seal { display:none; }
-  .ciapi-rh-home .institutional-brand .institutional-brand__ciapi { width:32px!important; height:38px!important; }
-  .ciapi-rh-home .institutional-brand .institutional-brand__gov { width:108px!important; height:38px!important; }
-  .ciapi-rh-home .institutional-brand__logos { gap:8px; }
-  .ciapi-rh-home .institutional-brand__divider { height:25px; }
-  .ciapi-rh-home .ciapi-hnav__mobile-toggle { min-height:44px; padding:10px 5px; font-size:12px; }
-  .ciapi-rh-home .ciapi-hnav__inner { padding-inline:16px; }
-  .ciapi-rh-home .institutional-pagebar { min-height:56px; padding:10px 18px; }
-  .ciapi-rh-home .institutional-pagebar h1 { font-size:15px; }
-  .ciapi-rh-home .institutional-pagebar__user { display:none; }
-  .ciapi-rh-home .ciapi-contextual-main { padding:22px 16px!important; }
-  .ciapi-rh-home .ciapi-pagebar-sae { min-height:34px; padding:7px 10px; font-size:10px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-header__inner { padding:12px 18px!important; gap:15px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-heading strong { font-size:17px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-heading span,:is(.ciapi-rh-home,.ciapi-rh-people) .institutional-seal { display:none; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand .institutional-brand__ciapi { width:32px!important; height:38px!important; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand .institutional-brand__gov { width:108px!important; height:38px!important; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand__logos { gap:8px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-brand__divider { height:25px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .ciapi-hnav__mobile-toggle { min-height:44px; padding:10px 5px; font-size:12px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .ciapi-hnav__inner { padding-inline:16px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar { min-height:56px; padding:10px 18px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar h1 { font-size:15px; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .institutional-pagebar__user { display:none; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .ciapi-contextual-main { padding:22px 16px!important; }
+  :is(.ciapi-rh-home,.ciapi-rh-people) .ciapi-pagebar-sae { min-height:34px; padding:7px 10px; font-size:10px; }
 }
 /* When the same SAE action is in the pagebar, avoid repeating it in the menu. */
-.ciapi-rh-home:has(.ciapi-pagebar-sae) .ciapi-hnav__sae { display:none; }
+:is(.ciapi-rh-home,.ciapi-rh-people):has(.ciapi-pagebar-sae) .ciapi-hnav__sae { display:none; }

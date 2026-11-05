@@ -1,4 +1,5 @@
 import React from 'react';
+import DashboardIcon, { type DashboardIconName } from './dashboard/DashboardIcon';
 import { PanelLeftClose, PanelLeftOpen, Search, Users, CalendarDays, Map, Clock3, FileText, Settings, Stethoscope, ClipboardList } from 'lucide-react';
 
 type Entry = { label:string; tab:string; action?:string };
@@ -30,10 +31,17 @@ const sections: Record<string,{title:string; entries:Entry[]}> = {
   diagnostico:{title:'Diagnóstico',entries:[{label:'Diagnóstico do sistema',tab:'diagnostico',action:'open'}]},
 };
 const icons: Record<string,React.ElementType> = {servidores:Users,frequencia:Clock3,ferias:CalendarDays,mapas:Map,atestados:Stethoscope,requerimentos:ClipboardList,relatorios:FileText,admin:Settings,diagnostico:Search};
-export function ContextualModuleMenu({module,activeTab,collapsed,onToggle,onSelect,isAdmin}:{module:string;activeTab:string;collapsed:boolean;onToggle:()=>void;onSelect:(tab:string,action?:string)=>void;isAdmin:boolean}){
+export function ContextualModuleMenu({module,activeTab,activeAction,collapsed,onToggle,onSelect,isAdmin}:{module:string;activeTab:string;activeAction?:string|null;collapsed:boolean;onToggle:()=>void;onSelect:(tab:string,action?:string)=>void;isAdmin:boolean}){
   const section=sections[module]; if(!section) return null;
   const Icon=icons[module]||Search;
   const entries=section.entries.filter(e=>isAdmin || !e.tab.startsWith('admin-'));
+  if(module === 'servidores') {
+    const artwork: Record<string, DashboardIconName> = {pesquisar:'search-person',inativos:'inactive-person',add:'new-person','painel-pessoal':'personnel'};
+    return <aside className={`ciapi-people-menu${collapsed ? ' ciapi-people-menu--collapsed' : ''}`} aria-label="Opções de Servidores">
+      <div className="ciapi-people-menu__heading"><span>GESTÃO DE PESSOAS</span><button type="button" onClick={onToggle} aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!collapsed}>{collapsed ? <PanelLeftOpen size={17}/> : <PanelLeftClose size={17}/>}</button></div>
+      {!collapsed && <div className="ciapi-people-menu__cards">{entries.map(entry=><button key={entry.action} type="button" className={`ciapi-people-link ciapi-people-link--${entry.action}`} aria-current={activeAction === entry.action ? 'page' : undefined} onClick={()=>onSelect(entry.tab,entry.action)}><DashboardIcon name={artwork[entry.action || ''] || 'people'} size={46}/><span>{entry.label}</span></button>)}</div>}
+    </aside>;
+  }
   return <aside className={`ciapi-side${collapsed?' ciapi-side--collapsed':''}`} aria-label={`Opções de ${section.title}`}>
     <div className="ciapi-side__heading"><Icon size={20}/>{!collapsed&&<strong>{section.title}</strong>}<button type="button" onClick={onToggle} aria-label={collapsed?'Expandir menu':'Recolher menu'}>{collapsed?<PanelLeftOpen size={17}/>:<PanelLeftClose size={17}/>}</button></div>
     {!collapsed&&<div className="ciapi-side__items">{entries.map((entry,i)=><button key={`${entry.tab}-${i}`} type="button" className={'ciapi-side__item'} onClick={()=>onSelect(entry.tab,entry.action)}>{entry.label}<span aria-hidden="true">›</span></button>)}</div>}

@@ -11,6 +11,7 @@ import { InstitutionalNav } from './components/InstitutionalNav';
 import { ContextualModuleMenu } from './components/ContextualModuleMenu';
 import './ciapi-contextual-layout.css';
 import './pages/dashboard-workspace.css';
+import './pages/servidores-color.css';
 import { Topbar } from './components/Topbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -192,13 +193,13 @@ export default function App() {
       {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
-        <div className={`ciapi-horizontal-layout ciapi-contextual-app app-shell institutional-app min-h-screen min-w-0${activeTab === 'dashboard' ? ' ciapi-rh-home' : ''}`}>
-          <InstitutionalHeader compact title={activeTab === 'dashboard' ? 'CIAPI RH' : undefined} subtitle={activeTab === 'dashboard' ? 'Gestão de Recursos Humanos' : 'Sistema Integrado de Gestão de Recursos Humanos'} />
+        <div className={`ciapi-horizontal-layout ciapi-contextual-app app-shell institutional-app min-h-screen min-w-0${activeTab === 'dashboard' ? ' ciapi-rh-home' : activeTab === 'servidores' ? ' ciapi-rh-people' : ''}`}>
+          <InstitutionalHeader compact title={['dashboard', 'servidores'].includes(activeTab) ? 'CIAPI RH' : undefined} subtitle={['dashboard', 'servidores'].includes(activeTab) ? 'Gestão de Recursos Humanos' : 'Sistema Integrado de Gestão de Recursos Humanos'} />
           <InstitutionalNav activeTab={activeTab} selectedModule={displayedModule} onOpenModule={openModule} onNavigate={navigateWithAction} onLogout={handleLogout} />
           <div className="app-content-column flex min-w-0 flex-1 flex-col">
             <Topbar title={activeTab === 'dashboard' ? 'Início' : getPageTitle()} onOpenSae={acesso?.is_master ? () => setAmbiente('sae') : undefined} />
             <div className="ciapi-contextual-workspace">
-              {guardedModule && <ContextualModuleMenu module={displayedModule} activeTab={activeTab} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} onSelect={openFromSide} isAdmin={Boolean(acessoAtual?.isMaster || acessoAtual?.perfil === 'ADMINISTRADOR')} />}
+              {guardedModule && <ContextualModuleMenu activeAction={initialAction} module={displayedModule} activeTab={activeTab} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} onSelect={openFromSide} isAdmin={Boolean(acessoAtual?.isMaster || acessoAtual?.perfil === 'ADMINISTRADOR')} />}
               <main className="app-main ciapi-contextual-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">
                 <div className="app-page app-main-inner">
                   <AnimatePresence mode="wait">

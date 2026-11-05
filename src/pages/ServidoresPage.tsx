@@ -1,3 +1,4 @@
+import DashboardIcon from '../components/dashboard/DashboardIcon';
 import PainelPessoalCIAPI from './PainelPessoalCIAPI';
 import './painel-pessoal-restaurado.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -732,16 +733,17 @@ export const ServidoresPage = ({
         }}
       />}
       {!isModalOpen && !modoPainelPessoal && <section className="ciapi-servidores-search">
-        <header><strong>{consultaSituacao === 'INATIVO' ? 'Consultar servidores inativos' : consultaSituacao === 'ATIVO' ? 'Consultar servidores ativos' : 'Consultar servidores'}</strong><span>{new Date().toLocaleDateString('pt-BR')}</span></header>
+        <header><div className="ciapi-people-search-title"><DashboardIcon name="search-person" size={48}/><div><span>CONSULTA DE SERVIDORES</span><strong>{consultaSituacao === 'INATIVO' ? 'Consultar servidores inativos' : consultaSituacao === 'ATIVO' ? 'Consultar servidores ativos' : 'Consultar servidores'}</strong></div></div><span className="ciapi-people-status">{consultaSituacao === 'TODOS' ? 'Todos os cadastros' : consultaSituacao === 'ATIVO' ? 'Somente ativos' : 'Somente inativos'}</span></header>
+        <div className="ciapi-people-counts" aria-label="Resumo dos cadastros"><span>Cadastros <strong>{isLoading || error ? '—' : summary.total}</strong></span><span>Ativos <strong>{isLoading || error ? '—' : summary.ativos}</strong></span><span>Inativos <strong>{isLoading || error ? '—' : summary.inativos}</strong></span></div>
         <form onSubmit={runSearch}>
           <label htmlFor="ciapi-search-servidor">Buscar por nome, CPF ou matrícula</label>
           <div className="ciapi-servidores-search-row">
             <Search size={20} aria-hidden="true" />
-            <input id="ciapi-search-servidor" value={query} onChange={event => setQuery(event.target.value)} placeholder="Digite nome, CPF, matrícula ou segundo vínculo" />
+            <input id="ciapi-search-servidor" value={query} onChange={event => setQuery(event.target.value)} placeholder="Nome, CPF ou matrícula" />
           </div>
-          <p className="ciapi-servidores-hint">Escolha uma consulta individual ou mostre todos os servidores da situação selecionada.</p>
+          <p className="ciapi-servidores-hint">A busca também encontra a matrícula do segundo vínculo.</p>
           <div className="ciapi-servidores-actions">
-            <button className="ciapi-btn ciapi-btn-search" type="submit"><Search size={17}/> Consultar servidor individual</button>
+            <button className="ciapi-btn ciapi-btn-search" type="submit"><Search size={17}/> Buscar servidor</button>
             <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={mostrarTodos}>Mostrar todos</button>
             <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={() => {setQuery('');setHasSearched(false);setShowAll(false);setSearchResults([]);closeDetailsModal();}}>Limpar</button>
             <button className="ciapi-btn ciapi-btn-muted" type="button" onClick={handleAddEmployee}><Plus size={17}/> Novo servidor</button>

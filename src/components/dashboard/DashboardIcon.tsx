@@ -1,8 +1,10 @@
 import { useId } from 'react';
 
-export type DashboardIconName = 'people' | 'active' | 'attendance' | 'holiday' | 'medical' | 'reports' | 'birthday' | 'agenda' | 'sunrise';
+export type DashboardIconName = 'people' | 'active' | 'attendance' | 'holiday' | 'medical' | 'reports' | 'birthday' | 'agenda' | 'sunrise' | 'search-person' | 'inactive-person' | 'new-person' | 'personnel';
 
 const palettes: Record<DashboardIconName, [string, string, string]> = {
+  'search-person': ['#8ad9ff','#3297e4','#196eb5'], 'inactive-person': ['#d6bded','#a387c3','#7c619b'],
+  'new-person': ['#88ebc8','#2fb68d','#15896a'], personnel: ['#a9c6ff','#5e91e4','#3b65b1'],
   people: ['#6bd6ff', '#1689dc', '#1065ab'], active: ['#70e9a6', '#16ad68', '#087f4c'],
   attendance: ['#c9a2ff', '#9357df', '#6936b3'], holiday: ['#ffd777', '#ff9a28', '#db7616'],
   medical: ['#75e7cf', '#23bba2', '#0b8e80'], reports: ['#79d5ff', '#298fe5', '#1769bc'],
@@ -18,18 +20,19 @@ export default function DashboardIcon({ name, size = 58 }: { name: DashboardIcon
   const edge = { stroke: dark, strokeWidth: 1.4, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const };
   let drawing;
   switch (name) {
-    case 'people': drawing = <>
+    case 'people': case 'search-person': drawing = <>
       <rect x="9" y="17" width="46" height="39" rx="9" fill={fill} {...edge}/><rect x="14" y="22" width="36" height="28" rx="5" fill="#e5f7ff"/>
       <rect x="26" y="7" width="12" height="19" rx="6" fill={fill} {...edge}/><circle cx="32" cy="14" r="2" fill="#effaff"/>
       <circle cx="26" cy="33" r="5" fill={fill}/><path d="M17 46Q17 38 26 38Q35 38 35 46Z" fill={fill}/>
       <path d="M39 31H45M39 36H45M39 42H43" stroke="#72b9de" strokeWidth="2.5" strokeLinecap="round"/>
       <path d="M13 29V25Q13 21 17 21M14 52H43" stroke="#fff" strokeWidth="1.6" opacity=".55" fill="none"/>
+      {name === 'search-person' && <g><circle cx="44" cy="42" r="10" fill="#eff9ff" stroke="#247ab6" strokeWidth="3"/><path d="M51 50L59 58" stroke="#247ab6" strokeWidth="5" strokeLinecap="round"/><path d="M39 40Q41 36 45 37" stroke="#9fdcff" strokeWidth="2" strokeLinecap="round"/></g>}
     </>; break;
-    case 'active': drawing = <>
+    case 'active': case 'new-person': case 'inactive-person': drawing = <>
       <circle cx="28" cy="19" r="12" fill={fill} {...edge}/><path d="M9 48Q9 32 28 32Q46 32 47 48V54H9Z" fill={fill} {...edge}/>
       <path d="M14 45Q15 37 22 36M21 11Q25 8 29 9" stroke="#fff" strokeWidth="2" opacity=".5" strokeLinecap="round" fill="none"/>
       <circle cx="46" cy="46" r="14" fill="#ebfff4" stroke="#fff" strokeWidth="2"/><circle cx="46" cy="46" r="11" fill={fill} {...edge}/>
-      <path d="M40 46L44 50L52 41" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"/>
+      {name === 'new-person' ? <path d="M46 40V52M40 46H52" stroke="white" strokeWidth="3.2" strokeLinecap="round"/> : name === 'inactive-person' ? <path d="M43 41V51M49 41V51" stroke="white" strokeWidth="3.2" strokeLinecap="round"/> : <path d="M40 46L44 50L52 41" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"/>}
     </>; break;
     case 'attendance': drawing = <>
       <rect x="10" y="12" width="36" height="45" rx="6" fill={fill} {...edge}/><rect x="15" y="18" width="26" height="33" rx="3" fill="#fbf7ff"/>
@@ -53,7 +56,7 @@ export default function DashboardIcon({ name, size = 58 }: { name: DashboardIcon
       <path d="M23 43H40M23 48H33" stroke="#7fcdbf" strokeWidth="2.5" strokeLinecap="round"/>
       <path d="M12 18V14Q12 10 16 10" stroke="white" strokeWidth="1.5" opacity=".6" fill="none"/>
     </>; break;
-    case 'reports': drawing = <>
+    case 'reports': case 'personnel': drawing = <>
       <path d="M7 15L23 8L41 14L57 8V49L41 56L23 50L7 57Z" fill={fill} {...edge}/>
       <path d="M23 8V50L41 56V14Z" fill="#c5ebff" opacity=".7"/>
       <path d="M11 19L19 15M11 24L19 20" stroke="#e6f8ff" strokeWidth="1.5" opacity=".7"/>
