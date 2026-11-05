@@ -12,6 +12,9 @@ import { ContextualModuleMenu } from './components/ContextualModuleMenu';
 import './ciapi-contextual-layout.css';
 import './pages/dashboard-workspace.css';
 import './pages/servidores-color.css';
+import './workspace-theme.css';
+import DashboardIcon from './components/dashboard/DashboardIcon';
+import { visualFor } from './components/workspace/visuals';
 import { Topbar } from './components/Topbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -116,14 +119,14 @@ export default function App() {
 
     if (guardedModule && !showModulePage && displayedModule !== 'servidores') {
       return <section className="ciapi-entry" aria-label="Abertura do módulo">
-        <div className="ciapi-entry__icon" aria-hidden="true">⌕</div>
+        <div className="ciapi-entry__icon" aria-hidden="true"><DashboardIcon name={visualFor(displayedModule).icon}/></div>
         <p className="ciapi-entry__eyebrow">CIAPI RH · {displayedModule.toUpperCase()}</p>
         <h2>{moduleHeading[displayedModule] || 'Consulta institucional'}</h2>
         <p>Selecione uma opção no menu lateral ou abra a consulta para visualizar os registros. As tabelas não são carregadas nesta tela inicial.</p>
         <button type="button" onClick={() => setShowModulePage(true)}>Abrir consulta / gerenciamento →</button>
       </section>;
     }
-    return <div className={guardedModule ? 'ciapi-existing-module' : ''}>{renderContent()}</div>;
+    return <div className={guardedModule ? 'ciapi-existing-module ciapi-module-surface' : ''}>{renderContent()}</div>;
   };
 
   const renderContent = () => {
@@ -193,11 +196,11 @@ export default function App() {
       {ambiente === 'sae' ? (
         <SaeApp />
       ) : (
-        <div className={`ciapi-horizontal-layout ciapi-contextual-app app-shell institutional-app min-h-screen min-w-0${activeTab === 'dashboard' ? ' ciapi-rh-home' : activeTab === 'servidores' ? ' ciapi-rh-people' : ''}`}>
-          <InstitutionalHeader compact title={['dashboard', 'servidores'].includes(activeTab) ? 'CIAPI RH' : undefined} subtitle={['dashboard', 'servidores'].includes(activeTab) ? 'Gestão de Recursos Humanos' : 'Sistema Integrado de Gestão de Recursos Humanos'} />
+        <div data-tone={visualFor(displayedModule).tone} className={`ciapi-workspace-theme ciapi-rh-modern ciapi-horizontal-layout ciapi-contextual-app app-shell institutional-app min-h-screen min-w-0${activeTab === 'dashboard' ? ' ciapi-rh-home' : activeTab === 'servidores' ? ' ciapi-rh-people' : ''}`}>
+          <InstitutionalHeader compact title="CIAPI RH" subtitle="Gestão de Recursos Humanos" />
           <InstitutionalNav activeTab={activeTab} selectedModule={displayedModule} onOpenModule={openModule} onNavigate={navigateWithAction} onLogout={handleLogout} />
           <div className="app-content-column flex min-w-0 flex-1 flex-col">
-            <Topbar title={activeTab === 'dashboard' ? 'Início' : getPageTitle()} onOpenSae={acesso?.is_master ? () => setAmbiente('sae') : undefined} />
+            <Topbar moduleKey={displayedModule} title={activeTab === 'dashboard' ? 'Início' : getPageTitle()} onOpenSae={acesso?.is_master ? () => setAmbiente('sae') : undefined} />
             <div className="ciapi-contextual-workspace">
               {guardedModule && <ContextualModuleMenu activeAction={initialAction} module={displayedModule} activeTab={activeTab} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} onSelect={openFromSide} isAdmin={Boolean(acessoAtual?.isMaster || acessoAtual?.perfil === 'ADMINISTRADOR')} />}
               <main className="app-main ciapi-contextual-main flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-7">

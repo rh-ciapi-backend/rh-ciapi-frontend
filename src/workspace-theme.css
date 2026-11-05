@@ -1,0 +1,102 @@
+/* Shared visual language. Data, permission checks and official printable sheets are untouched. */
+@media screen {
+  .ciapi-workspace-theme { --module-accent:#337dc2; --module-soft:#edf5ff; --module-line:#cedff3; }
+  .ciapi-workspace-theme[data-tone=green],.ciapi-module-link[data-tone=green] { --module-accent:#35856e; --module-soft:#edf9f2; --module-line:#c6e6d7; }
+  .ciapi-workspace-theme[data-tone=purple],.ciapi-module-link[data-tone=purple] { --module-accent:#8b61b7; --module-soft:#f4eefc; --module-line:#ddceef; }
+  .ciapi-workspace-theme[data-tone=orange],.ciapi-module-link[data-tone=orange] { --module-accent:#bb7a32; --module-soft:#fff5e8; --module-line:#f0dabc; }
+  .ciapi-module-link[data-tone=blue] { --module-accent:#337dc2; --module-soft:#edf5ff; --module-line:#cedff3; }
+  .ciapi-module-title { display:flex; align-items:center; gap:12px; min-width:0; }
+  .ciapi-module-title>div>span { display:none; }
+  .ciapi-module-title h1 { margin:0; }
+  .ciapi-module-title>.ciapi-custom-icon { flex-shrink:0; }
+  .ciapi-module-menu { flex:0 0 235px; width:235px; padding:22px 16px; background:#f9fbfe; border-right:1px solid #e3eaf4; min-width:0; }
+  .ciapi-module-menu__heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:17px; color:#6d83a1; font-size:12px; }
+  .ciapi-module-menu__heading>button { display:grid; place-items:center; flex-shrink:0; width:30px; height:30px; background:#edf3fb; color:#6d88a5; border-radius:9px; }
+  .ciapi-module-menu__cards { display:grid; gap:10px; }
+  .ciapi-module-link { display:flex; align-items:center; gap:11px; min-width:0; text-align:left; padding:14px 12px; border:1px solid var(--module-line); background:linear-gradient(125deg,#fff,var(--module-soft)); border-radius:14px; color:var(--module-accent); transition:transform .18s; }
+  .ciapi-module-link>span { font-size:11px; font-weight:650; line-height:1.45; overflow-wrap:anywhere; }
+  .ciapi-module-link>svg { flex-shrink:0; }
+  .ciapi-module-link:hover { transform:translateY(-2px); }
+  .ciapi-module-link[aria-current=page] { box-shadow:0 0 0 2px var(--module-line); }
+  .ciapi-module-menu--collapsed { flex-basis:64px; width:64px; padding:20px 12px; }
+  .ciapi-module-menu--collapsed strong { display:none; }
+  .ciapi-workspace-theme .ciapi-entry { border:1px solid var(--module-line); border-radius:20px; background:linear-gradient(130deg,#fff,var(--module-soft)); padding:32px; }
+  .ciapi-workspace-theme .ciapi-entry__icon { background:none; width:62px; height:62px; }
+  .ciapi-workspace-theme .ciapi-entry button { background:var(--module-accent); border-radius:11px; }
+  .ciapi-workspace-theme .ciapi-module-surface { min-width:0; color:#294b67; }
+  .ciapi-rh-modern .ciapi-existing-module.ciapi-module-surface { padding:20px; border:1px solid #dce6f2; border-radius:18px; box-shadow:0 5px 18px #274c7005; }
+  .ciapi-module-surface :is(.app-surface,.app-subtle-surface,[class~='bg-card-dark'],[class~='bg-[#172033]'],[class~='bg-[#0b1220]']) { background:#fff!important; color:#2c4e6a; border-color:#dfe7f2!important; box-shadow:0 4px 14px #274c7005; }
+  .ciapi-module-surface :is(.app-subtle-surface,[class~='bg-slate-900/40'],[class~='bg-slate-950/35'],[class~='bg-slate-800/40'],[class~='bg-slate-800/60'],[class~='bg-slate-900/60']) { background:#f5f8fd!important; border-color:#dfe7f2!important; }
+  .ciapi-module-surface :is(h1,h2,h3,h4,p,span,div,legend,label).text-white:not(.bg-primary):not(.bg-blue-600) { color:#284b6d!important; }
+  .ciapi-module-surface :is(.text-slate-200,.text-slate-300,.text-slate-400,.text-slate-500) { color:#71859b; }
+  .ciapi-module-surface :is(button,a).bg-primary,.ciapi-module-surface :is(button,a).bg-blue-600 { color:#fff!important; }
+  .ciapi-module-surface :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea) { background:#fff!important; color:#315472!important; border-color:#d5e1ee!important; border-radius:10px; min-width:0; }
+  .ciapi-module-surface :is(input,select,textarea)::placeholder { color:#91a1b5; }
+  .ciapi-module-surface :is(button,a) { transition:background-color .16s,border-color .16s; }
+  .ciapi-workspace-theme :is(button,a,input,select,textarea,summary):focus-visible { outline:3px solid #80add9; outline-offset:2px; }
+  /* Module controls: do not target the official frequency sheet or map paper. */
+  .ciapi-rh-modern :is(.cf-panel,.cf-sign-settings,.ciapi-mapas-workspace,.ciapi-atestados-inline-panel,.ciapi-admin-light) { background:#fff; border:1px solid var(--module-line); border-radius:17px; box-shadow:0 4px 14px #274c7005; }
+  .ciapi-rh-modern :is(.cf-top,.ciapi-mapas-panel-title,.ciapi-mapas-competencia-bar) { background:linear-gradient(110deg,#fff,var(--module-soft)); border-radius:13px; border-color:var(--module-line); padding:16px; }
+  .ciapi-rh-modern :is(.cf-panel-title,.ciapi-mapas-panel-title) { color:#315471; }
+  .ciapi-rh-modern .cf-toolbar { border-color:#e0e8f2; border-radius:13px; }
+  .ciapi-rh-modern :is(.cf-export-choices button,.ciapi-mapas-choice-grid label) { border-radius:13px; border-color:var(--module-line); background:var(--module-soft); color:var(--module-accent); }
+  .ciapi-rh-modern :is(.cf-btn--primary,.ciapi-mapas-button:not(.subtle)) { background:var(--module-accent); color:white; border-color:var(--module-accent); border-radius:10px; }
+  .ciapi-rh-modern .ciapi-module-surface>.space-y-6>div:first-child h1 { font-size:24px; letter-spacing:-.03em; }
+  .ciapi-rh-modern .ciapi-module-surface :is(.ciapi-admin-light table,.cf-results table) th { background:var(--module-soft); color:var(--module-accent); }
+  .ciapi-rh-modern .ciapi-module-surface :is(table:not(.cf-paper table):not(.ciapi-mapas-paper table)) td { color:#3a5670; }
+}
+@media screen and (max-width:800px) {
+  .ciapi-module-menu { width:100%; flex:none; padding:14px 16px 18px; border-right:0; border-bottom:1px solid #e1e9f4; }
+  .ciapi-module-menu__heading { margin-bottom:12px; }
+  .ciapi-module-menu__cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+  .ciapi-module-link { padding:11px 9px; gap:8px; min-height:72px; }
+  .ciapi-module-link>.ciapi-custom-icon { width:33px; height:33px; }
+  .ciapi-module-link>span { font-size:10px; }
+  .ciapi-module-menu--collapsed { width:100%; padding:8px 16px; }
+  .ciapi-module-menu--collapsed strong { display:block; }
+  .ciapi-module-menu--collapsed .ciapi-module-menu__heading { margin:0; }
+  .ciapi-module-title { gap:9px; }
+  .ciapi-module-title>.ciapi-custom-icon { width:30px; height:30px; }
+  .ciapi-rh-modern .institutional-pagebar h1 { font-size:14px; }
+  .ciapi-rh-modern .ciapi-existing-module.ciapi-module-surface { padding:13px; border-radius:15px; }
+  .ciapi-module-surface :is(.cf-row,.ciapi-mapas-filters) { min-width:0; }
+  .ciapi-module-surface :is(input,select,textarea) { max-width:100%; }
+}
+@media(prefers-reduced-motion:reduce) { .ciapi-module-link { transition:none; transform:none; } }
+@media screen {
+ .ciapi-workspace-theme .ciapi-module-surface .ciapi-admin-metric { background:linear-gradient(125deg,#f6fbff,#e5f1ff); border-color:#cddff3; color:#365f89; }
+ .ciapi-workspace-theme .ciapi-module-surface .ciapi-admin-metric[data-tone=green] { background:linear-gradient(125deg,#f5fffa,#e2f5eb); border-color:#cae6d7; }
+ .ciapi-workspace-theme .ciapi-module-surface .ciapi-admin-metric[data-tone=orange] { background:linear-gradient(125deg,#fffcf6,#fff1dc); border-color:#edddc3; }
+ .ciapi-workspace-theme .ciapi-module-surface .ciapi-admin-metric[data-tone=purple] { background:linear-gradient(125deg,#fdf9ff,#efe7fb); border-color:#decff0; }
+ .ciapi-rh-modern .cf-panel-title>.ciapi-custom-icon { width:42px; height:42px; }
+}
+@media screen {
+ .ciapi-module-surface .ciapi-vacation-stat:nth-child(1) { background:linear-gradient(130deg,#fff,#fff1de)!important; border-color:#eedbc1!important; }
+ .ciapi-module-surface .ciapi-vacation-stat:nth-child(2) { background:linear-gradient(130deg,#fff,#e7f6ed)!important; border-color:#cfe5d8!important; }
+ .ciapi-module-surface .ciapi-vacation-stat:nth-child(3) { background:linear-gradient(130deg,#fff,#f1eafb)!important; border-color:#dfd3ee!important; }
+ .ciapi-module-surface .ciapi-vacation-stat:nth-child(4) { background:linear-gradient(130deg,#fff,#e7f2ff)!important; border-color:#cfdfef!important; }
+ .ciapi-vacation-stat>div.relative>div:last-child { background:none; border:0; }
+}
+@media screen and (max-width:600px) {
+ .ciapi-vacation-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+ .ciapi-vacation-stat { padding:14px; border-radius:15px; }
+ .ciapi-vacation-stat>div.relative { gap:8px; }
+ .ciapi-vacation-stat>div.relative>div:last-child { width:34px; height:34px; }
+ .ciapi-vacation-stat .ciapi-custom-icon { width:34px; height:34px; }
+ .ciapi-vacation-stat p:first-child { font-size:9px; letter-spacing:.04em; }
+ .ciapi-vacation-stat p:last-child { font-size:10px; line-height:1.5; }
+ .ciapi-vacation-calendar { overflow:auto; }
+ .ciapi-vacation-calendar>div { min-width:0; }
+ .ciapi-vacation-calendar .grid { gap:3px; }
+ .ciapi-vacation-calendar .grid>button { min-height:62px; padding:5px 3px; border-radius:8px; }
+ .ciapi-vacation-calendar .grid>button>div:first-child { flex-wrap:wrap; gap:2px; }
+ .ciapi-vacation-calendar .grid>button>div:last-child { display:none; }
+ .ciapi-vacation-calendar .grid>div { font-size:8px; letter-spacing:0; }
+}
+@media screen {
+ .ciapi-module-surface :is(.text-cyan-300,.text-cyan-100,[class~='text-cyan-100/80']) { color:#317f8c; }
+ .ciapi-module-surface :is(.text-blue-200,.text-emerald-300) { color:#368273; }
+ .ciapi-module-surface :is(.text-amber-300,.text-amber-200) { color:#a77436; }
+ .ciapi-module-surface :is(.text-rose-300,.text-rose-200) { color:#b35a75; }
+ .ciapi-module-surface button.text-white:not([class*='bg-primary']):not([class*='bg-blue-']):not([class*='bg-rose-600']):not([class*='bg-emerald-600']) { color:#375d82; }
+}

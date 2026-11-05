@@ -1,3 +1,4 @@
+import DashboardIcon from '../components/dashboard/DashboardIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Shield,
@@ -48,14 +49,14 @@ const AdminCard = ({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl border bg-gradient-to-br ${toneMap[tone]} p-5 text-left transition-all ${
+      data-tone={tone==='emerald'?'green':tone==='amber'?'orange':tone==='rose'?'purple':'blue'} className={`ciapi-admin-metric w-full rounded-2xl border bg-gradient-to-br ${toneMap[tone]} p-5 text-left transition-all ${
         clickable ? 'hover:scale-[1.01] hover:border-primary/40' : 'cursor-default'
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-slate-900/60 p-3">
-            <Icon size={22} />
+          <div className="ciapi-admin-metric__icon">
+            <DashboardIcon name={tone==='emerald'?'active':tone==='amber'?'shield':tone==='rose'?'settings':'people'} size={54} />
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">{title}</h3>
