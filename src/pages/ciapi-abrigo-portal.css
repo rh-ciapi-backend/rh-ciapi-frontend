@@ -1,34 +1,97 @@
-/* Portal CIAPI — tres cartoes no desktop, sem alterar a autenticacao. */
-.institutional-login .institutional-login__content--portal {
-  width: min(100% - 32px, 1100px) !important;
-  max-width: 1100px !important;
-  margin-inline: auto;
+/* Scoped to the entry portal; authenticated RH/SAE layouts retain their styles. */
+.ciapi-portal {
+  background: radial-gradient(ellipse at 85% 20%, #e5f1ef 0, transparent 46%), #f3f6fa;
+  color: #173853;
 }
-.institutional-login .institutional-login__systems--portal {
-  display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 24px !important;
-  align-items: stretch;
-  justify-content: center;
-  width: 100%;
-  max-width: 1050px !important;
-  margin-inline: auto;
-  flex-wrap: nowrap !important;
+.ciapi-portal .institutional-header {
+  background: linear-gradient(115deg, #092e50, #103e5f);
+  box-shadow: none;
+  position: relative;
 }
-.institutional-login .institutional-login__systems--portal > .institutional-system-card {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  box-sizing: border-box;
-  height: 100%;
+.ciapi-portal .institutional-header::after {
+  content: ''; position: absolute; inset: auto 0 0; height: 3px;
+  background: linear-gradient(90deg, #62adcb, #8bc5ad 62%, #dcc58e);
 }
-.institutional-system-card--coming-soon { cursor: default; opacity: .86; }
-.institutional-system-card--coming-soon:hover { transform: none; }
-.institutional-system-card--coming-soon .institutional-system-card__action { color: #64748b; }
-@media (max-width: 760px) {
-  .institutional-login .institutional-login__systems--portal {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-    max-width: 360px !important;
-  }
+.ciapi-portal .institutional-header__inner {
+  display: flex; flex-direction: row; flex-wrap: wrap;
+  justify-content: space-between; max-width: 1160px; min-height: 112px;
+  padding: 24px 30px; gap: 16px 32px;
+}
+.ciapi-portal .institutional-brand--dual { width: auto; }
+.ciapi-portal .institutional-brand .institutional-brand__ciapi { width: 50px !important; height: 58px !important; }
+.ciapi-portal .institutional-brand .institutional-brand__gov { width: 155px !important; height: 58px !important; }
+.ciapi-portal .institutional-brand__divider { height: 38px; background: #ffffff40; }
+.ciapi-portal .institutional-heading { text-align: left; order: initial; width: auto; margin-right: auto; }
+.ciapi-portal .institutional-heading strong { font-size: 25px; font-weight: 700; letter-spacing: -.04em; }
+.ciapi-portal .institutional-heading span { max-width: 250px; font-size: 11px; line-height: 1.6; color: #c6dce7; }
+.ciapi-portal .institutional-seal { width: auto; min-width: 0; order: initial; border: 1px solid #ffffff20; border-radius: 30px; padding: 9px 12px; color: #cce4eb; font-size: 10px; }
+.ciapi-portal .institutional-seal svg { width: 16px; height: 16px; }
+.ciapi-portal__main { flex: 1; width: min(100% - 60px, 1100px); margin: 0 auto; padding: 48px 0 32px; }
+.ciapi-portal__intro { margin-bottom: 28px; }
+.ciapi-portal__eyebrow { font-size: 10px; font-weight: 750; letter-spacing: .16em; color: #538093; margin: 0 0 10px; }
+.ciapi-portal__intro h1 { font-size: clamp(23px, 3.5vw, 33px); letter-spacing: -.04em; font-weight: 750; line-height: 1.25; margin: 0; color: #163952; }
+.ciapi-portal__intro > p:last-child { font-size: 14px; color: #6b7d8a; margin: 10px 0 0; }
+.ciapi-portal__systems { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.ciapi-portal-card {
+  --portal-accent: #2b68b5; --portal-soft: #edf4ff; --portal-border: #dbe7f7;
+  min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 22px;
+  position: relative; overflow: hidden; text-align: left; text-decoration: none;
+  padding: 26px; border: 1px solid #e0e8ee; border-radius: 22px; background: #fff;
+  box-shadow: 0 6px 24px #233e5506; cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  animation: ciapi-portal-in .45s ease both;
+}
+.ciapi-portal-card--sae { --portal-accent: #267b68; --portal-soft: #edf8f2; --portal-border: #d4eade; animation-delay: .07s; }
+.ciapi-portal-card--abrigo { --portal-accent: #8a63a3; --portal-soft: #f6f0fa; --portal-border: #e8dced; animation-delay: .14s; }
+.ciapi-portal-card::before { content: ''; position: absolute; top: 0; left: 27px; right: 27px; height: 3px; background: var(--portal-accent); border-radius: 0 0 4px 4px; opacity: .65; }
+.ciapi-portal-card:hover { transform: translateY(-4px); border-color: var(--portal-border); box-shadow: 0 15px 32px #233e5510; }
+.ciapi-portal-card:active { transform: translateY(-1px) scale(.99); }
+.ciapi-portal-card:focus-visible { outline: 3px solid var(--portal-accent); outline-offset: 4px; }
+.ciapi-portal-card__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ciapi-portal-card__icon { display: grid; place-items: center; flex-shrink: 0; width: 54px; height: 54px; border-radius: 17px; background: var(--portal-soft); color: var(--portal-accent); }
+.ciapi-portal-card__tag { font-size: 10px; line-height: 1.4; font-weight: 650; color: var(--portal-accent); text-align: right; }
+.ciapi-portal-card__body { display: flex; flex-direction: column; gap: 5px; }
+.ciapi-portal-card__body strong { font-size: 24px; line-height: 1.2; font-weight: 750; letter-spacing: -.035em; color: #193b54; }
+.ciapi-portal-card__body > span { font-size: 12px; font-weight: 600; color: #516b7e; line-height: 1.5; }
+.ciapi-portal-card__body small { display: block; font-size: 12px; line-height: 1.7; color: #7b8b98; margin-top: 5px; }
+.ciapi-portal-card__action { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding: 12px 15px; border-radius: 11px; background: var(--portal-soft); color: var(--portal-accent); font-weight: 700; font-size: 12px; }
+.ciapi-portal-card__action svg { transition: transform .2s ease; }
+.ciapi-portal-card:hover .ciapi-portal-card__action svg { transform: translateX(3px); }
+.ciapi-portal__access { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 27px 0 0; font-size: 11px; color: #788d99; text-align: center; }
+.ciapi-portal .institutional-login__footer { font-size: 10px; color: #8c9ca7; padding: 16px; }
+@keyframes ciapi-portal-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media(max-width: 1000px) {
+  .ciapi-portal .institutional-seal { display: none; }
+  .ciapi-portal-card { padding: 22px; }
+}
+@media(max-width: 760px) {
+  .ciapi-portal .institutional-header__inner { justify-content: center; padding: 19px 20px; gap: 11px; }
+  .ciapi-portal .institutional-brand--dual { justify-content: center; width: 100%; }
+  .ciapi-portal .institutional-heading { text-align: center; margin: 0; }
+  .ciapi-portal .institutional-heading strong { font-size: 22px; }
+  .ciapi-portal .institutional-heading span { display: block; max-width: 100%; font-size: 10px; }
+  .ciapi-portal .institutional-brand .institutional-brand__ciapi { width: 38px !important; height: 44px !important; }
+  .ciapi-portal .institutional-brand .institutional-brand__gov { width: 135px !important; height: 44px !important; }
+  .ciapi-portal .institutional-brand__divider { height: 30px; }
+  .ciapi-portal__main { width: min(100% - 32px, 540px); padding: 25px 0 16px; }
+  .ciapi-portal__intro { margin-bottom: 20px; }
+  .ciapi-portal__eyebrow { font-size: 9px; margin-bottom: 7px; }
+  .ciapi-portal__intro h1 { font-size: clamp(21px, 5.5vw, 28px); }
+  .ciapi-portal__intro > p:last-child { font-size: 12px; margin-top: 7px; }
+  .ciapi-portal__systems { grid-template-columns: 1fr; gap: 12px; }
+  .ciapi-portal-card { display: grid; grid-template-columns: 46px 1fr; gap: 10px 14px; padding: 18px; border-radius: 18px; }
+  .ciapi-portal-card::before { left: 0; right: auto; top: 20px; bottom: 20px; width: 3px; height: auto; border-radius: 0 3px 3px 0; }
+  .ciapi-portal-card__top { display: contents; }
+  .ciapi-portal-card__icon { grid-column: 1; grid-row: 1 / span 2; width: 46px; height: 46px; border-radius: 14px; }
+  .ciapi-portal-card__icon svg { width: 25px; height: 25px; }
+  .ciapi-portal-card__tag { grid-column: 2; grid-row: 1; text-align: left; font-size: 9px; }
+  .ciapi-portal-card__body { grid-column: 2; gap: 3px; }
+  .ciapi-portal-card__body strong { font-size: 20px; }
+  .ciapi-portal-card__body > span { font-size: 11px; }
+  .ciapi-portal-card__body small { display: none; }
+  .ciapi-portal-card__action { grid-column: 2; padding: 8px 11px; font-size: 11px; border-radius: 8px; }
+  .ciapi-portal__access { margin-top: 21px; font-size: 10px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .ciapi-portal-card, .ciapi-portal-card__action svg { animation: none; transition: none; }
 }

@@ -1,0 +1,78 @@
+/* Colorful personnel workspace. Scope excludes SAE and other RH modules. */
+.ciapi-rh-people .ciapi-existing-module { border:0; background:transparent; padding:0; box-shadow:none; }
+.ciapi-rh-people .app-page { max-width:1240px!important; }
+.ciapi-rh-people .ciapi-contextual-main { background:radial-gradient(ellipse at 90% 0,#eaf1ff66,transparent 60%),#f3f6fc!important; }
+.ciapi-people-menu { flex:0 0 235px; width:235px; padding:23px 16px; border-right:1px solid #e3eaf4; background:#f9fbfe; min-width:0; }
+.ciapi-people-menu__heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:17px; }
+.ciapi-people-menu__heading>span { color:#7b8da6; font-size:9px; font-weight:750; letter-spacing:.1em; }
+.ciapi-people-menu__heading>button { display:grid; place-items:center; width:32px; height:32px; border-radius:9px; color:#718aa3; background:#edf3fb; cursor:pointer; }
+.ciapi-people-menu__cards { display:grid; gap:12px; }
+.ciapi-people-link { --link-bg:#e9f3ff; --link-border:#c3daf5; --link-text:#2a679d; display:flex; align-items:center; gap:12px; text-align:left; padding:17px 12px; border:1px solid var(--link-border); border-radius:16px; background:linear-gradient(125deg,#fcfeff,var(--link-bg)); color:var(--link-text); min-width:0; transition:transform .18s,border-color .18s,box-shadow .18s; cursor:pointer; }
+.ciapi-people-link--inativos { --link-bg:#f2eafa; --link-border:#e1d2ed; --link-text:#80619e; }
+.ciapi-people-link--add { --link-bg:#e2f7ee; --link-border:#c5e7dc; --link-text:#267d64; }
+.ciapi-people-link--painel-pessoal { --link-bg:#eaf0ff; --link-border:#d2dcf5; --link-text:#4e6da9; }
+.ciapi-people-link>span { font-size:12px; font-weight:650; line-height:1.45; }
+.ciapi-people-link>.ciapi-custom-icon { width:40px; height:40px; flex-shrink:0; }
+.ciapi-people-link:hover { transform:translateY(-2px); box-shadow:0 5px 14px #34587e0d; }
+.ciapi-people-link[aria-current=page] { box-shadow:0 0 0 2px var(--link-border); }
+.ciapi-people-menu--collapsed { flex-basis:64px; width:64px; padding:20px 12px; }
+.ciapi-people-menu--collapsed .ciapi-people-menu__heading>span { display:none; }
+.ciapi-rh-people :is(button,input,summary):focus-visible { outline:3px solid #77a9dc; outline-offset:3px; }
+.ciapi-rh-people .ciapi-servidores-search { border:1px solid #d4e1f1; border-radius:20px; box-shadow:0 6px 20px #344c7806; }
+.ciapi-rh-people .ciapi-servidores-search>header { padding:20px 22px; background:linear-gradient(115deg,#f3f9ff,#f6f4ff); gap:14px; flex-wrap:wrap; }
+.ciapi-people-search-title { display:flex; align-items:center; gap:14px; min-width:0; }
+.ciapi-people-search-title>div { display:grid; gap:5px; min-width:0; }
+.ciapi-rh-people .ciapi-people-search-title>div>span { font-size:9px; letter-spacing:.12em; font-weight:700; color:#7a92ab; }
+.ciapi-people-search-title strong { font-size:19px; color:#284b70; font-weight:700; line-height:1.3; }
+.ciapi-rh-people .ciapi-servidores-search>header>.ciapi-people-status { color:#6684ab; background:#e9f0fc; border:1px solid #d9e5f6; border-radius:30px; padding:5px 10px; font-size:10px; }
+.ciapi-people-counts { display:flex; align-items:stretch; padding:15px 22px 0; gap:10px; }
+.ciapi-people-counts>span { display:flex; align-items:center; justify-content:space-between; flex:1; gap:10px; padding:10px 12px; border-radius:11px; background:#eef5ff; color:#6084ad; font-size:11px; min-width:0; }
+.ciapi-people-counts strong { color:#345e91; font-size:16px; font-weight:750; }
+.ciapi-people-counts>span:nth-child(2) { background:#edf9f2; color:#5c967d; }
+.ciapi-people-counts>span:nth-child(2) strong { color:#3c8064; }
+.ciapi-people-counts>span:nth-child(3) { background:#f5effb; color:#9679ae; }
+.ciapi-people-counts>span:nth-child(3) strong { color:#7b589d; }
+.ciapi-rh-people .ciapi-servidores-search form { padding:20px 22px 22px; gap:12px; }
+.ciapi-rh-people .ciapi-servidores-search label { color:#59768f; font-size:12px; font-weight:600; }
+.ciapi-rh-people .ciapi-servidores-search-row { background:#fbfdff; border-radius:12px; border-color:#d9e4f0; }
+.ciapi-rh-people .ciapi-servidores-search-row:focus-within { border-color:#83b5e7; box-shadow:0 0 0 3px #87b6e51a; }
+.ciapi-rh-people .ciapi-servidores-search-row input { background:transparent!important; height:49px; font-size:13px; padding-inline:0; }
+.ciapi-rh-people .ciapi-servidores-hint { font-size:10px; line-height:1.5; color:#8a9aaf; }
+.ciapi-rh-people .ciapi-servidores-actions { justify-content:flex-start; margin-top:4px; gap:9px; }
+.ciapi-rh-people .ciapi-btn { border-radius:10px; font-size:11px; font-weight:650; min-height:40px; padding:10px 14px; }
+.ciapi-rh-people .ciapi-btn-search { background:linear-gradient(135deg,#428fdd,#2d6fbe); color:white; border:1px solid #3e80ca; }
+.ciapi-rh-people .ciapi-btn-muted { color:#6e82a0; border-color:#dde6f1; background:#f6f9fe; }
+.ciapi-rh-people .ciapi-servidores-results,.ciapi-rh-people .ciapi-servidores-profile,.ciapi-rh-people .ciapi-servidores-editor { border:1px solid #d7e2f1; border-radius:18px; box-shadow:0 6px 20px #344c7806; }
+.ciapi-rh-people .ciapi-servidores-results>header,.ciapi-rh-people .ciapi-servidores-profile-top { background:#f3f7fd; border-bottom-color:#e5edf6; }
+.ciapi-rh-people .ciapi-servidores-matches button { gap:12px; }
+.ciapi-rh-people .ciapi-servidores-avatar-small { background:linear-gradient(130deg,#e5efff,#eaf6f9); border:1px solid #d9e6f6; border-radius:13px; flex-shrink:0; }
+.ciapi-rh-people .ciapi-servidores-matches button>span:nth-child(2) strong { font-size:13px; }
+.ciapi-rh-people .ciapi-servidores-matches small { font-size:11px; overflow-wrap:anywhere; }
+.ciapi-rh-people .ciapi-servidores-profile-top>strong { font-size:14px; }
+.ciapi-rh-people .ciapi-servidores-section { background:#f8faff; border-color:#e1e8f4; }
+.ciapi-rh-people .ciapi-servidores-section:nth-child(2) { background:#f9f5fd; }
+.ciapi-rh-people .ciapi-servidores-section:nth-child(3) { background:#f2faf7; }
+@media(max-width:800px) {
+  .ciapi-people-menu { flex:none; width:100%; border-right:0; border-bottom:1px solid #e2eaf4; padding:14px 16px 18px; background:#f7f9fd; }
+  .ciapi-people-menu__heading { margin-bottom:12px; }
+  .ciapi-people-menu__heading>button { width:28px; height:28px; }
+  .ciapi-people-menu__cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .ciapi-people-link { padding:12px 10px; gap:9px; border-radius:14px; min-height:75px; }
+  .ciapi-people-link>span { font-size:11px; }
+  .ciapi-people-link>.ciapi-custom-icon { width:36px; height:36px; }
+  .ciapi-people-menu--collapsed { width:100%; padding:9px 16px; }
+  .ciapi-people-menu--collapsed .ciapi-people-menu__heading { margin-bottom:0; }
+  .ciapi-people-menu--collapsed .ciapi-people-menu__heading>span { display:block; }
+  .ciapi-rh-people .ciapi-servidores-search>header { padding:17px 16px; gap:11px; }
+  .ciapi-people-search-title { gap:11px; }
+  .ciapi-people-search-title strong { font-size:17px; }
+  .ciapi-people-search-title>.ciapi-custom-icon { width:40px; height:40px; }
+  .ciapi-people-counts { padding:14px 14px 0; gap:7px; }
+  .ciapi-people-counts>span { padding:9px; gap:4px; font-size:9px; }
+  .ciapi-people-counts strong { font-size:14px; }
+  .ciapi-rh-people .ciapi-servidores-search form { padding:17px 15px; }
+  .ciapi-rh-people .ciapi-servidores-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .ciapi-rh-people .ciapi-servidores-matches button { padding:14px; }
+  .ciapi-rh-people .ciapi-servidores-search { border-radius:17px; }
+}
+@media(prefers-reduced-motion:reduce) { .ciapi-people-link { transition:none; transform:none; } }
