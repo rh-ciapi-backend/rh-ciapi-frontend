@@ -95,7 +95,7 @@ export default function MapasPage({ initialAction }: MapasPageProps) {
 
   useEffect(() => {
     if (!initialAction) return;
-    if (initialAction === 'mapa-exportar') {
+    if (initialAction === 'mapa-exportar' || initialAction === 'mapas-exportar') {
       setAba('exportar');
       setErro('');
       return;
