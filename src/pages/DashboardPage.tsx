@@ -2,21 +2,13 @@ import './dashboard-home-ciapi.css';
 import AgendaLembretesCIAPI from '../components/dashboard/AgendaLembretesCIAPI';
 import './dashboard-rh-restaurado.css';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Users,
-  UserCheck,
-  Calendar,
-  AlertCircle,
-  Map,
-  Clock,
-  ChevronRight,
-  CalendarDays,
-  Clock3,
-} from 'lucide-react';
+import { ChevronRight, CalendarDays, Clock3 } from 'lucide-react';
 import { servidoresService } from '../services/servidoresService';
 import type { Servidor } from '../types';
 import BirthdayPanel from '../components/dashboard/BirthdayPanel';
 import AniversariantesDoDia from '../components/AniversariantesDoDia';
+import DashboardIcon, { type DashboardIconName } from '../components/dashboard/DashboardIcon';
+import './dashboard-color.css';
 import { useAuth } from '../contexts/AuthContext';
 
 type DashboardPageProps = {
@@ -104,7 +96,7 @@ type StatCardProps = {
   title: string;
   value: number | string;
   subtitle: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: DashboardIconName;
   iconClass: string;
   onClick?: () => void;
 };
@@ -113,15 +105,14 @@ function StatCard({
   title,
   value,
   subtitle,
-  icon: Icon,
+  icon,
   iconClass,
   onClick,
 }: StatCardProps) {
   return (
     <button type="button" onClick={onClick} disabled={!onClick} className={`ciapi-stat ${iconClass}`}>
-      <span className="ciapi-stat__heading"><span className="ciapi-stat__icon"><Icon size={18} /></span><span>{title}</span><ChevronRight size={14} aria-hidden="true" /></span>
-      <strong className="ciapi-stat__value">{value}</strong>
-      <span className="ciapi-stat__caption">{subtitle}</span>
+      <DashboardIcon name={icon} />
+      <span className="ciapi-stat__text"><span className="ciapi-stat__heading">{title}</span><strong className="ciapi-stat__value">{value}</strong><span className="ciapi-stat__caption">{subtitle}</span></span>
     </button>
   );
 }
@@ -221,14 +212,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return 'Usuário';
   }, [user]);
 
-  const greeting = useMemo(() => {
-    const hour = currentDateTime.getHours();
-
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
-  }, [currentDateTime]);
-
   const formattedDate = useMemo(() => {
     const formatted = new Intl.DateTimeFormat('pt-BR', {
       weekday: 'long',
@@ -261,32 +244,34 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     <div className="ciapi-home-v2">
       {error && <div className="ciapi-home-error" role="alert">{error}</div>}
       <section className="ciapi-home-welcome" aria-label="Visão geral do CIAPI">
-        <div><span className="ciapi-home-welcome__label">PAINEL DE PESSOAL</span><h2>{greeting}, {primeiroNome}!</h2><p>Seu dia de trabalho, organizado em um só lugar.</p></div>
+        <div><span className="ciapi-home-welcome__label">PAINEL DE PESSOAL</span><h2>Olá, {primeiroNome}!</h2><p>Vamos organizar seu dia?</p></div>
+        <div className="ciapi-home-welcome__art"><DashboardIcon name="sunrise" size={140}/></div>
         <div className="ciapi-home-welcome__date"><span><CalendarDays size={15} aria-hidden="true"/>{formattedDate}</span><span><Clock3 size={15} aria-hidden="true"/>{formattedTime}</span></div>
       </section>
 
       <section className="ciapi-home-stats" aria-label="Indicadores de servidores">
-        <StatCard title="Servidores" value={stats.total} subtitle="Total de cadastros" icon={Users} iconClass="ciapi-stat--blue" onClick={() => onNavigate('servidores', 'pesquisar')}/>
-        <StatCard title="Ativos" value={stats.ativos} subtitle="Em atividade" icon={UserCheck} iconClass="ciapi-stat--green" onClick={() => onNavigate('servidores', 'ativos')}/>
+        <StatCard title="Servidores" value={stats.total} subtitle="Cadastrados" icon="people" iconClass="ciapi-stat--blue" onClick={() => onNavigate('servidores', 'pesquisar')}/>
+        <StatCard title="Ativos" value={stats.ativos} subtitle="Em atividade" icon="active" iconClass="ciapi-stat--green" onClick={() => onNavigate('servidores', 'ativos')}/>
       </section>
 
       <section className="ciapi-home-shortcuts" aria-label="Acesso rápido">
         <h2>Acesso rápido</h2>
         <div className="ciapi-home-shortcuts__grid">
-          <button type="button" onClick={() => onNavigate('frequencia', 'open')}><Clock size={20} aria-hidden="true"/><span>Frequência</span><ChevronRight size={15} aria-hidden="true"/></button>
-          <button type="button" onClick={() => onNavigate('ferias', 'open')}><Calendar size={20} aria-hidden="true"/><span>Férias</span><ChevronRight size={15} aria-hidden="true"/></button>
-          <button type="button" onClick={() => onNavigate('atestados', 'open')}><AlertCircle size={20} aria-hidden="true"/><span>Atestados</span><ChevronRight size={15} aria-hidden="true"/></button>
-          <button type="button" onClick={() => onNavigate('mapas', 'mapa-comissionados-setrabes')}><Map size={20} aria-hidden="true"/><span>Mapas</span><ChevronRight size={15} aria-hidden="true"/></button>
+          <button type="button" onClick={() => onNavigate('frequencia', 'open')}><DashboardIcon name="attendance"/><span>Frequência</span><ChevronRight size={15} aria-hidden="true"/></button>
+          <button type="button" onClick={() => onNavigate('ferias', 'open')}><DashboardIcon name="holiday"/><span>Férias</span><ChevronRight size={15} aria-hidden="true"/></button>
+          <button type="button" onClick={() => onNavigate('atestados', 'open')}><DashboardIcon name="medical"/><span>Atestados</span><ChevronRight size={15} aria-hidden="true"/></button>
+          <button type="button" onClick={() => onNavigate('mapas', 'mapa-comissionados-setrabes')}><DashboardIcon name="reports"/><span>Mapas</span><ChevronRight size={15} aria-hidden="true"/></button>
         </div>
       </section>
 
       <section className="ciapi-home-bottom">
         <div className="ciapi-home-panel ciapi-home-birthdays">
-          <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading}/>
-          <details className="ciapi-home-more-birthdays"><summary>Ver calendário e próximos aniversários</summary><BirthdayPanel servidores={servidores} isLoading={isLoading}/></details>
+          <AniversariantesDoDia servidores={servidores as any[]} isLoading={isLoading} compact/>
+          <details className="ciapi-home-more-birthdays"><summary>Calendário completo</summary><BirthdayPanel servidores={servidores} isLoading={isLoading}/></details>
         </div>
         <AgendaLembretesCIAPI userId={user?.id || 'local'}/>
       </section>
+      <p className="ciapi-home-signature">CIAPI · Cuidando de quem cuida</p>
     </div>
   );
 };

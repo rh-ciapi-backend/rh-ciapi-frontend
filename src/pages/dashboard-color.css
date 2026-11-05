@@ -1,0 +1,93 @@
+/* Approved colorful dashboard: vector artwork and real data, scoped to the RH home. */
+.ciapi-rh-home .ciapi-contextual-main { background:radial-gradient(ellipse at 90% 0,#eaf1ff66,transparent 55%),#f3f6fc!important; }
+.ciapi-custom-icon { display:block; flex-shrink:0; overflow:visible; filter:drop-shadow(0 3px 3px #20436618); }
+.ciapi-home-welcome { position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:15px 24px; align-items:center; }
+.ciapi-home-welcome h2 { color:#123a65; font-size:clamp(27px,3vw,36px); }
+.ciapi-home-welcome__label { color:#637997; }
+.ciapi-home-welcome p { color:#657996; font-size:15px; }
+.ciapi-home-welcome__art { grid-column:2; grid-row:1 / span 2; }
+.ciapi-home-welcome__date { grid-column:1; grid-row:2; display:flex; gap:12px; flex-wrap:wrap; color:#6e809c; }
+.ciapi-home-stats { gap:16px; }
+.ciapi-stat { display:grid; grid-template-columns:68px minmax(0,1fr); align-items:center; gap:20px; padding:24px; border-radius:20px; border-color:#bfdafa; background:linear-gradient(140deg,#f1faff,#daedff); box-shadow:0 5px 16px #3189d20b,inset 0 1px 0 #ffffff; }
+.ciapi-stat--green { border-color:#b9e6d2; background:linear-gradient(140deg,#f0fff8,#dcf8e8); box-shadow:0 5px 16px #21a8790b,inset 0 1px 0 #ffffff; }
+.ciapi-stat>.ciapi-custom-icon { width:68px; height:68px; }
+.ciapi-stat__text { display:flex; flex-direction:column; min-width:0; padding-left:20px; border-left:1px solid #bed5ed; }
+.ciapi-stat--green .ciapi-stat__text { border-color:#b9dfcd; }
+.ciapi-stat__heading { color:#214971; font-size:13px; font-weight:700; }
+.ciapi-stat__value { color:#12365d; font-size:38px; margin:4px 0 3px; }
+.ciapi-stat__caption { color:#627c96; font-size:12px; }
+.ciapi-home-shortcuts h2 { color:#244363; font-size:16px; font-weight:700; }
+.ciapi-home-shortcuts__grid button { --tile-line:#d8c4f1; --tile-bg:#f2eafa; background:linear-gradient(125deg,#fcf9ff,var(--tile-bg)); border-color:var(--tile-line); border-radius:17px; padding:18px 15px; gap:13px; box-shadow:0 4px 10px #4b457c06,inset 0 1px 0 #fff; min-height:86px; }
+.ciapi-home-shortcuts__grid button:nth-child(2) { --tile-line:#f3d7b8; --tile-bg:#fff0df; background:linear-gradient(125deg,#fffaf4,var(--tile-bg)); }
+.ciapi-home-shortcuts__grid button:nth-child(3) { --tile-line:#b8e7df; --tile-bg:#e1f8f2; background:linear-gradient(125deg,#f3fffc,var(--tile-bg)); }
+.ciapi-home-shortcuts__grid button:nth-child(4) { --tile-line:#bedbf4; --tile-bg:#e1f1ff; background:linear-gradient(125deg,#f6fbff,var(--tile-bg)); }
+.ciapi-home-shortcuts__grid button>.ciapi-custom-icon { width:48px; height:48px; }
+.ciapi-home-shortcuts__grid button>span { border-left:1px solid var(--tile-line); padding-left:12px; color:#244266; font-size:13px; }
+.ciapi-home-shortcuts__grid button>svg:last-child { color:#597598; width:15px; }
+.ciapi-home-shortcuts__grid button:hover { filter:brightness(.985); border-color:#99b8d5; }
+.ciapi-home-panel { border-color:#d6e1f0; border-radius:19px; box-shadow:0 5px 14px #324c7a05; }
+.ciapi-home-v2 .ciapi-bday-section h2 { display:flex; gap:12px; color:#28496b; font-size:16px; }
+.ciapi-home-v2 .ciapi-bday-section h2>.ciapi-custom-icon { width:46px; height:46px; }
+.ciapi-home-v2 .ciapi-bday-section h2>.ciapi-bday-count { font-size:10px; background:#ffe2ec; color:#bb4e77; border-radius:8px; padding:4px 8px; white-space:nowrap; }
+.ciapi-home-v2 .ciapi-bday-empty { color:#6e7c99; background:#f3f5fa; text-align:center; margin-top:12px; padding:14px; }
+.ciapi-bday-expand { padding-top:14px; border-top:1px solid #e7edf6; }
+.ciapi-bday-expand>summary { color:#3d5b7d; font-size:12px; font-weight:650; cursor:pointer; }
+.ciapi-bday-expand[open]>summary { margin-bottom:16px; }
+.ciapi-home-more-birthdays { margin-top:12px; padding-top:10px; }
+.ciapi-home-more-birthdays summary { color:#7287a0; font-weight:500; font-size:11px; }
+.ciapi-home-v2 .ciapi-agenda .ciapi-home-panel-head { align-items:center; }
+.ciapi-home-v2 .ciapi-agenda .ciapi-home-panel-head h2 { color:#28496b; gap:12px; font-size:16px; }
+.ciapi-home-v2 .ciapi-agenda .ciapi-home-panel-head>div>p { display:none; }
+.ciapi-home-v2 .ciapi-agenda-count { color:#8559ae; background:#f0e6fb; font-size:10px; padding:3px 7px; }
+.ciapi-home-v2 .ciapi-agenda-add { background:linear-gradient(135deg,#ae75e7,#8546cb); box-shadow:0 3px 8px #9854cc14; border:1px solid #8e53c5; font-size:12px; min-height:37px; }
+.ciapi-home-v2 .ciapi-agenda-empty { background:#f4f5fb; min-height:95px; gap:8px; padding:17px; }
+.ciapi-home-v2 .ciapi-agenda-empty>svg { display:none; }
+.ciapi-home-v2 .ciapi-agenda-empty strong { color:#4e5d7d; font-size:13px; }
+.ciapi-home-v2 .ciapi-agenda-empty p { color:#7786a3; font-size:12px; }
+.ciapi-home-v2 .ciapi-agenda-disclaimer { font-size:10px; color:#8794a8; }
+.ciapi-home-signature { text-align:center; font-size:11px; font-weight:600; color:#7b8fa7; margin:5px 0; }
+@media(max-width:1100px) {
+  .ciapi-home-shortcuts__grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:600px) {
+  .ciapi-home-v2 { gap:20px; }
+  .ciapi-home-welcome { gap:13px 8px; padding-top:5px; }
+  .ciapi-home-welcome h2 { font-size:27px; }
+  .ciapi-home-welcome p { font-size:12px; }
+  .ciapi-home-welcome__label { font-size:9px; letter-spacing:.1em; }
+  .ciapi-home-welcome__art { grid-row:1; align-self:center; }
+  .ciapi-home-welcome__art .ciapi-custom-icon { width:96px; height:96px; }
+  .ciapi-home-welcome__date { grid-column:1 / -1; font-size:10px; }
+  .ciapi-home-stats { gap:11px; }
+  .ciapi-stat { grid-template-columns:41px minmax(0,1fr); padding:16px 11px; gap:10px; border-radius:17px; }
+  .ciapi-stat>.ciapi-custom-icon { width:41px; height:41px; }
+  .ciapi-stat__text { padding-left:10px; }
+  .ciapi-stat__heading { font-size:11px; }
+  .ciapi-stat__value { font-size:29px; }
+  .ciapi-stat__caption { font-size:10px; }
+  .ciapi-home-shortcuts h2 { font-size:15px; }
+  .ciapi-home-shortcuts__grid { gap:10px; }
+  .ciapi-home-shortcuts__grid button { padding:14px 10px; gap:9px; min-height:77px; border-radius:15px; }
+  .ciapi-home-shortcuts__grid button>.ciapi-custom-icon { width:39px; height:39px; }
+  .ciapi-home-shortcuts__grid button>span { padding-left:9px; font-size:11px; }
+  .ciapi-home-shortcuts__grid button>svg:last-child { width:12px; }
+  .ciapi-home-v2 .ciapi-agenda .ciapi-home-panel-head { flex-wrap:nowrap; }
+  .ciapi-home-v2 .ciapi-agenda .ciapi-home-panel-head h2 { font-size:14px; gap:8px; }
+  .ciapi-home-v2 .ciapi-bday-section h2 { font-size:14px; gap:9px; }
+  .ciapi-home-v2 .ciapi-agenda .ciapi-home-panel-head h2>.ciapi-custom-icon { width:40px; height:40px; }
+  .ciapi-home-v2 .ciapi-agenda-count { display:none; }
+  .ciapi-home-v2 .ciapi-agenda-add { font-size:11px; padding:8px 11px; }
+  .ciapi-home-v2 .ciapi-agenda-empty strong { font-size:12px; }
+  .ciapi-home-v2 .ciapi-agenda-empty p { font-size:11px; }
+}
+@media(max-width:360px) {
+  .ciapi-stat { grid-template-columns:32px minmax(0,1fr); gap:8px; padding:14px 9px; }
+  .ciapi-stat>.ciapi-custom-icon { width:32px; height:32px; }
+  .ciapi-stat__text { padding-left:8px; }
+  .ciapi-stat__value { font-size:26px; }
+  .ciapi-stat__caption { font-size:9px; }
+  .ciapi-home-shortcuts__grid button { gap:7px; padding:12px 8px; }
+  .ciapi-home-shortcuts__grid button>.ciapi-custom-icon { width:32px; height:32px; }
+  .ciapi-home-shortcuts__grid button>span { font-size:10px; padding-left:7px; }
+  .ciapi-home-welcome__art .ciapi-custom-icon { width:74px; height:74px; }
+}
