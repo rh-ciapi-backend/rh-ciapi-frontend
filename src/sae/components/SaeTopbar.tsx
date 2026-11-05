@@ -1,5 +1,3 @@
-import DashboardIcon from '../../components/dashboard/DashboardIcon';
-import { visualFor } from '../../components/workspace/visuals';
 import React, {
   useCallback,
   useEffect,
@@ -173,8 +171,8 @@ export default function SaeTopbar({
 
   return (
     <>
-      <header className="sae-modern-topbar sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border-dark bg-bg-dark/95 pl-16 pr-3 backdrop-blur sm:px-6 lg:px-8">
-        <div className="sae-modern-topbar__title min-w-0 flex-1"><DashboardIcon name={visualFor(activeTab).icon} size={38}/><div>
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border-dark bg-bg-dark/95 pl-16 pr-3 backdrop-blur sm:px-6 lg:px-8">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">
             SAE
           </p>
@@ -182,7 +180,7 @@ export default function SaeTopbar({
           <h2 className="truncate text-base font-bold text-white sm:text-lg">
             {TITLES[activeTab]}
           </h2>
-        </div></div>
+        </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
 

@@ -1,6 +1,3 @@
-import DashboardIcon from '../components/dashboard/DashboardIcon';
-import { visualFor } from '../components/workspace/visuals';
-import '../workspace-theme.css';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -187,8 +184,8 @@ export default function SaeApp() {
   }
 
   return (
-    <div data-tone={visualFor(activeTab).tone} className="sae-horizontal-shell ciapi-workspace-theme ciapi-sae-modern">
-      <InstitutionalHeader compact title="SAE CIAPI" subtitle="Serviço de Atenção Especializada · SAE CIAPI" />
+    <div className="sae-horizontal-shell">
+      <InstitutionalHeader compact subtitle="Serviço de Atenção Especializada · SAE CIAPI" />
       <SaeHorizontalNav
         activeTab={activeTab}
         onChange={handleChangeTab}
@@ -205,9 +202,9 @@ export default function SaeApp() {
         <SaeTopbar activeTab={activeTab} restrictedProfessional={restrictedProfessional} />
       </div>
       <div className={activeTab==='usuarios' ? 'sae-usuarios-workspace' : 'sae-outros-workspace'}>
-      {activeTab === 'usuarios' && !restrictedProfessional && <aside className="sae-usuarios-sidebar" aria-label="Opções de usuários"><div className="sae-usuarios-sidebar-title">Usuários</div>{([['pesquisa','Pesquisar usuário'],['inativos','Usuários inativos'],['novo','Novo usuário'],['painel','Painel de Usuários']] as const).map(([v,label])=><button type="button" key={v} className={visaoUsuarios===v?'selected':''} onClick={()=>{setUsuarioSelecionadoId(null);setVisaoUsuarios(v)}}><DashboardIcon name={v==='pesquisa'?'search-person':v==='inativos'?'inactive-person':v==='novo'?'new-person':'personnel'} size={40}/><span>{label}</span></button>)}</aside>}
+      {activeTab === 'usuarios' && !restrictedProfessional && <aside className="sae-usuarios-sidebar" aria-label="Opções de usuários"><div className="sae-usuarios-sidebar-title">Usuários</div>{([['pesquisa','Pesquisar usuário'],['inativos','Usuários inativos'],['novo','Novo usuário'],['painel','Painel de Usuários']] as const).map(([v,label])=><button type="button" key={v} className={visaoUsuarios===v?'selected':''} onClick={()=>{setUsuarioSelecionadoId(null);setVisaoUsuarios(v)}}>{label}<span>›</span></button>)}</aside>}
       <main className="sae-horizontal-workspace">
-        <div className="sae-horizontal-workspace-inner ciapi-module-surface">
+        <div className="sae-horizontal-workspace-inner">
           {renderContent()}
         </div>
       </main>

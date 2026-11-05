@@ -44,39 +44,6 @@
   .ciapi-rh-modern .ciapi-module-surface>.space-y-6>div:first-child h1 { font-size:24px; letter-spacing:-.03em; }
   .ciapi-rh-modern .ciapi-module-surface :is(.ciapi-admin-light table,.cf-results table) th { background:var(--module-soft); color:var(--module-accent); }
   .ciapi-rh-modern .ciapi-module-surface :is(table:not(.cf-paper table):not(.ciapi-mapas-paper table)) td { color:#3a5670; }
-  /* SAE shell, same components but an independent palette and access flow. */
-  .ciapi-sae-modern>.institutional-header .institutional-header__inner { display:flex; flex-wrap:nowrap; justify-content:flex-start; padding:14px 24px; gap:22px; min-height:80px; }
-  .ciapi-sae-modern .institutional-brand--dual { width:auto; }
-  .ciapi-sae-modern .institutional-brand .institutional-brand__ciapi { width:40px!important; height:48px!important; }
-  .ciapi-sae-modern .institutional-brand .institutional-brand__gov { width:135px!important; height:48px!important; }
-  .ciapi-sae-modern .institutional-brand__divider { height:32px; }
-  .ciapi-sae-modern .institutional-heading { text-align:left; width:auto; order:initial; }
-  .ciapi-sae-modern .institutional-heading strong { font-size:20px; }
-  .ciapi-sae-modern .institutional-heading span { font-size:11px; }
-  .ciapi-sae-modern .institutional-seal { margin-left:auto; width:auto; }
-  .ciapi-sae-modern .sae-modern-topbar { padding:12px 24px; height:auto; min-height:64px; background:#f6f9fc!important; }
-  .sae-modern-topbar__title { display:flex; align-items:center; gap:12px; }
-  .ciapi-sae-modern .sae-modern-topbar h2 { color:#335570!important; }
-  .ciapi-sae-modern .sae-modern-topbar button { color:#617d96; background:#fff; border-color:#dbe6f2; }
-  .ciapi-sae-modern .sae-horizontal-workspace { background:#f3f7fc; }
-  .ciapi-sae-modern .sae-horizontal-workspace-inner { max-width:1250px; }
-  .ciapi-sae-modern .sae-usuarios-sidebar { background:#f9fbfe; border-color:#e1e9f4; }
-  .ciapi-sae-modern .sae-usuarios-sidebar>button { display:flex; align-items:center; gap:10px; padding:13px 11px; margin-bottom:10px; border:1px solid #d5e5f7; border-radius:14px; background:linear-gradient(120deg,#fff,#eaf4ff); color:#3a6c9a; font-size:11px; }
-  .ciapi-sae-modern .sae-usuarios-sidebar>button:nth-of-type(2) { background:linear-gradient(120deg,#fff,#f3eafa); border-color:#e3d4ef; color:#906bac; }
-  .ciapi-sae-modern .sae-usuarios-sidebar>button:nth-of-type(3) { background:linear-gradient(120deg,#fff,#e5f8ef); border-color:#cce7db; color:#3d8871; }
-  .ciapi-sae-modern .sae-usuarios-sidebar>button.selected { box-shadow:0 0 0 2px #cbddf2; }
-  .ciapi-sae-modern .sae-usuarios-sidebar-title { font-size:11px; color:#7590a6; }
-  .ciapi-sae-modern .sae-home-banner { background:linear-gradient(115deg,#f0f8ff,#edf8f3); border:1px solid #d2e5ef; border-radius:18px; padding:25px; min-height:0; box-shadow:none; }
-  .ciapi-sae-modern .sae-home-banner::before { display:none; }
-  .ciapi-sae-modern .sae-home-banner-content :is(h1,p),.ciapi-sae-modern .sae-home-date { color:#456985; }
-  .ciapi-sae-modern .sae-home-banner-content h1 { color:#214767; font-size:28px; }
-  .ciapi-sae-modern .sae-home-metric { background:linear-gradient(125deg,#f8fcff,#e6f2ff); border:1px solid #cfe1f6; border-radius:17px; }
-  .ciapi-sae-modern .sae-home-metric:nth-child(2) { background:linear-gradient(125deg,#fcfaff,#f0e8fb); border-color:#e2d4ef; }
-  .ciapi-sae-modern .sae-home-metric:nth-child(3) { background:linear-gradient(125deg,#f7fffc,#e4f8ef); border-color:#cce7db; }
-  .ciapi-sae-modern .sae-home-metric:nth-child(4) { background:linear-gradient(125deg,#f7fffc,#e3f5f3); border-color:#cce7e4; }
-  .ciapi-sae-modern .sae-home-metric-icon { width:54px; height:54px; background:none; border:0; }
-  .ciapi-sae-modern :is(.sae-home-panel,.sae-home-table-scroll) { border-color:#dce6f1; border-radius:16px; }
-  .ciapi-sae-modern .sae-home-table th { background:#edf6fa; color:#52788d; }
 }
 @media screen and (max-width:800px) {
   .ciapi-module-menu { width:100%; flex:none; padding:14px 16px 18px; border-right:0; border-bottom:1px solid #e1e9f4; }
@@ -94,24 +61,6 @@
   .ciapi-rh-modern .ciapi-existing-module.ciapi-module-surface { padding:13px; border-radius:15px; }
   .ciapi-module-surface :is(.cf-row,.ciapi-mapas-filters) { min-width:0; }
   .ciapi-module-surface :is(input,select,textarea) { max-width:100%; }
-  .ciapi-sae-modern>.institutional-header .institutional-header__inner { padding:12px 16px; gap:14px; min-height:0; }
-  .ciapi-sae-modern .institutional-brand .institutional-brand__ciapi { width:32px!important; height:38px!important; }
-  .ciapi-sae-modern .institutional-brand .institutional-brand__gov { width:108px!important; height:38px!important; }
-  .ciapi-sae-modern .institutional-brand__logos { gap:8px; }
-  .ciapi-sae-modern .institutional-heading strong { font-size:16px; white-space:nowrap; }
-  .ciapi-sae-modern .institutional-heading span,.ciapi-sae-modern .institutional-seal { display:none; }
-  .ciapi-sae-modern .sae-modern-topbar { padding:10px 16px; }
-  .ciapi-sae-modern .sae-horizontal-workspace { padding:18px 14px; }
-  .ciapi-sae-modern .sae-usuarios-sidebar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; padding:14px; }
-  .ciapi-sae-modern .sae-usuarios-sidebar-title { grid-column:1/-1; }
-  .ciapi-sae-modern .sae-usuarios-sidebar>button { width:100%; margin:0; padding:11px; min-width:0; }
-  .ciapi-sae-modern .sae-usuarios-sidebar>button svg { width:32px; height:32px; }
-  .ciapi-sae-modern .sae-home-banner { padding:18px; display:flex; flex-direction:row; align-items:center; gap:12px; }
-  .ciapi-sae-modern .sae-home-banner-art svg { width:75px; height:75px; }
-  .ciapi-sae-modern .sae-home-banner-content h1 { font-size:21px; }
-  .ciapi-sae-modern .sae-home-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .ciapi-sae-modern .sae-home-metric { padding:14px; gap:8px; }
-  .ciapi-sae-modern .sae-home-metric-icon,.ciapi-sae-modern .sae-home-metric-icon svg { width:37px; height:37px; }
 }
 @media(prefers-reduced-motion:reduce) { .ciapi-module-link { transition:none; transform:none; } }
 @media screen {
@@ -145,10 +94,6 @@
  .ciapi-vacation-calendar .grid>div { font-size:8px; letter-spacing:0; }
 }
 @media screen {
- .ciapi-sae-modern>.institutional-header .institutional-header__inner { flex-direction:row!important; }
- .ciapi-sae-modern .sae-home-banner .sae-home-banner-content>p:not(.sae-home-eyebrow) { color:#6e8a9d; }
- .ciapi-sae-modern .sae-home-banner .sae-home-banner-content h1 { margin-top:10px; }
- .ciapi-sae-modern .sae-home-banner h1>span[aria-hidden] { display:none; }
  .ciapi-module-surface :is(.text-cyan-300,.text-cyan-100,[class~='text-cyan-100/80']) { color:#317f8c; }
  .ciapi-module-surface :is(.text-blue-200,.text-emerald-300) { color:#368273; }
  .ciapi-module-surface :is(.text-amber-300,.text-amber-200) { color:#a77436; }

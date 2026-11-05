@@ -1,4 +1,3 @@
-import DashboardIcon, { type DashboardIconName } from '../../components/dashboard/DashboardIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, CalendarDays, Clock3, HeartPulse, RefreshCw, Stethoscope, Users, Plus, Trash2, Check, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -80,15 +79,15 @@ export default function SaeDashboardPage() {
           <p>Valorização, respeito e cuidado com as pessoas.</p>
           <div className="sae-home-date"><Clock3 size={16} /><span className="capitalize">{data}</span></div>
         </div>
-        <div className="sae-home-banner-art"><DashboardIcon name="sunrise" size={110}/></div>
+        <div className="sae-home-banner-motto">Centro Integrado de Atenção à Pessoa Idosa</div>
       </div>
 
       {avisos.length > 0 && <div className="sae-home-warning" role="alert"><strong>Algumas consultas não foram concluídas:</strong><ul>{avisos.map(x => <li key={x}>{x}</li>)}</ul></div>}
 
       <div className="sae-home-metrics">
-        {metricas.map(({nome,valor,descricao,Icon},index) => <article className="sae-home-metric" key={nome}>
+        {metricas.map(({nome,valor,descricao,Icon}) => <article className="sae-home-metric" key={nome}>
           <div><p className="sae-home-metric-label">{nome}</p><strong>{carregando ? '…' : valor === null ? '—' : valor.toLocaleString('pt-BR')}</strong><p>{descricao}</p></div>
-          <span className="sae-home-metric-icon"><DashboardIcon name={(['active','agenda','medical','heart'] as DashboardIconName[])[index]} size={54}/></span>
+          <span className="sae-home-metric-icon"><Icon size={22}/></span>
         </article>)}
       </div>
 
